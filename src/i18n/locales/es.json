@@ -143,6 +143,16 @@
     "errOtpResend": "No se pudo enviar un código nuevo. Inténtalo en un momento.",
     "errOtpLength": "Ese código parece incompleto. Copia el código entero del correo."
   },
+  "adoption": {
+    "title": "Se encontraron datos existentes",
+    "body": "Tienes datos guardados en este dispositivo de antes de iniciar sesión. ¿Los añadimos a tu cuenta y los sincronizamos con la nube, o los descartamos?",
+    "keep": "Conservar y sincronizar con la nube",
+    "discard": "Descartar datos locales",
+    "later": "Decidir más tarde",
+    "working": "Procesando…",
+    "failed": "No se pudo guardar tu elección en este dispositivo. Inténtalo de nuevo.",
+    "footer": "No te lo volveremos a preguntar en esta cuenta."
+  },
   "onboarding": {
     "welcomeTitle": "Configuremos el sistema de tu vida",
     "welcomeBody": "Nexus reúne tus finanzas, tu forma física, tus estudios, tu trabajo y tus hábitos en una sola puntuación, para que veas de un vistazo hacia dónde va tu vida.",

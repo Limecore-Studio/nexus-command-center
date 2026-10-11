@@ -143,6 +143,16 @@
     "errOtpResend": "Uuden koodin lähetys epäonnistui. Yritä hetken kuluttua.",
     "errOtpLength": "Koodi näyttää vajaalta. Kopioi koko koodi sähköpostista."
   },
+  "adoption": {
+    "title": "Laitteelta löytyi tietoja",
+    "body": "Tälle laitteelle on tallennettu tietoja ajalta ennen kirjautumista. Liitetäänkö ne tiliisi ja synkronoidaan pilveen, vai hylätäänkö ne?",
+    "keep": "Säilytä ja synkronoi pilveen",
+    "discard": "Hylkää paikalliset tiedot",
+    "later": "Päätä myöhemmin",
+    "working": "Käsitellään…",
+    "failed": "Valintaasi ei voitu tallentaa tälle laitteelle. Yritä uudelleen.",
+    "footer": "Tällä tilillä tätä ei kysytä uudelleen."
+  },
   "onboarding": {
     "welcomeTitle": "Otetaan elämäsi käyttöjärjestelmä käyttöön",
     "welcomeBody": "Nexus kokoaa taloutesi, kuntosi, opintosi, työsi ja tapasi yhdeksi pisteluvuksi — näet yhdellä silmäyksellä, mihin suuntaan elämäsi kulkee.",

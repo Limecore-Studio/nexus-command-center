@@ -74,6 +74,16 @@
     "errOtpResend": "Tidak dapat mengirim kode baru. Coba sebentar lagi.",
     "errOtpLength": "Kode itu tampak belum lengkap. Salin seluruh kode dari email."
   },
+  "adoption": {
+    "title": "Ditemukan data yang sudah ada",
+    "body": "Ada data yang tersimpan di perangkat ini dari sebelum Anda masuk. Tambahkan ke akun Anda dan sinkronkan ke cloud, atau buang?",
+    "keep": "Simpan & sinkronkan ke cloud",
+    "discard": "Buang data lokal",
+    "later": "Putuskan nanti",
+    "working": "Memproses…",
+    "failed": "Pilihan Anda tidak dapat disimpan di perangkat ini. Coba lagi.",
+    "footer": "Anda tidak akan ditanya lagi di akun ini."
+  },
   "app": {
     "name": "Nexus Command Center",
     "tagline": "Sistem operasi hidupmu"

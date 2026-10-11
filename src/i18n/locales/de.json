@@ -143,6 +143,16 @@
     "errOtpResend": "Neuer Code konnte nicht gesendet werden. Bitte kurz warten.",
     "errOtpLength": "Der Code scheint unvollständig. Kopiere den ganzen Code aus der E-Mail."
   },
+  "adoption": {
+    "title": "Vorhandene Daten gefunden",
+    "body": "Auf diesem Gerät sind Daten aus der Zeit vor deiner Anmeldung gespeichert. Sollen wir sie in dein Konto übernehmen und mit der Cloud synchronisieren oder verwerfen?",
+    "keep": "Behalten & mit der Cloud synchronisieren",
+    "discard": "Lokale Daten verwerfen",
+    "later": "Später entscheiden",
+    "working": "Verarbeite…",
+    "failed": "Deine Auswahl konnte auf diesem Gerät nicht gespeichert werden. Versuch es noch einmal.",
+    "footer": "Für dieses Konto fragen wir nicht noch einmal."
+  },
   "onboarding": {
     "welcomeTitle": "Richten wir dein Lebens-OS ein",
     "welcomeBody": "Nexus bündelt Finanzen, Fitness, Studium, Arbeit und Gewohnheiten zu einem Wert — so siehst du auf einen Blick, wohin sich dein Leben entwickelt.",

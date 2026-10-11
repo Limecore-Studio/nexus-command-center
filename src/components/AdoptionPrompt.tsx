@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import { useConfirm } from './ConfirmDialog';
 import { adoptLocalData, hasLocalData } from '../lib/cloudSync';
 import { clearAllLocalData } from '../db/database';
 import { useSessionStore } from '../store/useSessionStore';
 import { useSyncStore } from '../store/useSyncStore';
-import { supabase } from '../lib/supabase';
+import {
+  getDismissedFromCloud,
+  readDecided,
+  recordDecision,
+  writeDecided,
+} from '../lib/adoptionFlag';
 
 // v1.1.1 — BUG-2 fix: dismiss flag now lives in Supabase, not Capacitor
 // Preferences. Android wipes SharedPreferences on app uninstall, so the
@@ -49,45 +56,11 @@ function writeLastUserId(userId: string): void {
   }
 }
 
-async function getDismissedFromCloud(userId: string): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('user_preferences')
-      .select('ncc_local_data_prompt_dismissed')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (error) {
-      console.warn('[adoption] read user_preferences failed:', error.message);
-      // Best-effort: if we can't read the flag we show the prompt rather
-      // than risk hiding it incorrectly. Better to over-prompt once than
-      // silently lose user-visible data behind a missing query.
-      return false;
-    }
-    return !!data?.ncc_local_data_prompt_dismissed;
-  } catch (e) {
-    console.warn('[adoption] read user_preferences threw:', (e as Error).message);
-    return false;
-  }
-}
-
-async function setDismissedInCloud(userId: string): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('user_preferences')
-      .upsert({
-        user_id: userId,
-        ncc_local_data_prompt_dismissed: true,
-        updated_at: new Date().toISOString(),
-      });
-    if (error) {
-      // Failure here just means the next reinstall will re-prompt — annoying
-      // but not data-loss. Log so we notice if this becomes systemic.
-      console.warn('[adoption] write user_preferences failed:', error.message);
-    }
-  } catch (e) {
-    console.warn('[adoption] write user_preferences threw:', (e as Error).message);
-  }
-}
+// v1.19 — NCC#139: see src/lib/adoptionFlag.ts for why this prompt no longer
+// appears offline and remembers decisions on the device.
+// "Decide later" lasts for this launch. Module scope rather than component
+// state, so a remount (sign-in churn, a route change) doesn't re-ask.
+const deferredThisLaunch = new Set<string>();
 
 export default function AdoptionPrompt() {
   const { t } = useTranslation();
@@ -96,12 +69,26 @@ export default function AdoptionPrompt() {
   const syncNow = useSyncStore((s) => s.syncNow);
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // Bumped by the browser's `online` event so an "unknown" answer is asked
+  // again once the device has a connection.
+  const [recheck, setRecheck] = useState(0);
+
+  useEffect(() => {
+    const onOnline = () => setRecheck((n) => n + 1);
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
 
   // Decide whether to show on mount + when user changes.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (!user) {
+        if (!cancelled) setShow(false);
+        return;
+      }
+      if (deferredThisLaunch.has(user.id)) {
         if (!cancelled) setShow(false);
         return;
       }
@@ -120,20 +107,35 @@ export default function AdoptionPrompt() {
         if (!cancelled) setShow(true);
         return;
       }
+      // v1.19 — NCC#139: a decision already made on this device needs no
+      // network. A cloud write that hasn't landed yet is retried here.
+      const decided = readDecided(user.id);
+      if (decided) {
+        if (decided === 'pending') recordDecision(user.id);
+        writeLastUserId(user.id);
+        if (!cancelled) setShow(false);
+        return;
+      }
       const dismissed = await getDismissedFromCloud(user.id);
+      if (dismissed === null) {
+        // Could not ask (offline, timed out). Say nothing now; the `online`
+        // event or the next launch asks again.
+        if (!cancelled) setShow(false);
+        return;
+      }
       if (dismissed) {
         // Already dismissed by THIS user previously — advance the marker
         // so we don't re-evaluate the user-change branch next mount.
+        writeDecided(user.id, 'synced');
         writeLastUserId(user.id);
         if (!cancelled) setShow(false);
         return;
       }
       if (!hasData) {
         // No local data → silently mark dismissed in the cloud so we
-        // don't re-check on every launch. Fire-and-forget; if the write
-        // fails the next launch will re-evaluate hasLocalData() which
-        // will still be false, so we'll write again. Idempotent.
-        void setDismissedInCloud(user.id);
+        // don't re-check on every launch. If the write fails, the local
+        // "pending" marker retries it on a later launch. Idempotent.
+        recordDecision(user.id);
         writeLastUserId(user.id);
         if (!cancelled) setShow(false);
         return;
@@ -143,23 +145,55 @@ export default function AdoptionPrompt() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, recheck]);
+
+  const onLater = () => {
+    if (!user || busy) return;
+    deferredThisLaunch.add(user.id);
+    setShow(false);
+  };
+
+  // Escape on desktop/web and the Android back button both mean "later" —
+  // the prompt used to have no way out at all. A back-button listener also
+  // stops Capacitor's default back action (leave the app) while it is open.
+  useEffect(() => {
+    if (!show) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onLater();
+    };
+    window.addEventListener('keydown', onKey);
+    const back = Capacitor.isNativePlatform()
+      ? CapacitorApp.addListener('backButton', () => onLater())
+      : null;
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      void back?.then((h) => h.remove());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onLater is a new function every render; its inputs (user, busy) are the deps, so it is re-bound exactly when they change rather than churning the native listener each render
+  }, [show, busy, user]);
 
   if (!show || !user) return null;
 
   const onKeep = async () => {
     setBusy(true);
+    setFailed(false);
     try {
+      // Local only: every row goes into the sync queue. Nothing here waits
+      // on the network, so offline it finishes as fast as online.
       await adoptLocalData(user.id);
-      await syncNow();
-      // Dismiss BEFORE hiding the UI so a misfired re-mount during the
-      // sync round-trip doesn't re-prompt. Fire-and-forget upsert —
-      // failure is logged, not surfaced (don't block UX on a pref write).
-      void setDismissedInCloud(user.id);
+      // Remember the decision BEFORE hiding the UI so a misfired re-mount
+      // doesn't re-prompt; the cloud copy follows when it can.
+      recordDecision(user.id);
       // v1.2.1 — AUDIT-FSG-2b: advance the user-change marker so the next
       // mount in this session doesn't trip the user-transition branch.
       writeLastUserId(user.id);
       setShow(false);
+      // v1.19 — NCC#139: was awaited inside the modal, which offline meant
+      // "Working…" for good. The queue pushes whenever the sync can run.
+      void syncNow();
+    } catch (e) {
+      console.warn('[adoption] keep failed:', (e as Error).message);
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -168,14 +202,12 @@ export default function AdoptionPrompt() {
   const onDiscard = async () => {
     if (!(await confirm({ message: t('common.wipeTestData') }))) return;
     setBusy(true);
+    setFailed(false);
     try {
       await clearAllLocalData();
-      // Same pattern as onKeep — mark dismissed before the reload so the
-      // post-reload mount sees the flag. The reload will trigger another
-      // session restore + AdoptionPrompt mount; if the upsert hasn't
-      // completed by then we'd re-prompt, but hasLocalData() will return
-      // false (we just wiped) and the inner branch sets the flag again.
-      void setDismissedInCloud(user.id);
+      // Same pattern as onKeep — remember the decision before the reload so
+      // the post-reload mount sees it, whether or not the cloud write lands.
+      recordDecision(user.id);
       // v1.2.1 — AUDIT-FSG-2b: advance the user-change marker. Both
       // adoption outcomes (Keep + Discard) count as "user has acted",
       // so subsequent mounts under the same user_id should follow the
@@ -184,38 +216,55 @@ export default function AdoptionPrompt() {
       setShow(false);
       // Force a reload so all stores re-init with the empty DB.
       window.location.reload();
+    } catch (e) {
+      console.warn('[adoption] discard failed:', (e as Error).message);
+      setFailed(true);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-bg/90 z-50 flex items-center justify-center p-4">
+    <div
+      className="fixed inset-0 bg-bg/90 z-50 flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="adoption-title"
+    >
       <div className="card-elevated max-w-sm w-full">
-        <h2 className="font-heading font-bold text-lg mb-2">Existing data found</h2>
-        <p className="text-sm text-text-muted mb-4">
-          You have data stored locally on this device from before signing in. Should we adopt
-          it into your account and sync it to the cloud, or discard it?
-        </p>
+        <h2 id="adoption-title" className="font-heading font-bold text-lg mb-2">{t('adoption.title')}</h2>
+        <p className="text-sm text-text-muted mb-4">{t('adoption.body')}</p>
         <div className="space-y-2">
           <button
             onClick={onKeep}
             disabled={busy}
             className="btn w-full"
           >
-            {busy ? 'Working…' : 'Keep & sync to cloud'}
+            {busy ? t('adoption.working') : t('adoption.keep')}
           </button>
           <button
             onClick={onDiscard}
             disabled={busy}
             className="btn-ghost w-full text-danger border-danger/40"
           >
-            Discard local data
+            {t('adoption.discard')}
+          </button>
+          <button
+            onClick={onLater}
+            disabled={busy}
+            className="btn-ghost w-full"
+          >
+            {t('adoption.later')}
           </button>
         </div>
+        {failed && (
+          <p role="alert" className="text-sm text-danger mt-3 text-center">
+            {t('adoption.failed')}
+          </p>
+        )}
         {/* v1.1 — UI/UX review #6: 10px → 11px on a legal-flavored disclosure. */}
         <p className="text-[0.6875rem] text-text-muted mt-3 text-center">
-          You won't be asked again on this account.
+          {t('adoption.footer')}
         </p>
       </div>
     </div>

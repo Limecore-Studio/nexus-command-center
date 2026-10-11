@@ -143,6 +143,16 @@
     "errOtpResend": "Impossible d’envoyer un nouveau code. Réessayez sous peu.",
     "errOtpLength": "Ce code semble incomplet. Copiez le code entier depuis l’e-mail."
   },
+  "adoption": {
+    "title": "Données existantes trouvées",
+    "body": "Des données datant d’avant votre connexion sont enregistrées sur cet appareil. Faut-il les ajouter à votre compte et les synchroniser avec le cloud, ou les supprimer ?",
+    "keep": "Conserver et synchroniser avec le cloud",
+    "discard": "Supprimer les données locales",
+    "later": "Décider plus tard",
+    "working": "Traitement…",
+    "failed": "Impossible d’enregistrer votre choix sur cet appareil. Réessayez.",
+    "footer": "Cette question ne vous sera plus posée sur ce compte."
+  },
   "onboarding": {
     "welcomeTitle": "Configurons le système de votre vie",
     "welcomeBody": "Nexus réunit vos finances, votre forme, vos études, votre travail et vos habitudes en un seul score — pour voir d’un coup d’œil la tendance de votre vie.",

@@ -74,6 +74,16 @@
     "errOtpResend": "Não foi possível enviar um novo código. Tente daqui a pouco.",
     "errOtpLength": "Esse código parece incompleto. Copie o código completo do e-mail."
   },
+  "adoption": {
+    "title": "Dados existentes encontrados",
+    "body": "Você tem dados salvos neste dispositivo de antes de entrar na conta. Vamos adicioná-los à sua conta e sincronizar com a nuvem, ou descartá-los?",
+    "keep": "Manter e sincronizar com a nuvem",
+    "discard": "Descartar dados locais",
+    "later": "Decidir depois",
+    "working": "Processando…",
+    "failed": "Não foi possível salvar sua escolha neste dispositivo. Tente de novo.",
+    "footer": "Você não verá esta pergunta de novo nesta conta."
+  },
   "app": {
     "name": "Nexus Command Center",
     "tagline": "O sistema operacional da sua vida"

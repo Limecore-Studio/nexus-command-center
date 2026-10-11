@@ -118,6 +118,11 @@
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- v1.19 — NCC#139: lets the WebView track connectivity, so
+         navigator.onLine and the online/offline events reflect airplane mode.
+         Without it the sync's "offline? skip" check never fired and every
+         request went out to fail. Normal permission, no prompt. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Android 13 (API 33) and above require an explicit runtime permission

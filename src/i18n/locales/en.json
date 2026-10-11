@@ -143,6 +143,16 @@
     "errOtpResend": "Could not send a new code. Try again shortly.",
     "errOtpLength": "That code looks incomplete. Copy the whole code from the email."
   },
+  "adoption": {
+    "title": "Existing data found",
+    "body": "You have data stored locally on this device from before signing in. Should we adopt it into your account and sync it to the cloud, or discard it?",
+    "keep": "Keep & sync to cloud",
+    "discard": "Discard local data",
+    "later": "Decide later",
+    "working": "Working…",
+    "failed": "Couldn't save your choice on this device. Try again.",
+    "footer": "You won't be asked again on this account."
+  },
   "onboarding": {
     "welcomeTitle": "Let's set up your life OS",
     "welcomeBody": "Nexus pulls your finances, fitness, studies, work and habits into one score — so you can see how your life is trending at a glance.",

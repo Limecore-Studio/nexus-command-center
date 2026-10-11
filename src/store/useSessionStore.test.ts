@@ -12,6 +12,8 @@ const h = vi.hoisted(() => ({
   stored: null as unknown,
   listener: null as null | ((event: string, session: unknown) => void),
   published: [] as unknown[],
+  signOut: null as null | (() => Promise<{ error: unknown }>),
+  cleared: 0,
 }));
 
 vi.mock('../lib/supabase', () => ({
@@ -22,9 +24,11 @@ vi.mock('../lib/supabase', () => ({
         h.listener = cb;
         return { data: { subscription: { unsubscribe() {} } } };
       },
+      signOut: () => h.signOut!(),
     },
   },
   readStoredSession: async () => h.stored,
+  clearStoredSession: async () => void h.cleared++,
 }));
 vi.mock('../lib/ssoPublisher', () => ({
   publishSession: async (s: unknown) => void h.published.push(s),
@@ -34,6 +38,7 @@ vi.mock('../lib/originMarker', () => ({ scheduleOriginStamp: () => {} }));
 vi.mock('../lib/guestMode', () => ({ setGuestMode: async () => {} }));
 vi.mock('../db/database', () => ({ db: {} }));
 
+vi.stubGlobal('window', { dispatchEvent: () => true });
 const { useSessionStore } = await import('./useSessionStore');
 
 const STORED = { access_token: 'old', refresh_token: 'r', expires_at: 1, user: { id: 'u-1' } };
@@ -50,6 +55,7 @@ beforeEach(() => {
   h.stored = null;
   h.listener = null;
   h.published = [];
+  h.cleared = 0;
   useSessionStore.setState({
     session: null,
     user: null,
@@ -172,5 +178,36 @@ describe('useSessionStore.init (NCC#135)', () => {
     const s = useSessionStore.getState();
     expect(s.session).toEqual(FRESH);
     expect(s.sessionUnverified).toBe(false);
+  });
+});
+
+describe('useSessionStore.signOut (NCC#141 review)', () => {
+  beforeEach(() => {
+    useSessionStore.setState({ session: STORED as never, user: STORED.user as never, sessionUnverified: true });
+  });
+
+  it('signs out through the server when it answers', async () => {
+    h.signOut = async () => ({ error: null });
+    await useSessionStore.getState().signOut();
+    expect(h.cleared).toBe(0);
+    expect(useSessionStore.getState().user).toBeNull();
+    expect(useSessionStore.getState().sessionUnverified).toBe(false);
+  });
+
+  it('removes the local session when the server call fails', async () => {
+    h.signOut = async () => ({ error: new AuthRetryableFetchError('Failed to fetch', 0) });
+    await useSessionStore.getState().signOut();
+    expect(h.cleared).toBe(1);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+
+  it('gives up waiting after 3 s offline and removes the local session', async () => {
+    h.signOut = () => new Promise(() => {});
+    const p = useSessionStore.getState().signOut();
+    await vi.advanceTimersByTimeAsync(3000);
+    await p;
+    expect(h.cleared).toBe(1);
+    expect(useSessionStore.getState().user).toBeNull();
+    expect(useSessionStore.getState().sessionUnverified).toBe(false);
   });
 });

@@ -6,7 +6,7 @@
 // a valid session.
 import { create } from 'zustand';
 import { isAuthRetryableFetchError, type Session, type User } from '@supabase/supabase-js';
-import { readStoredSession, supabase } from '../lib/supabase';
+import { clearStoredSession, readStoredSession, supabase } from '../lib/supabase';
 import { publishSession, clearPublishedSession } from '../lib/ssoPublisher';
 import { setGuestMode } from '../lib/guestMode';
 import { scheduleOriginStamp } from '../lib/originMarker';
@@ -50,6 +50,8 @@ export function userInitials(user: User | null): string {
 // on the stored session. Online, an expired token refreshes well inside this;
 // offline, it caps a wait that used to run 25–50 s.
 const SESSION_HEAD_START_MS = 1500;
+// How long sign-out waits for the server before signing out locally.
+const SIGN_OUT_WAIT_MS = 3000;
 
 export const useSessionStore = create<SessionState>((set) => ({
   session: null,
@@ -191,7 +193,23 @@ export const useSessionStore = create<SessionState>((set) => ({
     } catch (e) {
       console.warn('[auth] signOut: syncQueue drain failed:', (e as Error).message);
     }
-    await supabase.auth.signOut({ scope: 'local' });
+    // v1.19 — NCC#141 review. Offline, auth-js's signOut first resolves the
+    // session (an expired token means its refresh retry chain: ~75 s
+    // measured), then its logout call fails on the network and it returns
+    // WITHOUT removing the session — the user tapped Sign out and came back
+    // signed in. Give it a few seconds; past that, or on any error, remove
+    // the stored session here so the sign-out is real on this device.
+    const outcome = await Promise.race([
+      supabase.auth.signOut({ scope: 'local' }).then(
+        ({ error }) => error ?? null,
+        (error: unknown) => error,
+      ),
+      new Promise<'timeout'>((res) => setTimeout(() => res('timeout'), SIGN_OUT_WAIT_MS)),
+    ]);
+    if (outcome) {
+      console.warn('[auth] signOut: server not reached, removing the local session:', outcome === 'timeout' ? 'timed out' : (outcome as Error).message);
+      await clearStoredSession();
+    }
     // v1.1 auth UX — clear the guest-mode flag so the next render lands
     // on the Login screen rather than back into a half-authenticated guest
     // state. App.tsx listens for the change event below.
@@ -199,6 +217,6 @@ export const useSessionStore = create<SessionState>((set) => ({
     window.dispatchEvent(new CustomEvent('nexus:guest-mode-changed'));
     // onAuthStateChange will fire with null and update state. Also set here
     // to avoid a one-frame flash of stale user data.
-    set({ session: null, user: null });
+    set({ session: null, user: null, sessionUnverified: false });
   },
 }));

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -67,7 +67,11 @@ export default function AdoptionPrompt() {
   const confirm = useConfirm();
   const user = useSessionStore((s) => s.user);
   const syncNow = useSyncStore((s) => s.syncNow);
+  const refreshPending = useSyncStore((s) => s.refreshPending);
   const [show, setShow] = useState(false);
+  // True while Discard's confirmation is open, so Escape / back close that
+  // dialog's question, not the prompt underneath it.
+  const confirmingRef = useRef(false);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   // Bumped by the browser's `online` event so an "unknown" answer is asked
@@ -83,6 +87,14 @@ export default function AdoptionPrompt() {
   // Decide whether to show on mount + when user changes.
   useEffect(() => {
     let cancelled = false;
+    // v1.19 — NCC#141 review: a run started by the `online` re-check can
+    // still be waiting on the cloud when the user answers the prompt. Its
+    // answer was computed before that, so check again right before showing.
+    const showUnlessAnswered = (userId: string, userChange: boolean) => {
+      if (cancelled || deferredThisLaunch.has(userId)) return;
+      if (userChange ? readLastUserId() === userId : readDecided(userId)) return;
+      setShow(true);
+    };
     (async () => {
       if (!user) {
         if (!cancelled) setShow(false);
@@ -104,7 +116,7 @@ export default function AdoptionPrompt() {
       const isUserChange =
         previousUserId !== null && previousUserId !== user.id && hasData;
       if (isUserChange) {
-        if (!cancelled) setShow(true);
+        showUnlessAnswered(user.id, true);
         return;
       }
       // v1.19 — NCC#139: a decision already made on this device needs no
@@ -140,7 +152,7 @@ export default function AdoptionPrompt() {
         if (!cancelled) setShow(false);
         return;
       }
-      if (!cancelled) setShow(true);
+      showUnlessAnswered(user.id, false);
     })();
     return () => {
       cancelled = true;
@@ -148,7 +160,7 @@ export default function AdoptionPrompt() {
   }, [user, recheck]);
 
   const onLater = () => {
-    if (!user || busy) return;
+    if (!user || busy || confirmingRef.current) return;
     deferredThisLaunch.add(user.id);
     setShow(false);
   };
@@ -181,6 +193,10 @@ export default function AdoptionPrompt() {
       // Local only: every row goes into the sync queue. Nothing here waits
       // on the network, so offline it finishes as fast as online.
       await adoptLocalData(user.id);
+      // The sync's `online` and 30 s triggers only fire when they see queued
+      // rows, and offline nothing refreshes that count — so without this,
+      // rows queued offline waited for the next launch to go up.
+      void refreshPending();
       // Remember the decision BEFORE hiding the UI so a misfired re-mount
       // doesn't re-prompt; the cloud copy follows when it can.
       recordDecision(user.id);
@@ -200,7 +216,11 @@ export default function AdoptionPrompt() {
   };
 
   const onDiscard = async () => {
-    if (!(await confirm({ message: t('common.wipeTestData') }))) return;
+    confirmingRef.current = true;
+    const ok = await confirm({ message: t('common.wipeTestData') }).finally(() => {
+      confirmingRef.current = false;
+    });
+    if (!ok) return;
     setBusy(true);
     setFailed(false);
     try {

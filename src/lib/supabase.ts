@@ -44,10 +44,13 @@ const capacitorStorage: SupportedStorage = {
 // v1.19 — NCC#139: no request used to have a time limit. On Wi-Fi with no
 // route (or a captive portal) a request can stay pending forever, and every
 // await behind it — a sync, the "Existing data found" prompt — sat on
-// "Working…" with it. 30 s is far past any healthy response (the slowest
-// call, the delete-account function, answers in a few seconds) and NCC has no
-// storage uploads, so nothing legitimate is cut off. A caller's own signal
-// still aborts as before.
+// "Working…" with it; a hung auth request also holds auth-js's lock, which
+// queues every later request behind it. 30 s is far past any healthy
+// response (the slowest call, the delete-account function, answers in a few
+// seconds) and NCC has no storage uploads, so nothing legitimate is cut off.
+// This bounds the HTTP request itself; time spent waiting for auth-js's lock
+// before a request is sent is not covered. A caller's own signal still aborts
+// as before.
 const REQUEST_TIMEOUT_MS = 30_000;
 
 export function fetchWithTimeout(
@@ -57,11 +60,15 @@ export function fetchWithTimeout(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const outer = init.signal;
+  const forward = () => controller.abort(outer?.reason);
   if (outer) {
-    if (outer.aborted) controller.abort();
-    else outer.addEventListener('abort', () => controller.abort(), { once: true });
+    if (outer.aborted) forward();
+    else outer.addEventListener('abort', forward, { once: true });
   }
-  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+    clearTimeout(timer);
+    outer?.removeEventListener('abort', forward);
+  });
 }
 
 const SESSION_STORAGE_KEY = 'nexus-supabase-session';
@@ -102,6 +109,13 @@ export async function readStoredSession(): Promise<Session | null> {
   } catch {
     return null;
   }
+}
+
+/** v1.19 — NCC#141 review: removes the stored session without the network.
+ *  For a sign-out that couldn't reach the server — auth-js only removes the
+ *  session after its logout call succeeds, so offline it would stay. */
+export async function clearStoredSession(): Promise<void> {
+  await capacitorStorage.removeItem(SESSION_STORAGE_KEY);
 }
 
 // ── Mobile session durability (v1.7 — forced-logout bug) ────────────────

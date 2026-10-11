@@ -230,14 +230,22 @@ public class NexusNotificationsPlugin extends Plugin {
         }
 
         // RTC_WAKEUP wakes the device if asleep — necessary for time-of-day
-        // notifications like the 4:05pm market-close recap. setAndAllowWhileIdle
+        // notifications like the 4:05pm market-close recap. AllowWhileIdle
         // adds Doze-mode tolerance (within OS-imposed quota) so the alarm
         // still fires during long idle stretches; without it, doze can
         // defer the alarm by hours.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
+        //
+        // v1.19 — NCC#137: setAndAllowWhileIdle is INEXACT. Android may
+        // deliver it well after fireAt (a large share of the lead time, up
+        // to about an hour), so a 09:00 task reminder could land at 09:40.
+        // The exact variant fires on the minute; USE_EXACT_ALARM (manifest)
+        // grants it on API 33+, SCHEDULE_EXACT_ALARM on 31-32. If the user
+        // revokes it in system settings, fall back to the inexact call
+        // rather than throwing a SecurityException.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
         } else {
-            am.set(AlarmManager.RTC_WAKEUP, fireAt, pi);
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
         }
 
         // Track the ID so cancelAll / getPending can enumerate it later.

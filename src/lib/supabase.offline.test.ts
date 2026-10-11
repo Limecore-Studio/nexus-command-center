@@ -15,6 +15,9 @@ vi.mock('@capacitor/preferences', () => ({
 
 // The module builds its web OAuth redirect from window.location at import.
 vi.stubGlobal('window', { location: { origin: 'http://localhost' } });
+// createClient() builds the realtime client at import, which needs a WebSocket
+// constructor; CI runs Node 20, which has none. Nothing here connects.
+if (typeof globalThis.WebSocket === 'undefined') vi.stubGlobal('WebSocket', class {});
 const { readStoredSession, fetchWithTimeout } = await import('./supabase');
 
 describe('readStoredSession', () => {

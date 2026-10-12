@@ -18,7 +18,7 @@
 // overlay show live suggestions for a half-typed token — there is no such thing
 // as a "partially parsed" state to special-case.
 
-import { parseAmount } from './parseAmount';
+import { numberInput } from './numberInput';
 
 export interface QuickEntryDraft {
   /** Positive magnitude. Direction is in `type`, as everywhere else. */
@@ -44,14 +44,14 @@ function shiftDays(today: string, days: number): string {
 /**
  * Amount parsing for TYPED input, which is narrower than the CSV case: the
  * user types one number, so a lone separator with one or two digits after it
- * is a decimal point in any locale. Reuses `parseAmount` rather than carrying a
- * second implementation of currency-symbol and grouping handling.
+ * is a decimal point in any locale. Goes through `numberInput` (and so
+ * `parseAmount`) rather than carrying a second implementation.
  */
 function typedAmount(token: string): number | null {
-  const hasComma = token.includes(',');
-  const hasDot = token.includes('.');
-  if (hasComma && !hasDot) return parseAmount(token, ',');
-  return parseAmount(token, '.');
+  // v1.18.1 (NCC#144): the same rules as every other money field
+  // (numberInput). This read "1.234,56" as 1.23456.
+  const n = numberInput(token);
+  return Number.isNaN(n) ? null : n;
 }
 
 /** A token is an amount only if it is mostly digits — `#food` and `2for1`

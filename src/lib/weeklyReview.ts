@@ -15,6 +15,7 @@ import type { Transaction, PortfolioHolding } from '../types/finance';
 import type { Course, StudySession } from '../types/studies';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
+import { parseDateLocal } from '@/utils/formatters';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Date helpers
@@ -39,7 +40,7 @@ function endOfWeek(weekStart: Date): Date {
 }
 
 function inRange(iso: string, start: Date, end: Date): boolean {
-  const t = new Date(iso).getTime();
+  const t = parseDateLocal(iso).getTime();
   return t >= start.getTime() && t <= end.getTime();
 }
 
@@ -247,7 +248,7 @@ function aggregateTasks(tasks: Task[], weekStart: Date): TasksWeekly {
     if (inRange(t.createdAt, weekStart, weekEnd)) created++;
     if (!t.completed) {
       stillOpen++;
-      if (t.dueDate && new Date(t.dueDate).getTime() < now.getTime()) overdue++;
+      if (t.dueDate && parseDateLocal(t.dueDate).getTime() < now.getTime()) overdue++;
     }
   }
 

@@ -38,18 +38,32 @@ export function calculateGPA(
   gradesBySubject: Map<string, Grade[]>,
   mode: GradeMode = 'us',
 ): number {
-  let totalCredits = 0;
-  let weightedSum = 0;
+  // v1.18.1 (NCC#160): matches StudyDesk (StudyDesk#147). A course set to 0
+  // credits (pass/fail) counts for nothing; `c.credits || 1` counted it as 1,
+  // so the two apps showed different averages for the same synced data. A
+  // course with no credits set still counts as 1, and when every graded
+  // course is 0 credits the plain mean is shown rather than 0.
+  const scored: { points: number; credits: number }[] = [];
   for (const c of courses) {
     const grades = gradesBySubject.get(c.id) ?? [];
     const score = subjectScore(grades);
     if (score == null) continue;
-    const credits = c.credits || 1;
-    totalCredits += credits;
-    weightedSum += (mode === 'us' ? gradeToPoints(score) : score) * credits;
+    scored.push({ points: mode === 'us' ? gradeToPoints(score) : score, credits: gpaCredits(c.credits) });
   }
-  if (totalCredits === 0) return 0;
+  if (scored.length === 0) return 0;
+  let totalCredits = scored.reduce((sum, x) => sum + x.credits, 0);
+  if (totalCredits === 0) {
+    for (const x of scored) x.credits = 1;
+    totalCredits = scored.length;
+  }
+  const weightedSum = scored.reduce((sum, x) => sum + x.points * x.credits, 0);
   return Math.round((weightedSum / totalCredits) * 100) / 100;
+}
+
+function gpaCredits(credits: unknown): number {
+  if (credits == null || credits === '') return 1;
+  const n = Number(credits);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
 }
 
 // ─── Scale inference ────────────────────────────────────────────────────

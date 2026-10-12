@@ -9,6 +9,9 @@ import { useFinanceStore } from '../../store/useFinanceStore';
 import { useTemplatesStore } from '../../store/useTemplatesStore';
 import type { TransactionTemplate } from '../../types/templates';
 import { TransactionType } from '../../types/finance';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
+import { localDateKey } from '@/utils/formatters';
 
 const types: { key: TransactionType; labelKey: string }[] = [
   { key: 'expense', labelKey: 'fin.tx.expense' },
@@ -46,7 +49,7 @@ export default function AddTransaction() {
   const [categoryId, setCategoryId] = useState<string>('');
   const [accountId, setAccountId] = useState<string>('');
   const [destinationAccountId, setDestinationAccountId] = useState<string>('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localDateKey(new Date()));
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -95,7 +98,7 @@ export default function AddTransaction() {
   }, [refreshTemplates]);
 
   const submit = async () => {
-    const n = parseFloat(amount);
+    const n = numberInput(amount);
     if (!n || n < 0 || !description.trim()) return;
     // v1.2 follow-up — CTO Account refactor. Validation:
     //   - Transfers require source != destination (would be a no-op)

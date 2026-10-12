@@ -137,6 +137,24 @@ export function buildNetWorthTrend({
   const inRange = buckets.filter(({ y, m }) => monthEndKey(y, m) >= firstSeen);
   if (inRange.length === 0) return empty;
 
+  // v1.18.1 (NCC#149): moving money between an account and the portfolio
+  // (Deposit, Withdraw, Savings "Invest") changes the account's OPENING
+  // balance, which is undated, while the cash entry is dated when it
+  // happened. Read as-is, every month before a deposit lost the amount and
+  // net worth showed a drop that never happened. So for a month before a
+  // move, the move is added back to the account it came from (a withdrawal,
+  // stored negative, is taken back off the account it went to).
+  const moves = cash.filter((e) => e.accountId && (e.type === 'deposit' || e.type === 'withdrawal'));
+  const laterMovesBase = (accountId: string, asOf: string): number => {
+    let sum = 0;
+    for (const e of moves) {
+      if (e.accountId !== accountId || dayOf(e.createdAt) <= asOf) continue;
+      const v = e.currency === baseCurrency ? e.amount : convertSync(e.amount, e.currency, baseCurrency, fxRates);
+      if (v != null) sum += v;
+    }
+    return sum;
+  };
+
   let txIdx = 0;
   let snapIdx = 0;
   let cashIdx = 0;
@@ -176,6 +194,7 @@ export function buildNetWorthTrend({
       // A balance we cannot convert is unknown, and adding 0 for it would
       // quietly understate net worth. Drop the slice instead.
       if (base == null) continue;
+      base += laterMovesBase(a.id, asOf);
       accountsBase += base;
       slices.push({ id: a.id, name: a.name, accountType: a.accountType, base });
     }

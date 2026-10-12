@@ -22,7 +22,7 @@ import { useGoalsStore } from '../store/useGoalsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { computeGoalProgress } from '../lib/goals';
 import { buildWeeklyReview } from '../lib/weeklyReview';
-import { formatCurrency, isOverdue, isToday } from '../utils/formatters';
+import { formatCurrency, isOverdue, isToday, localDateKey, parseDateLocal } from '../utils/formatters';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -60,9 +60,11 @@ export default function Dashboard() {
   // Dashboard can still see live state — but no longer trigger a refresh here.
 
   const monthExpenses = useMemo(() => {
-    const now = new Date();
+    // v1.18.1 (NCC#148): this month of THIS year. Comparing getMonth() alone
+    // counted every past October against this October's budget.
+    const month = localDateKey(new Date()).slice(0, 7);
     return transactions
-      .filter((t) => t.type === 'expense' && new Date(t.date).getMonth() === now.getMonth())
+      .filter((t) => t.type === 'expense' && localDateKey(parseDateLocal(t.date)).slice(0, 7) === month)
       .reduce((s, t) => s + t.amount, 0);
   }, [transactions]);
 
@@ -80,7 +82,7 @@ export default function Dashboard() {
     return transactions
       .filter((t) => {
         if (t.type !== 'expense') return false;
-        const d = new Date(t.date);
+        const d = parseDateLocal(t.date);
         return d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth();
       })
       .reduce((s, t) => s + t.amount, 0);
@@ -101,7 +103,7 @@ export default function Dashboard() {
   // ticking clock in state for a number that changes once a day.
   // eslint-disable-next-line react-hooks/purity
   const weekAgo = Date.now() - 7 * 86400000;
-  const workoutsThisWeek = sessions.filter((s) => new Date(s.date).getTime() > weekAgo).length;
+  const workoutsThisWeek = sessions.filter((s) => parseDateLocal(s.date).getTime() > weekAgo).length;
 
   const gpaDelta = studies && previousGpa != null
     ? `${studies.calculatedGpa - previousGpa >= 0 ? '↑' : '↓'} ${Math.abs(studies.calculatedGpa - previousGpa).toFixed(2)} ${t('dash.pts')}`

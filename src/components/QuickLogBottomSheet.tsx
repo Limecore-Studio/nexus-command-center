@@ -8,6 +8,8 @@ import { useTemplatesStore } from '../store/useTemplatesStore';
 import { useWorkQualityStore, todayKey } from '../store/useWorkQualityStore';
 import { localDateKey } from '../utils/formatters';
 import Glyph from './Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 // v1.5.2 — Quick Log is NCC-native only. Grade (StudyDesk), study Session
 // (StudyDesk) and workout Set (LimeLog) were removed: cramming stripped-down
@@ -103,7 +105,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
   }, [categoryId, categories, accountId]);
 
   const submit = async () => {
-    const n = parseFloat(amount);
+    const n = numberInput(amount);
     // Reject negative amounts too: a negative expense inverts the account
     // balance and budget math downstream (renders as a red expense that ADDS
     // to the balance). Quick Log has no visible amount-sign control.

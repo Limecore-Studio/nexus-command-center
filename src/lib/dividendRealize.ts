@@ -37,6 +37,7 @@
 import type { PortfolioHolding, PortfolioCashEntry } from '../types/finance';
 import type { DividendEvent } from '../api/stockDetail';
 import { legacyIdToUuid } from '../utils/uuid';
+import { localDateKey } from '@/utils/formatters';
 
 const ANCHOR_KEY = 'nexus.dividendRealize.anchor.v1';
 
@@ -62,7 +63,7 @@ interface DividendCredit {
  * aren't back-credited on upgrade. `now` is injectable for tests.
  */
 function getDividendAnchor(now: number = Date.now()): string {
-  const today = new Date(now).toISOString().slice(0, 10);
+  const today = localDateKey(new Date(now));
   try {
     const existing = localStorage.getItem(ANCHOR_KEY);
     if (existing) return existing;
@@ -91,7 +92,7 @@ export function computeDividendCredits(
   existingEntries: PortfolioCashEntry[],
   now: number = Date.now(),
 ): DividendCredit[] {
-  const today = new Date(now).toISOString().slice(0, 10);
+  const today = localDateKey(new Date(now));
   const anchor = getDividendAnchor(now);
   const existingIds = new Set(existingEntries.map((e) => e.id));
 

@@ -13,6 +13,8 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { portfolioCashBalance } from '../lib/portfolioCash';
 import type { ManualAssetType } from '../types/finance';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 const LIQUID_TYPES: ManualAssetType[] = ['cash', 'savings', 'checking'];
 
@@ -53,7 +55,7 @@ export default function PortfolioCashCard() {
   const cancel = () => { setMode(null); setError(null); };
 
   const submit = async () => {
-    const amt = parseFloat(amount);
+    const amt = numberInput(amount);
     if (!(amt > 0) || !accountId) return;
     try {
       if (mode === 'deposit') await deposit({ amount: amt, currency: baseCurrency, accountId });
@@ -136,7 +138,7 @@ export default function PortfolioCashCard() {
             <button
               className="btn flex-1"
               onClick={submit}
-              disabled={!(parseFloat(amount) > 0) || !accountId}
+              disabled={!(numberInput(amount) > 0) || !accountId}
             >
               {mode === 'deposit' ? 'Deposit' : 'Withdraw'}
             </button>

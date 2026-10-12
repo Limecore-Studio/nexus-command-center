@@ -148,7 +148,7 @@ interface FitnessStore {
   disconnectHealthConnect: () => Promise<void>;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDateKey(new Date());
 
 export const useFitnessStore = create<FitnessStore>((set, get) => ({
   sessions: [],

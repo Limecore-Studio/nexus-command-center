@@ -23,8 +23,9 @@ import {
   type DividendEvent,
 } from '../api/stockDetail';
 import { getMarketNews } from '../api/marketNews';
-import { computeDividendCredits } from '../lib/dividendRealize';
+import { computeDividendCredits, guestDividendKey } from '../lib/dividendRealize';
 import { useSettingsStore } from './useSettingsStore';
+import { useSessionStore } from './useSessionStore';
 import { checkBudgetThresholds } from '../lib/budgetAlerts';
 // v1.2 follow-up — CTO Account refactor. The BUG-6 budgetAssetBridge helper
 // is no longer wired (and the file removed): in the Account model every
@@ -832,6 +833,9 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
         get().holdings,
         nextDividends,
         get().portfolioCashEntries,
+        Date.now(),
+        // v1.18.1 (NCC#152): credit ids are per owner.
+        useSessionStore.getState().user?.id ?? guestDividendKey(),
       );
       for (const c of credits) {
         await addCashEntry(set, get, {

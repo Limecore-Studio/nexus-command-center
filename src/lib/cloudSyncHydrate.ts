@@ -7,6 +7,7 @@ import { selectAll } from './selectAll';
 import type { Table } from 'dexie';
 import { recordSeen } from './editStamp';
 import { db } from '../db/database';
+import { listPending } from '../db/syncQueue';
 import { legacyIdToUuid } from '../utils/uuid';
 import type { StockSale, PortfolioCashEntry } from '../types/finance';
 import type { Course, Grade, StudySession } from '../types/studies';
@@ -14,6 +15,48 @@ import type { BodyMetric } from '../types/fitness';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
+
+/**
+ * v1.18.1 (NCC#146, NCC#161) — write rows pulled from the cloud, skipping rows
+ * with a change still waiting in the sync queue, and keeping `localOnly`
+ * fields from the row already on this device.
+ *  - Pending rows: the server's copy is older than this device's unsent
+ *    edit. Writing it reverted the edit, and a second edit built on the
+ *    reverted row then lost the first. They refresh on the pull after their
+ *    push lands. The queue is read inside the same transaction as the write,
+ *    so an edit queued while the pull's network reads ran is seen too. Both
+ *    id forms count: a legacy local id reaches the server as
+ *    legacyIdToUuid(id).
+ *  - localOnly fields have no server column (the push never sends them), so
+ *    the pulled copy always lacks them, and a plain bulkPut erased them on
+ *    every sync.
+ */
+export async function putFromCloud<T extends { id: string }>(
+  table: Table<T, string>,
+  rows: T[],
+  localOnly: (keyof T)[] = [],
+): Promise<void> {
+  await db.transaction('rw', table, db.syncQueue, async () => {
+    const pendingIds = new Set<string>();
+    for (const q of await listPending()) {
+      pendingIds.add(q.entityId);
+      pendingIds.add(legacyIdToUuid(q.entityId));
+    }
+    const fresh = rows.filter((r) => !pendingIds.has(r.id));
+    if (localOnly.length > 0 && fresh.length > 0) {
+      const existing = await table.bulkGet(fresh.map((r) => r.id));
+      fresh.forEach((r, i) => {
+        const prev = existing[i];
+        if (!prev) return;
+        for (const k of localOnly) {
+          if (prev[k] !== undefined) r[k] = prev[k];
+        }
+      });
+    }
+    await table.bulkPut(fresh);
+  });
+}
+
 
 // ============================================================================
 // Studies hydration — explicit fetch-then-write for the three StudyDesk tables
@@ -135,7 +178,7 @@ export async function hydrateStudiesTables(userId: string): Promise<StudiesHydra
         archivedAt: s.archived_at ?? undefined,
         createdAt: s.created_at,
       }));
-      await db.courses.bulkPut(courses);
+      await putFromCloud(db.courses, courses);
       const removed = await removeTombstoned(db.courses, deletedIds);
       subjectCount = courses.length;
       console.log(`[studies-hydrate] subjects=${subjectCount} removed=${removed}`);
@@ -162,7 +205,7 @@ export async function hydrateStudiesTables(userId: string): Promise<StudiesHydra
         createdAt: g.created_at,
         updatedAt: g.updated_at,
       }));
-      await db.grades.bulkPut(grades);
+      await putFromCloud(db.grades, grades);
       const removed = await removeTombstoned(db.grades, deletedIds);
       gradeCount = grades.length;
       console.log(`[studies-hydrate] grades=${gradeCount} removed=${removed}`);
@@ -189,7 +232,7 @@ export async function hydrateStudiesTables(userId: string): Promise<StudiesHydra
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
-      await db.studySessions.bulkPut(sessions);
+      await putFromCloud(db.studySessions, sessions);
       const removed = await removeTombstoned(db.studySessions, deletedIds);
       sessionCount = sessions.length;
       console.log(`[studies-hydrate] study_sessions=${sessionCount} removed=${removed}`);
@@ -258,7 +301,7 @@ export async function hydrateHabitsFromCloud(
         createdAt: h.created_at,
         updatedAt: h.updated_at,
       }));
-      await db.habits.bulkPut(habits);
+      await putFromCloud(db.habits, habits);
       habitCount = habits.length;
     }
   } catch (e) {
@@ -281,7 +324,7 @@ export async function hydrateHabitsFromCloud(
         syncStatus: 'synced' as const,
         createdAt: c.created_at,
       }));
-      await db.habitCompletions.bulkPut(completions);
+      await putFromCloud(db.habitCompletions, completions);
       // v1.16 (NCC#58): one local row per (habit, day), and it is the
       // server's. A row minted on this device for a day another device had
       // already recorded — or the same row still held under its legacy id —
@@ -344,7 +387,7 @@ export async function hydrateBodyMetricsFromCloud(
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
-      await db.bodyMetrics.bulkPut(rows);
+      await putFromCloud(db.bodyMetrics, rows);
       count = rows.length;
     }
   } catch (e) {
@@ -387,8 +430,19 @@ export async function hydrateWorkQualityFromCloud(
         createdAt: r.created_at,
         updatedAt: r.updated_at,
       }));
-      await db.workQualityLogs.bulkPut(rows);
+      await putFromCloud(db.workQualityLogs, rows);
       count = rows.length;
+      // v1.18.1 (NCC#154): a day this device rated under its own id while
+      // another device's row for that day was already on the server. The
+      // server row just landed, so the local one is a shadow: two rows for
+      // one day, and edits went to whichever find() hit first. Drop it unless
+      // a change to it is still queued (that push lands on the server row).
+      const serverIdByDate = new Map(rows.map((r) => [r.date, r.id]));
+      const queued = new Set((await listPending()).map((q) => q.entityId));
+      const shadowed = (await db.workQualityLogs.toArray())
+        .filter((l) => serverIdByDate.has(l.date) && serverIdByDate.get(l.date) !== l.id && !queued.has(l.id))
+        .map((l) => l.id);
+      if (shadowed.length > 0) await db.workQualityLogs.bulkDelete(shadowed);
     }
   } catch (e) {
     const msg = (e as Error).message;
@@ -436,7 +490,7 @@ export async function hydrateBraindumpFromCloud(
         updatedAt: r.updated_at,
         deletedAt: null,
       }));
-      await db.braindumpEntries.bulkPut(rows);
+      await putFromCloud(db.braindumpEntries, rows);
       count = rows.length;
     }
   } catch (e) {
@@ -481,7 +535,7 @@ export async function hydrateStockSalesFromCloud(
         syncStatus: 'synced' as const,
         createdAt: r.created_at,
       }));
-      await db.stockSales.bulkPut(rows);
+      await putFromCloud(db.stockSales, rows);
       count = rows.length;
     }
   } catch (e) {
@@ -521,7 +575,7 @@ export async function hydratePortfolioCashFromCloud(
         createdAt: r.created_at,
         syncStatus: 'synced' as const,
       }));
-      await db.portfolioCashEntries.bulkPut(rows);
+      await putFromCloud(db.portfolioCashEntries, rows);
       count = rows.length;
     }
   } catch (e) {

@@ -608,7 +608,8 @@
     "bioUnavailable": "Biometria ei käytettävissä tällä laitteella",
     "setPinFirst": "Aseta ensin PIN — biometria avaa vasta alkuasetuksen jälkeen",
     "bio": "Bio",
-    "forgotPin": "Unohtuiko PIN? Nollaa kohdasta Asetukset → Tyhjennä kaikki tiedot"
+    "forgotPin": "Unohtuiko PIN? Nollaa kohdasta Asetukset → Tyhjennä kaikki tiedot",
+    "pinUnreadable": "Puhelin ei juuri nyt pysty lukemaan tallennettua PIN-koodiasi. Kokeile käynnistää sovellus uudelleen. Jos sormenjälkiavaus on käytössä, voit avata lukituksen sormenjäljellä, ja Asetukset → Tyhjennä kaikki tiedot antaa aloittaa alusta uudella PIN-koodilla. Muuten tyhjennä sovelluksen tallennustila Androidin asetuksista. Synkronoidut tiedot palaavat, kun kirjaudut sisään."
   },
   "fin": {
     "flow": {

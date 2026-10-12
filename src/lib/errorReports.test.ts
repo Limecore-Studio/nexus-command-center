@@ -171,12 +171,33 @@ describe('uncaught errors and rejections', () => {
 describe('the export includes what exists only on the server', () => {
   it('reads the user\'s feedback and error reports', async () => {
     holder.client = fakeClient({
-      feedback: [{ id: 'f1', user_id: USER.id, message: 'hi' }, { id: 'f2', user_id: 'someone-else', message: 'no' }],
-      client_errors: [{ id: 'e1', user_id: USER.id, error_name: 'TypeError' }],
+      // RLS returns only the caller's own feedback rows.
+      feedback: [{ id: 'f1', user_id: USER.id, message: 'hi' }],
+      client_errors: [{ id: 'e1', user_id: USER.id, error_name: 'TypeError' }, { id: 'e2', user_id: 'someone-else', error_name: 'x' }],
     });
     const server = await serverOnlyData(USER.id);
     expect((server.feedback as any[]).map((r) => r.id)).toEqual(['f1']);
     expect((server.client_errors as any[]).map((r) => r.id)).toEqual(['e1']);
+  });
+
+  // v1.18.1 (NCC#158): production grants signed-in users nine feedback
+  // columns, not user_id; a request naming any other column, or `*`, fails
+  // as a whole with 42501. This fake refuses the same way.
+  it('asks feedback only for the columns a signed-in user may read', async () => {
+    const GRANTED = new Set(['id', 'app', 'app_version', 'category', 'rating', 'message', 'status', 'shipped_in', 'created_at']);
+    holder.client = fakeClient(
+      { feedback: [{ id: 'f1', message: 'hi' }] },
+      {
+        failWhen: (req) => {
+          if (req.table !== 'feedback') return null;
+          const cols = (req.columns ?? '*').split(',').map((c) => c.trim());
+          const named = [...cols, ...req.filters.map(([, col]) => col)];
+          return named.every((c) => GRANTED.has(c)) ? null : { code: '42501', message: 'permission denied for table feedback' };
+        },
+      },
+    );
+    const server = await serverOnlyData(USER.id);
+    expect(server.feedback).toEqual([{ id: 'f1', message: 'hi' }]);
   });
 
   it('says so in the export when a read fails, instead of leaving it out', async () => {

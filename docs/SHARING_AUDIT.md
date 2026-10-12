@@ -3,6 +3,15 @@
 **Date:** 2026-09-14 · **Asked by:** v1.14 plan, "Revive task sharing and
 budget-category sharing", step 1 — *audit first, before writing new code.*
 
+> **Out of date (2026-10-12, v1.18.1, NCC#157).** Sharing does not work
+> today. After this audit, `share_task`, `share_budget_category` and
+> `get_public_profiles` were made non-executable for signed-in users, so
+> every invite fails with 42501 (permission denied). The share buttons are
+> hidden (`SHARING_ENABLED` in `src/lib/sharing.ts`), and migration
+> `20261012_sharing_rpcs_execute_revoked.sql` records the revoke. Turning
+> sharing back on is tracked in Limekana/limecore#62. The rest of this
+> document describes the state on 2026-09-14.
+
 ## The question
 
 > Find the invite/accept UI in the current NCC codebase and confirm whether

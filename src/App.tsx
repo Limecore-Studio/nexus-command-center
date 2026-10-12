@@ -73,6 +73,7 @@ const LifeProfileSettings = lazy(() => import('./screens/LifeProfileSettings'));
 export default function App() {
   const unlocked = useAuthStore((s) => s.unlocked);
   const initAuth = useAuthStore((s) => s.init);
+  const authReady = useAuthStore((s) => s.ready);
   const initSync = useSyncStore((s) => s.init);
   const session = useSessionStore((s) => s.session);
   const sessionLoading = useSessionStore((s) => s.loading);
@@ -123,6 +124,9 @@ export default function App() {
       // gate logic below; we resolve to a final state once both are known.
       const guest = await isGuestMode();
       setGuestModeState(guest);
+      // v1.18.1 (limecore#58): the PIN state is read before any data work, so
+      // a failure in seeding or a store load can't keep it from being read.
+      await initAuth();
 
       // One-time wipe of prior seeded sample data.
       if (localStorage.getItem('nexus.seeded.v1') && !localStorage.getItem('nexus.wiped.v1')) {
@@ -136,7 +140,6 @@ export default function App() {
       // hydration block below. A guest captures ideas too, and without this
       // their dashboard card would read empty while their entries sat on disk.
       await useBraindumpStore.getState().load();
-      await initAuth();
       initSync();
       // v1.2 — install the Insights rating-history observer. Runs once;
       // subsequent installs replace the same singleton observer. Must be
@@ -413,6 +416,15 @@ export default function App() {
   // NOT ON WEB EITHER (2026-09-18, owner call): the same reasoning applies to
   // a browser tab. Android is the only build that keeps the lock.
   if (!unlocked && APP_LOCK_APPLIES) {
+    // v1.18.1 (limecore#58): until the stored PIN state is read, hasPin is
+    // its default (false) and LockScreen would open in "set a PIN" mode.
+    if (!authReady) {
+      return (
+        <div className="min-h-full bg-bg text-text flex items-center justify-center">
+          <div className="text-text-muted text-xs uppercase tracking-wider">{t('common.loading')}</div>
+        </div>
+      );
+    }
     return <LockScreen />;
   }
 

@@ -608,7 +608,8 @@
     "bioUnavailable": "Biométrie indisponible sur cet appareil",
     "setPinFirst": "Définissez d'abord un PIN — la biométrie déverrouille APRÈS la configuration initiale",
     "bio": "Bio",
-    "forgotPin": "PIN oublié ? Réinitialisez via Paramètres → Effacer toutes les données"
+    "forgotPin": "PIN oublié ? Réinitialisez via Paramètres → Effacer toutes les données",
+    "pinUnreadable": "Ce téléphone ne peut pas lire votre PIN enregistré pour le moment. Essayez de redémarrer l'app. Si le déverrouillage par empreinte est activé, vous pouvez l'utiliser, et Paramètres → Effacer toutes les données permet de repartir avec un nouveau PIN. Sinon, effacez le stockage de l'app dans les paramètres Android. Les données synchronisées reviennent à la connexion."
   },
   "fin": {
     "flow": {

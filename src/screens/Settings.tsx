@@ -25,7 +25,7 @@ import { useSettingsStore, BaseCurrency, UI_SCALES } from '../store/useSettingsS
 import { useShellTier } from '../lib/useShell';
 import { clearAllLocalData } from '../db/database';
 import { setErrorReportsEnabled, useErrorReportsEnabled } from '../lib/errorReports';
-import { biometricCapability } from '../utils/biometric';
+import { authenticateBiometric, biometricCapability } from '../utils/biometric';
 import { supabase } from '../lib/supabase';
 import { withCaptcha } from '../lib/captcha';
 import { setGuestMode } from '../lib/guestMode';
@@ -104,7 +104,16 @@ export default function Settings() {
       const entered = window.prompt(t('settings.pinReentry'));
       if (!entered) return;
       const result = await verifyPin(entered);
-      if (!result.ok) {
+      // v1.18.1 (limecore#58): a PIN this device can't read can't be checked.
+      // Clearing all data is the way out of that state, so a fingerprint
+      // stands in for the PIN here rather than blocking the wipe for good.
+      if (result.unreadable) {
+        const bio = await authenticateBiometric();
+        if (!bio.ok) {
+          alert(t('lock.pinUnreadable'));
+          return;
+        }
+      } else if (!result.ok) {
         if (result.locked) {
           alert(t('settings.wipeLocked', { n: result.locked.remainingSeconds }));
         } else {

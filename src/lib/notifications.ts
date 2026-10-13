@@ -31,6 +31,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { NexusNotifications, type NotificationAction } from './nexusNotificationsPlugin';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 export type { NotificationAction };
 
@@ -234,9 +235,10 @@ interface ScheduleOptions {
   /** When to fire. Omit for "immediately" (1 second from now — the native
    *  side won't accept past times, it floors them). */
   at?: Date;
-  /** Repeat cadence. Currently unused by the native plugin (single-shot
-   *  only); kept in the API surface for forward-compat. The Weekly Review
-   *  flow handles its own re-arming on every app start. */
+  /** Repeat cadence. v1.18.1 (NCC#138): 'day' is honoured by the native
+   *  plugin, which re-arms the alarm for the same local time the next day
+   *  each time it fires. Other values are not, and are not sent: the Weekly
+   *  Review flow re-arms itself on every app start. */
   every?: 'day' | 'week' | 'month' | 'year';
   /** Arbitrary payload — read in the tap handler. Keep small; this rides
    *  the AlarmManager intent. The `route` field is special: if present,
@@ -264,6 +266,12 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
   if (!Capacitor.isNativePlatform()) {
     return { ok: false, reason: 'Notifications not available on this platform.' };
   }
+  // v1.18.1 (NCC#151): the master switch, checked here so no scheduler can
+  // miss it. Habit reminders, habit milestones and insights tier alerts never
+  // checked it, so they kept firing for users who had turned notifications off.
+  if (!useSettingsStore.getState().notifMasterEnabled) {
+    return { ok: false, reason: 'Notifications are turned off.' };
+  }
   if (!(await hasNotificationPermission())) {
     return { ok: false, reason: 'Notification permission not granted.' };
   }
@@ -278,6 +286,7 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
       atMillis,
       extra: opts.extra,
       actions: opts.actions,
+      ...(opts.every === 'day' ? { every: 'day' } : {}),
     });
     return { ok: true };
   } catch (e) {
@@ -351,6 +360,10 @@ export async function onNotificationTap(
   try {
     const handle = await NexusNotifications.addListener('notificationTap', (event) => {
       if (isAppRoute(event.route)) onOpen(event.route);
+      // v1.18.1 (NCC#143): the native side also buffers every tap for the
+      // cold-start drain below. This one was delivered live, so clear the
+      // buffer, or the next subscription would replay it.
+      void NexusNotifications.consumePendingTap().catch(() => {});
     });
     // v1.3.1 BUG-14 — drain the cold-start buffer. If the app was launched
     // from a notification tap, the native event already fired (before this
@@ -401,6 +414,10 @@ export async function onNotificationAction(
         }
       }
       handler({ actionId: event.actionId, route: isAppRoute(event.route) ? event.route : '', extra });
+      // v1.18.1 (NCC#143): delivered live, so clear the native buffer; left
+      // there, the next subscription replayed it and a "Mark done" flipped
+      // the task back to not done.
+      void NexusNotifications.consumePendingAction().catch(() => {});
     });
     // v1.3.1 BUG-14 — drain the cold-start action buffer (same rationale as
     // onNotificationTap's drain). Cold-start from a "Mark done" tap would

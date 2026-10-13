@@ -170,7 +170,10 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
     // Reminder bookkeeping — schedule when the row has a time and isn't
     // archived; cancel in every other case.
     if (merged.reminderTime && !merged.archivedAt) {
-      void scheduleHabitReminder(merged);
+      // v1.18.1 (NCC#151): with today's streak and completion. Scheduling
+      // `merged` alone meant streak 0 and "not done today", so renaming a
+      // habit already done today still sent next morning's catch-up ping.
+      get()._rearmReminder(id);
     } else {
       void cancelHabitReminder({ id });
     }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -512,13 +512,27 @@ function NotificationBridge() {
     }
   }, [settingsLoaded, weeklyReminder]);
 
+  // v1.18.1 (NCC#143): subscribed ONCE. `navigate` changes identity with
+  // the route (React Router 7, HashRouter), and every re-subscription drained
+  // the native buffer again, replaying an old tap or "Mark done". The
+  // handlers read the current navigate through a ref instead.
+  const navigateRef = useRef(navigate);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
+
   useEffect(() => {
     let unsub: () => void = () => {};
-    onNotificationTap((route) => navigate(route)).then((u) => {
-      unsub = u;
+    let cancelled = false;
+    onNotificationTap((route) => navigateRef.current(route)).then((u) => {
+      if (cancelled) u();
+      else unsub = u;
     });
-    return () => unsub();
-  }, [navigate]);
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
 
   // Action-button taps. Each action ID maps to a different side-effect:
   //   'done'  → mark a task complete (extra.taskId)
@@ -528,6 +542,7 @@ function NotificationBridge() {
   // before this fires, so no manual cancel is needed.
   useEffect(() => {
     let unsub: () => void = () => {};
+    let cancelled = false;
     onNotificationAction((payload) => {
       const { actionId, route, extra } = payload;
       if (actionId === 'done' && extra && typeof extra.taskId === 'string') {
@@ -536,15 +551,21 @@ function NotificationBridge() {
         return;
       }
       if (actionId === 'view' && route) {
-        navigate(route);
+        navigateRef.current(route);
         return;
       }
       // Unknown actionId — log so we notice if a new scheduler ships an
       // action ID without a corresponding handler.
       console.warn('[notifications] unhandled action', actionId);
-    }).then((u) => { unsub = u; });
-    return () => unsub();
-  }, [navigate]);
+    }).then((u) => {
+      if (cancelled) u();
+      else unsub = u;
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
 
   return null;
 }

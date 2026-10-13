@@ -35,14 +35,22 @@ function taskNotifId(taskId: string): number {
   return TASKS_BASE + (Math.abs(hash) % TASKS_SIZE);
 }
 
-/** Convert a YYYY-MM-DD dueDate to a Date at 09:00 local time on that day.
- *  Returns null if the resulting time is in the past (the plugin would
- *  reject it; we'd rather skip than schedule something stale). */
-function dueAtNotifTime(dueDate: string): Date | null {
-  const [y, m, d] = dueDate.split('-').map(Number);
-  if (!y || !m || !d) return null;
-  const dt = new Date(y, m - 1, d, 9, 0, 0, 0);
-  if (dt.getTime() <= Date.now()) return null;
+/** When to remind about a task. A date-only dueDate ("YYYY-MM-DD") fires at
+ *  09:00 local on that day. A dueDate with a time — what Add Task and Quick
+ *  Log store, from a date-and-time picker — fires at that time.
+ *  v1.18.1 (NCC#142): only the date-only form was understood, so the ISO
+ *  instant the app itself stores parsed to NaN and no task reminder was ever
+ *  scheduled. Returns null for an unreadable or past time (we'd rather skip
+ *  than schedule something stale). */
+export function dueAtNotifTime(dueDate: string, now: number = Date.now()): Date | null {
+  let dt: Date;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dueDate);
+  if (dateOnly) {
+    dt = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 9, 0, 0, 0);
+  } else {
+    dt = new Date(dueDate);
+  }
+  if (Number.isNaN(dt.getTime()) || dt.getTime() <= now) return null;
   return dt;
 }
 

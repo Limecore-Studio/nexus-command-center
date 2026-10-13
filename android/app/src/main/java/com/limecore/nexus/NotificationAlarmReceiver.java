@@ -9,6 +9,7 @@ package com.limecore.nexus;
 // have ~10s before the system kills them. Posting a notification is far
 // under that budget.
 
+import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -23,6 +24,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Calendar;
+
 public class NotificationAlarmReceiver extends BroadcastReceiver {
 
     private static final String TAG = "NexusNotifications";
@@ -34,6 +37,10 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        // v1.18.1 (NCC#138): a daily reminder re-arms itself first, so a
+        // failure further down cannot stop tomorrow's.
+        rearmIfDaily(context, intent);
+
         int id = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_ID, 0);
         String title = intent.getStringExtra(NexusNotificationsPlugin.EXTRA_TITLE);
         String body = intent.getStringExtra(NexusNotificationsPlugin.EXTRA_BODY);
@@ -137,5 +144,39 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
             // before scheduling, but defensively we don't crash the receiver.
             Log.w(TAG, "POST_NOTIFICATIONS not granted: " + se.getMessage());
         }
+    }
+
+    /** v1.18.1 (NCC#138) — `every: "day"` used to be ignored, so the daily
+     *  habit reminder fired once and then stayed silent until the app was
+     *  opened again. When this alarm fires, schedule the same intent for the
+     *  same LOCAL time on the next day (Calendar keeps the wall-clock time
+     *  across a DST change; adding 24 hours would not). Same request code and
+     *  component as the original, so cancel() in the plugin still cancels it.
+     *  Not covered: a reboot or force-stop clears all alarms until the app
+     *  is opened again (no boot receiver; the owner's call, see NCC#138). */
+    private static void rearmIfDaily(Context context, Intent intent) {
+        if (!"day".equals(intent.getStringExtra(NexusNotificationsPlugin.EXTRA_EVERY))) return;
+        int id = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_ID, 0);
+        long at = intent.getLongExtra(NexusNotificationsPlugin.EXTRA_AT, System.currentTimeMillis());
+        Calendar next = Calendar.getInstance();
+        next.setTimeInMillis(at);
+        long now = System.currentTimeMillis();
+        do {
+            next.add(Calendar.DAY_OF_MONTH, 1);
+        } while (next.getTimeInMillis() <= now);
+
+        Intent again = new Intent(intent);
+        again.putExtra(NexusNotificationsPlugin.EXTRA_AT, next.getTimeInMillis());
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pi = PendingIntent.getBroadcast(context, id, again, flags);
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (am == null) {
+            Log.w(TAG, "AlarmManager unavailable; daily reminder id=" + id + " not re-armed");
+            return;
+        }
+        NexusNotificationsPlugin.setAlarm(am, next.getTimeInMillis(), pi);
     }
 }

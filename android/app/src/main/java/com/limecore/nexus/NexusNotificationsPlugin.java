@@ -83,6 +83,11 @@ public class NexusNotificationsPlugin extends Plugin {
     // payload can pass through PendingIntent boundaries without custom
     // Parcelable plumbing.
     public static final String EXTRA_ACTIONS_JSON = "nexus_actions_json";
+    // v1.18.1 (NCC#138): repeat cadence ("day" or absent) and the time this
+    // alarm was set for, so NotificationAlarmReceiver can re-arm a daily
+    // reminder for the same local time tomorrow when it fires.
+    public static final String EXTRA_EVERY = "nexus_every";
+    public static final String EXTRA_AT = "nexus_at";
 
     // Singleton handle so the static action-receiver (which has no Plugin
     // reference of its own) can route events back into JS via this
@@ -184,6 +189,7 @@ public class NexusNotificationsPlugin extends Plugin {
         Long atMillis = call.getLong("atMillis");
         JSObject extra = call.getObject("extra", new JSObject());
         JSArray actions = call.getArray("actions"); // optional
+        String every = call.getString("every"); // optional; only "day" is used
 
         if (id == null) {
             call.reject("Missing id");
@@ -212,6 +218,10 @@ public class NexusNotificationsPlugin extends Plugin {
         if (actions != null && actions.length() > 0) {
             intent.putExtra(EXTRA_ACTIONS_JSON, actions.toString());
         }
+        intent.putExtra(EXTRA_AT, fireAt);
+        if ("day".equals(every)) {
+            intent.putExtra(EXTRA_EVERY, "day");
+        }
 
         // FLAG_UPDATE_CURRENT so re-scheduling with the same ID replaces
         // the existing alarm cleanly. FLAG_IMMUTABLE is required on
@@ -229,16 +239,7 @@ public class NexusNotificationsPlugin extends Plugin {
             return;
         }
 
-        // RTC_WAKEUP wakes the device if asleep — necessary for time-of-day
-        // notifications like the 4:05pm market-close recap. setAndAllowWhileIdle
-        // adds Doze-mode tolerance (within OS-imposed quota) so the alarm
-        // still fires during long idle stretches; without it, doze can
-        // defer the alarm by hours.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
-        } else {
-            am.set(AlarmManager.RTC_WAKEUP, fireAt, pi);
-        }
+        setAlarm(am, fireAt, pi);
 
         // Track the ID so cancelAll / getPending can enumerate it later.
         addTrackedId(id);
@@ -247,6 +248,22 @@ public class NexusNotificationsPlugin extends Plugin {
         result.put("id", id);
         result.put("at", fireAt);
         call.resolve(result);
+    }
+
+    /** Sets one alarm. Shared with NotificationAlarmReceiver, which re-arms
+     *  daily reminders (v1.18.1, NCC#138), so both use the same alarm type.
+     *
+     *  RTC_WAKEUP wakes the device if asleep — necessary for time-of-day
+     *  notifications like the 4:05pm market-close recap. setAndAllowWhileIdle
+     *  adds Doze-mode tolerance (within OS-imposed quota) so the alarm still
+     *  fires during long idle stretches; without it, doze can defer the alarm
+     *  by hours. */
+    static void setAlarm(AlarmManager am, long fireAt, PendingIntent pi) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pi);
+        } else {
+            am.set(AlarmManager.RTC_WAKEUP, fireAt, pi);
+        }
     }
 
     @PluginMethod
@@ -416,23 +433,11 @@ public class NexusNotificationsPlugin extends Plugin {
     public void load() {
         super.load();
         sInstance = this;
-        // Replay any tap that happened before JS subscribed (cold-start case).
-        if (pendingTapRoute != null) {
-            JSObject ev = new JSObject();
-            ev.put("route", pendingTapRoute);
-            notifyListeners("notificationTap", ev);
-            pendingTapRoute = null;
-        }
-        // Same replay for a buffered action-button tap.
-        if (pendingActionId != null) {
-            JSObject ev = new JSObject();
-            ev.put("actionId", pendingActionId);
-            ev.put("route", pendingActionRoute == null ? "" : pendingActionRoute);
-            ev.put("extraJson", pendingActionExtraJson == null ? "" : pendingActionExtraJson);
-            notifyListeners("notificationAction", ev);
-            pendingActionId = null;
-            pendingActionRoute = null;
-            pendingActionExtraJson = null;
-        }
+        // v1.18.1 (NCC#143): no replay here. load() runs before JS has
+        // registered any listener, so a replay went nowhere, and it then
+        // cleared the buffer, so the JS drain (consumePendingTap /
+        // consumePendingAction, called right after addListener) found
+        // nothing: a "Mark done" tapped while the app was closed was lost.
+        // The buffer is left for that drain.
     }
 }

@@ -71,6 +71,9 @@ interface ScheduleSpec {
    *  than 3 won't all be visible; the OS may collapse extras into an
    *  overflow. */
   actions?: NotificationAction[];
+  /** v1.18.1 (NCC#138): 'day' makes the receiver re-arm the alarm for the
+   *  same local time the next day each time it fires. */
+  every?: 'day';
 }
 
 interface ScheduleResult {

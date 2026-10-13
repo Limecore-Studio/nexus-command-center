@@ -130,6 +130,9 @@ export default function NotificationsSection() {
               cancelCategory('portfolio-eod'),
               cancelCategory('news'),
               cancelCategory('watchlist'),
+              // v1.18.1 (NCC#151): these two were missed.
+              cancelCategory('habits'),
+              cancelCategory('insights'),
             ]);
           }
         }}

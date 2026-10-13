@@ -7,6 +7,10 @@ import process from 'node:process';
 // so this file runs in New York time. (Vitest runs each file in its own
 // process here, so the zone change stays in this file.)
 
+// Some of these modules reach the supabase client, which needs a WebSocket
+// that Node 20 (CI) does not have; none of the tests below touch it.
+vi.mock('./supabase', () => ({ supabase: {} }));
+
 const ORIGINAL_TZ = process.env.TZ;
 let m: {
   parseDateLocal: typeof import('../utils/formatters').parseDateLocal;
@@ -19,7 +23,6 @@ let m: {
 
 beforeAll(async () => {
   process.env.TZ = 'America/New_York';
-  // Some of these modules read window at import (the supabase client).
   vi.stubGlobal('window', { location: { origin: 'http://localhost' }, addEventListener() {}, removeEventListener() {} });
   const f = await import('../utils/formatters');
   const w = await import('./weeklyReview');

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 
-// The FX module reaches the supabase client, which reads window at import.
+// The FX module reaches the supabase client, which needs a WebSocket that
+// Node 20 (CI) does not have; these tests never touch it.
+vi.mock('./supabase', () => ({ supabase: {} }));
 vi.stubGlobal('window', { location: { origin: 'http://localhost' }, addEventListener() {}, removeEventListener() {} });
 const { buildNetWorthTrend } = await import('./netWorthTrend');
 

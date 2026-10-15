@@ -11,6 +11,7 @@ import { publishSession, clearPublishedSession } from '../lib/ssoPublisher';
 import { setGuestMode } from '../lib/guestMode';
 import { scheduleOriginStamp } from '../lib/originMarker';
 import { db } from '../db/database';
+import { setQueueOwner } from '../db/syncQueue';
 
 interface SessionState {
   session: Session | null;
@@ -188,8 +189,16 @@ export const useSessionStore = create<SessionState>((set) => ({
     // signed-in user_id changes across sessions, since the cloud
     // dismissed-flag is per-user and currently lets a returning B skip
     // adoption while A's data sits there.
+    //
+    // v1.18.1 (NCC#140): except this user's own edits. Every item now records
+    // whose it is and only its owner pushes it (db/syncQueue.ts), so they can
+    // no longer reach B; they stay, and go up the next time this account
+    // signs in on this device. Deleting them lost every offline edit at
+    // sign-out. Items with no owner (queued by an older build) still go:
+    // those are the ones that could reach B.
+    const owner = useSessionStore.getState().user?.id;
     try {
-      await db.syncQueue.filter((q) => !q.syncedAt).delete();
+      await db.syncQueue.filter((q) => !q.syncedAt && !(owner && q.owner === owner)).delete();
     } catch (e) {
       console.warn('[auth] signOut: syncQueue drain failed:', (e as Error).message);
     }
@@ -220,3 +229,11 @@ export const useSessionStore = create<SessionState>((set) => ({
     set({ session: null, user: null, sessionUnverified: false });
   },
 }));
+
+// v1.18.1 (limecore#59 §2, NCC#140): queued edits are tagged with the user on
+// screen (null as a guest), from the moment the session is known. See
+// db/syncQueue.ts. The stored user counts while the server cannot be asked:
+// that is the account the edits are made in.
+useSessionStore.subscribe((s) => {
+  if (s.initialized) setQueueOwner(s.user?.id ?? null);
+});

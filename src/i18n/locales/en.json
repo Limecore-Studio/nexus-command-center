@@ -360,7 +360,10 @@
     "themeLockedAria": "{{name}} — supporter theme, locked",
     "themeSupporterNote": "Rack is a supporter theme. It unlocks when you support development on Ko-fi, below.",
     "fdroidCheck": "Check F-Droid for updates",
-    "fdroidCheckNote": "Once a day, Nexus Command Center asks f-droid.org for its newest version. Nothing about you is sent. Turning this off stops the request entirely."
+    "fdroidCheckNote": "Once a day, Nexus Command Center asks f-droid.org for its newest version. Nothing about you is sent. Turning this off stops the request entirely.",
+    "signOutUnsynced_one": "{{count}} change hasn't synced yet. “Keep local data” keeps it on this device and sends it the next time you sign in here; wiping deletes it.",
+    "signOutUnsynced_other": "{{count}} changes haven't synced yet. “Keep local data” keeps them on this device and sends them the next time you sign in here; wiping deletes them.",
+    "signOutFailed": "Sign-out failed: {{msg}}"
   },
   "days": {
     "long": {

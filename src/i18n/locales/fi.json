@@ -360,7 +360,10 @@
     "themeLockedAria": "{{name}} — tukijan teema, lukittu",
     "themeSupporterNote": "Rack on tukijoiden teema. Se avautuu, kun tuet kehitystä Ko-fissa (alempana).",
     "fdroidCheck": "Tarkista päivitykset F-Droidista",
-    "fdroidCheckNote": "Nexus Command Center kysyy kerran päivässä f-droid.orgilta uusinta versiota. Sinusta ei lähetetä mitään. Kun tämä on pois päältä, kyselyä ei tehdä lainkaan."
+    "fdroidCheckNote": "Nexus Command Center kysyy kerran päivässä f-droid.orgilta uusinta versiota. Sinusta ei lähetetä mitään. Kun tämä on pois päältä, kyselyä ei tehdä lainkaan.",
+    "signOutUnsynced_one": "{{count}} muutos ei ole vielä synkronoitu. ”Säilytä paikalliset tiedot” pitää sen tällä laitteella ja lähettää sen, kun kirjaudut tänne seuraavan kerran; tyhjennys poistaa sen.",
+    "signOutUnsynced_other": "{{count}} muutosta ei ole vielä synkronoitu. ”Säilytä paikalliset tiedot” pitää ne tällä laitteella ja lähettää ne, kun kirjaudut tänne seuraavan kerran; tyhjennys poistaa ne.",
+    "signOutFailed": "Uloskirjautuminen epäonnistui: {{msg}}"
   },
   "days": {
     "long": {

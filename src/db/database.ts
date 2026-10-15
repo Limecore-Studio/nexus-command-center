@@ -99,6 +99,10 @@ export interface SyncQueueItem {
   // v1.16 (limecore#27): the edit's `updated_at`, computed when the edit is
   // enqueued (src/lib/editStamp.ts). Absent on items queued by older builds.
   stamp?: string;
+  /** v1.18.1 (limecore#59 §2, NCC#140): whose edit this is. The signed-in
+   *  user's id, null for an edit made as a guest (no account), absent on
+   *  items queued by older builds. Only the owner's items are pushed. */
+  owner?: string | null;
   syncedAt?: string;
   lastError?: string;
   /** NCC#55 — set when a dropped item was put back in the queue once, so a

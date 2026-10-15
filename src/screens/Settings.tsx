@@ -21,6 +21,7 @@ import { checkForDesktopUpdate, runDesktopUpdateAction, useDesktopUpdate } from 
 import { setUpdateCheckEnabled, useFdroidUpdate } from '../lib/fdroidUpdate';
 import { useSyncStore } from '../store/useSyncStore';
 import { useSessionStore, userDisplayName } from '../store/useSessionStore';
+import { listPending } from '../db/syncQueue';
 import { useSettingsStore, BaseCurrency, UI_SCALES } from '../store/useSettingsStore';
 import { useShellTier } from '../lib/useShell';
 import { clearAllLocalData } from '../db/database';
@@ -82,6 +83,25 @@ export default function Settings() {
   const [bioReason, setBioReason] = useState('');
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [signOutBusy, setSignOutBusy] = useState(false);
+  // v1.18.1 (NCC#140): what the sign-out choice decides about. This user's
+  // unsynced edits stay on the device under "Keep local data" (and go up at
+  // their next sign-in here); a wipe deletes them. The dialog used to say
+  // nothing about them, and sign-out deleted them either way.
+  const [unsentCount, setUnsentCount] = useState(0);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!signOutOpen) return;
+    let cancelled = false;
+    setSignOutError(null);
+    void listPending()
+      .then((items) => {
+        if (!cancelled) setUnsentCount(items.filter((q) => q.owner === user?.id).length);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [signOutOpen, user?.id]);
 
   useEffect(() => {
     biometricCapability().then((c) => {
@@ -122,6 +142,7 @@ export default function Settings() {
   // re-pull); wiping is the right choice on shared/borrowed devices.
   const doSignOut = async (wipe: boolean) => {
     setSignOutBusy(true);
+    setSignOutError(null);
     try {
       await signOut();
       if (wipe) {
@@ -129,6 +150,9 @@ export default function Settings() {
         localStorage.clear();
       }
       location.reload();
+    } catch (e) {
+      // v1.18.1 (NCC#140): said, not swallowed. The dialog stays open.
+      setSignOutError((e as Error)?.message || String(e));
     } finally {
       setSignOutBusy(false);
     }
@@ -535,6 +559,12 @@ export default function Settings() {
             <p className="text-xs text-text-muted mb-4">
               {t('settings.signOutBlurb')}
             </p>
+            {unsentCount > 0 && (
+              <p className="text-xs text-warning mb-4">{t('settings.signOutUnsynced', { count: unsentCount })}</p>
+            )}
+            {signOutError && (
+              <p className="text-xs text-danger mb-4" role="alert">{t('settings.signOutFailed', { msg: signOutError })}</p>
+            )}
             <div className="space-y-2">
               <button
                 className="btn w-full"

@@ -360,7 +360,10 @@
     "themeLockedAria": "{{name}} — Unterstützer-Theme, gesperrt",
     "themeSupporterNote": "Rack ist ein Unterstützer-Theme. Es wird freigeschaltet, wenn du die Entwicklung auf Ko-fi unterstützt (weiter unten).",
     "fdroidCheck": "Auf F-Droid nach Updates suchen",
-    "fdroidCheckNote": "Einmal am Tag fragt Nexus Command Center bei f-droid.org nach der neuesten Version. Über dich wird nichts gesendet. Ausgeschaltet unterbleibt die Anfrage ganz."
+    "fdroidCheckNote": "Einmal am Tag fragt Nexus Command Center bei f-droid.org nach der neuesten Version. Über dich wird nichts gesendet. Ausgeschaltet unterbleibt die Anfrage ganz.",
+    "signOutUnsynced_one": "{{count}} Änderung ist noch nicht synchronisiert. „Lokale Daten behalten“ bewahrt sie auf diesem Gerät auf und sendet sie bei deiner nächsten Anmeldung hier; Löschen entfernt sie.",
+    "signOutUnsynced_other": "{{count}} Änderungen sind noch nicht synchronisiert. „Lokale Daten behalten“ bewahrt sie auf diesem Gerät auf und sendet sie bei deiner nächsten Anmeldung hier; Löschen entfernt sie.",
+    "signOutFailed": "Abmelden fehlgeschlagen: {{msg}}"
   },
   "days": {
     "long": {

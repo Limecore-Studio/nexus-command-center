@@ -421,7 +421,9 @@
     "themeLockedAria": "{{name}} — tema pendukung, terkunci",
     "themeSupporterNote": "Rack adalah tema pendukung. Tema ini terbuka saat Anda mendukung pengembangan di Ko-fi, di bawah.",
     "fdroidCheck": "Periksa pembaruan di F-Droid",
-    "fdroidCheckNote": "Sekali sehari, Nexus Command Center menanyakan versi terbaru ke f-droid.org. Tidak ada data tentang Anda yang dikirim. Jika dimatikan, permintaan ini tidak dikirim sama sekali."
+    "fdroidCheckNote": "Sekali sehari, Nexus Command Center menanyakan versi terbaru ke f-droid.org. Tidak ada data tentang Anda yang dikirim. Jika dimatikan, permintaan ini tidak dikirim sama sekali.",
+    "signOutUnsynced_other": "{{count}} perubahan belum tersinkron. “Simpan data lokal” menyimpannya di perangkat ini dan mengirimnya saat kamu masuk lagi di sini; menghapus akan menghilangkannya.",
+    "signOutFailed": "Gagal keluar: {{msg}}"
   },
   "lock": {
     "secureAccess": "Akses aman",

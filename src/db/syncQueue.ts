@@ -48,3 +48,16 @@ export async function listPending(): Promise<SyncQueueItem[]> {
   return all.filter((q) => !q.syncedAt);
 }
 
+/** The pending items the current queue owner would push: the sync chip's and
+ *  Settings' count, and what the 30 s flusher waits on. Another account's
+ *  kept edits are not this user's backlog. */
+export async function listOwnPending(): Promise<SyncQueueItem[]> {
+  const u = queueOwner;
+  return (await listPending()).filter((q) => u === undefined || (u ? pushableFor(q, u) : q.owner == null));
+}
+
+/** Edits made as a guest and not yet released by "Keep" (adoptLocalData). */
+export async function hasGuestEdits(): Promise<boolean> {
+  return (await listPending()).some((q) => q.owner === null);
+}
+

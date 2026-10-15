@@ -18,7 +18,7 @@ vi.mock('./guestMode', () => ({ setGuestMode: async () => {} }));
 vi.stubGlobal('window', { dispatchEvent: () => true, addEventListener: () => {}, removeEventListener: () => {} });
 
 const { db } = await import('../db/database');
-const { enqueue, setQueueOwner, pushableFor } = await import('../db/syncQueue');
+const { enqueue, setQueueOwner, pushableFor, listOwnPending, hasGuestEdits } = await import('../db/syncQueue');
 const { pushQueue, adoptLocalData } = await import('./cloudSync');
 const { useSessionStore } = await import('../store/useSessionStore');
 
@@ -33,6 +33,18 @@ beforeEach(async () => {
 });
 
 describe('queued edits record their owner', () => {
+  // First in the file: the module's owner is still unset.
+  it('records no owner before the session is known, or while it is not initialized', async () => {
+    await enqueue('task', 't0', 'insert', {});
+    useSessionStore.setState({ user: { id: 'u9' } as never, initialized: false });
+    await enqueue('task', 't00', 'insert', {});
+    expect((await db.syncQueue.toArray()).every((q) => !('owner' in q))).toBe(true);
+    useSessionStore.setState({ initialized: true });
+    await enqueue('task', 't000', 'insert', {});
+    expect((await db.syncQueue.toArray()).find((q) => q.entityId === 't000')?.owner).toBe('u9');
+    useSessionStore.setState({ user: null, initialized: false });
+  });
+
   it('the signed-in user, null as a guest, nothing before the session is known', async () => {
     setQueueOwner('u1');
     await enqueue('task', 't1', 'insert', {});
@@ -47,6 +59,19 @@ describe('queued edits record their owner', () => {
     expect(pushableFor({}, 'u1')).toBe(true);
     expect(pushableFor({ owner: null }, 'u1')).toBe(false);
     expect(pushableFor({ owner: 'u2' }, 'u1')).toBe(false);
+  });
+});
+
+describe('the pending count', () => {
+  it('counts only what the current owner would push; a guest\'s edits are flagged', async () => {
+    await db.syncQueue.bulkAdd([item('own', 'u1'), item('older'), item('guest', null), item('other', 'u2')]);
+    setQueueOwner('u1');
+    expect((await listOwnPending()).map((q) => q.id).sort()).toEqual(['older', 'own']);
+    setQueueOwner(null);
+    expect((await listOwnPending()).map((q) => q.id).sort()).toEqual(['guest', 'older']);
+    expect(await hasGuestEdits()).toBe(true);
+    await adoptLocalData('u1');
+    expect(await hasGuestEdits()).toBe(false);
   });
 });
 

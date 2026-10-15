@@ -4,6 +4,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { useConfirm } from './ConfirmDialog';
 import { adoptLocalData, hasLocalData } from '../lib/cloudSync';
+import { hasGuestEdits } from '../db/syncQueue';
 import { clearAllLocalData } from '../db/database';
 import { useSessionStore } from '../store/useSessionStore';
 import { useSyncStore } from '../store/useSyncStore';
@@ -117,6 +118,13 @@ export default function AdoptionPrompt() {
         previousUserId !== null && previousUserId !== user.id && hasData;
       if (isUserChange) {
         showUnlessAnswered(user.id, true);
+        return;
+      }
+      // v1.18.1 (NCC#140): edits made as a guest since then push only after
+      // "Keep" (db/syncQueue.ts), so they are this user's to answer for even
+      // when the device's earlier answer would skip the prompt.
+      if (await hasGuestEdits()) {
+        if (!cancelled && !deferredThisLaunch.has(user.id)) setShow(true);
         return;
       }
       // v1.19 — NCC#139: a decision already made on this device needs no

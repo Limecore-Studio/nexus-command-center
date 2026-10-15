@@ -1,5 +1,5 @@
 import { create, type StoreApi } from 'zustand';
-import { listPending } from '../db/syncQueue';
+import { listOwnPending } from '../db/syncQueue';
 import { fullSync, PushResult, PullResult } from '../lib/cloudSync';
 import { coalesce } from '../lib/coalesce';
 import { useSessionStore } from './useSessionStore';
@@ -93,7 +93,7 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     if (pull.errors.length === 0) {
       await reloadDataStores();
     }
-    const pending = await listPending();
+    const pending = await listOwnPending();
     // Surface up to 5 of the most recent item errors for diagnostics.
     const itemErrors = pending
       .filter((p) => p.lastError)
@@ -190,7 +190,7 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   },
 
   async refreshPending() {
-    const pending = await listPending();
+    const pending = await listOwnPending();
     set({ pendingCount: pending.length });
   },
 

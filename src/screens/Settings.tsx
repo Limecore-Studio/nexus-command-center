@@ -201,7 +201,7 @@ export default function Settings() {
               <ChangeEmail user={user} />
               <button
                 className="btn-ghost w-full mt-2 text-danger border-danger/40"
-                onClick={() => (setSignOutError(null), setSignOutOpen(true))}
+                onClick={() => (setSignOutError(null), setUnsentCount(0), setSignOutOpen(true))}
               >
                 {t('settings.signOut')}
               </button>

@@ -361,9 +361,9 @@
     "themeSupporterNote": "Rack est un thème réservé aux soutiens. Il se déverrouille quand vous soutenez le développement sur Ko-fi, plus bas.",
     "fdroidCheck": "Rechercher les mises à jour sur F-Droid",
     "fdroidCheckNote": "Une fois par jour, Nexus Command Center demande à f-droid.org quelle est la version la plus récente. Rien vous concernant n’est envoyé. Désactivée, la requête n’est plus envoyée du tout.",
-    "signOutUnsynced_one": "{{count}} modification n’est pas encore synchronisée. « Conserver les données locales » la conserve sur cet appareil et l’envoie à votre prochaine connexion ici ; effacer la supprime.",
-    "signOutUnsynced_many": "{{count}} modifications ne sont pas encore synchronisées. « Conserver les données locales » les conserve sur cet appareil et les envoie à votre prochaine connexion ici ; effacer les supprime.",
-    "signOutUnsynced_other": "{{count}} modifications ne sont pas encore synchronisées. « Conserver les données locales » les conserve sur cet appareil et les envoie à votre prochaine connexion ici ; effacer les supprime.",
+    "signOutUnsynced_one": "{{count}} modification n’est pas encore synchronisée. « Conserver les données locales » la conserve sur cet appareil et l’envoie à votre prochaine connexion ici ; effacer la supprime. D’ici là, si les données de cet appareil sont effacées, les modifications non synchronisées sont perdues.",
+    "signOutUnsynced_many": "{{count}} modifications ne sont pas encore synchronisées. « Conserver les données locales » les conserve sur cet appareil et les envoie à votre prochaine connexion ici ; effacer les supprime. D’ici là, si les données de cet appareil sont effacées, les modifications non synchronisées sont perdues.",
+    "signOutUnsynced_other": "{{count}} modifications ne sont pas encore synchronisées. « Conserver les données locales » les conserve sur cet appareil et les envoie à votre prochaine connexion ici ; effacer les supprime. D’ici là, si les données de cet appareil sont effacées, les modifications non synchronisées sont perdues.",
     "signOutFailed": "Échec de la déconnexion : {{msg}}"
   },
   "days": {

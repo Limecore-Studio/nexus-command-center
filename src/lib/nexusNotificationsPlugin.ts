@@ -72,8 +72,14 @@ interface ScheduleSpec {
    *  overflow. */
   actions?: NotificationAction[];
   /** v1.18.1 (NCC#138): 'day' makes the receiver re-arm the alarm for the
-   *  same local time the next day each time it fires. */
+   *  next occurrence of its wall-clock time each time it fires. */
   every?: 'day';
+  /** v1.18.1 (NCC#138): with every: 'day', that wall-clock time (hour 0-23,
+   *  minute 0-59). Optional: the native side otherwise reads it off atMillis,
+   *  which is wrong for a time in a skipped DST hour (02:30 resolves to
+   *  03:30). */
+  hour?: number;
+  minute?: number;
 }
 
 interface ScheduleResult {

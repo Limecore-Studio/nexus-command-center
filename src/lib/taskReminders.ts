@@ -1,13 +1,14 @@
 // Task due-date reminders.
 //
-// Schedules a local notification at 09:00 on the task's due date. Cancels
-// it when the task is completed, deleted, or has its due date cleared.
+// Schedules a local notification when a task is due: at its due time when
+// `dueDate` carries one, at 09:00 local on the day when it is date-only.
+// Cancels it when the task is completed, deleted, or has its due date cleared.
 //
-// Why 09:00 local: the Task type stores `dueDate` as YYYY-MM-DD with no
-// time-of-day. A notification fired at midnight is silly; one fired during
-// the day means the user has at least the morning to react. 09:00 is a
-// reasonable "start of working day" default. If we later add a time-of-day
-// field on Task, this module can read it.
+// Two forms of `dueDate`: a full ISO instant, which Add Task and Quick Log
+// store from their date-and-time picker, fires at that instant (v1.18.1,
+// NCC#142; it used to parse to NaN, so it never fired at all). A date-only
+// YYYY-MM-DD has no time of day, and a notification fired at midnight is
+// silly; 09:00 is a reasonable "start of working day" default.
 //
 // On app start (AppShell) we call `reconcileTaskReminders(tasks)`. That:
 //   1. Cancels every pending notification in the tasks ID range. This
@@ -56,8 +57,8 @@ export function dueAtNotifTime(dueDate: string, now: number = Date.now()): Date 
 
 /** Schedule a reminder for one task. No-ops if:
  *    • the tasks notification toggle is off
- *    • the task has no dueDate, is already completed, or the 9am-on-dueDate
- *      time has already passed
+ *    • the task has no dueDate, is already completed, or its reminder time
+ *      (see dueAtNotifTime) has already passed
  *  Idempotent — re-running for the same task overwrites the prior schedule.
  */
 export async function scheduleTaskReminder(task: Task): Promise<void> {
@@ -81,8 +82,8 @@ export async function scheduleTaskReminder(task: Task): Promise<void> {
       at,
       extra: { route: '/tasks' },
       // "Mark done" action → handler in App.tsx calls
-      // useTaskStore.toggleComplete(taskId). Task ID rides in the action's
-      // extra so the handler knows which task to flip without round-
+      // useTaskStore.setComplete(taskId, true). Task ID rides in the action's
+      // extra so the handler knows which task to complete without round-
       // tripping through the route. Notification auto-dismisses on action
       // tap; no separate cancel call required.
       actions: [

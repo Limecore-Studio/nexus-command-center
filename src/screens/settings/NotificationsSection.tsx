@@ -60,9 +60,10 @@ export default function NotificationsSection() {
           state. Flipping ON triggers the OS permission prompt (same flow
           the first-launch modal uses), so this works as the fallback if
           the modal didn't show. Flipping OFF cancels every pending
-          notification across all 5 categories. Sub-toggles retain their
+          notification in every category. Sub-toggles retain their
           individual state so the user can toggle the master back on
-          without losing prior preferences. */}
+          without losing prior preferences. Habit reminders are re-armed
+          when it goes back on (rearmHabitsWhenNotificationsOn, v1.18.1). */}
       <Toggle
         label={t('settings.notifMaster')}
         sub={
@@ -120,9 +121,9 @@ export default function NotificationsSection() {
             })();
           } else {
             await setNotifMasterEnabled(false);
-            // Wipe every pending alarm across all five categories so
-            // nothing fires after the user has explicitly turned the
-            // master switch off. Sub-toggles keep their bool state.
+            // Wipe every pending alarm in every category so nothing
+            // fires after the user has explicitly turned the master
+            // switch off. Sub-toggles keep their bool state.
             await Promise.all([
               cancelCategory('weekly-review'),
               cancelCategory('tasks'),

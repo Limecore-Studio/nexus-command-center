@@ -1,9 +1,11 @@
 // ─── Habit reminders (v1.5.2 — Duolingo-style) ──────────────────────────
 //
 // Each habit with a reminderTime gets, on every app open (the store re-arms in
-// load()), up to three recurring daily local notifications:
+// load()), up to three local notifications:
 //
-//   1. PRIMARY      at reminderTime — varied, streak-aware copy.
+//   1. PRIMARY      at reminderTime — varied copy. Repeats daily for a daily
+//                   habit (so it never carries the streak; see below), one-shot
+//                   for a specific-days habit (streak-aware copy).
 //   2. EVENING NUDGE ~3h later (daily habits only, streak > 0, capped ≤ 21:00)
 //                   — soft "streak at risk" message.
 //   3. MORNING CATCH-UP at 08:00 (daily habits only) — "did you do it last
@@ -27,16 +29,21 @@
 // today is already done — and (2) both are ONE-SHOT (next occurrence only),
 // re-armed on every app open AND on every in-app completion toggle (the store
 // now re-arms in toggleCompletion / setCompletionAmount). The daily primary
-// reminder stays repeating: its "time to <habit>" copy is state-neutral, and
-// keeping it as a standing alarm means a user who stops opening the app still
-// gets their daily prompt.
+// reminder stays repeating, so a user who stops opening the app still gets
+// their daily prompt.
+//
+// v1.18.1 (NCC#138): it really repeats now (the native receiver re-arms it),
+// with the text it was scheduled with. This note used to call that text
+// state-neutral; it was streak-aware ("12-day streak"), and a repeat kept
+// showing the count after the streak broke. A repeating reminder now takes the
+// streak-free 'repeating' copy (habitMessages.ts).
 //
 // ID allocation: 3 slots per habit inside the 8000-8999 habits range —
 //   slot = hash(id) % 300; base = 8000 + slot*3 → {primary, evening, morning}.
 // Milestones use a small shared sub-range (8990-8998), one-off so collisions
 // are harmless.
 
-import { scheduleNotification, cancelNotifications, ID_RANGES } from './notifications';
+import { scheduleNotification, cancelNotifications, pendingIdsIn, ID_RANGES } from './notifications';
 import { habitMessage } from './habitMessages';
 import type { Habit } from '../types/habits';
 
@@ -46,6 +53,8 @@ function habitSlot(habitId: string): number {
   return Math.abs(h) % 300;
 }
 
+const MILESTONE_BASE = ID_RANGES.habits.base + 990; // 8990-8998
+
 function habitIds(habitId: string): { primary: number; evening: number; morning: number; milestone: number } {
   const slot = habitSlot(habitId);
   const base = ID_RANGES.habits.base + slot * 3; // 8000 + slot*3
@@ -53,8 +62,36 @@ function habitIds(habitId: string): { primary: number; evening: number; morning:
     primary: base,
     evening: base + 1,
     morning: base + 2,
-    milestone: ID_RANGES.habits.base + 990 + (slot % 9), // 8990-8998
+    milestone: MILESTONE_BASE + (slot % 9),
   };
+}
+
+/** The reminder alarm IDs a habit owns: primary, evening, morning. Two habits
+ *  can share them (slot = hash % 300). */
+export function habitReminderIds(habitId: string): number[] {
+  const ids = habitIds(habitId);
+  return [ids.primary, ids.evening, ids.morning];
+}
+
+/** v1.18.1 (NCC#138): cancel every alarm in the habits range that no active
+ *  habit with a reminder owns. A daily reminder now re-arms itself natively,
+ *  so one belonging to a habit archived, deleted or cleared of its reminder on
+ *  another device (and synced here) fired every day for good: the in-app paths
+ *  cancel their own alarms, sync never did. IDs an active habit owns are kept,
+ *  not wiped and re-armed, because slots collide (hash % 300): an archived
+ *  habit can share its IDs with an active one. Milestones are left alone; they
+ *  are one-off and fire within seconds. */
+export async function reconcileHabitReminders(habits: Habit[]): Promise<void> {
+  const owned = new Set<number>();
+  for (const h of habits) {
+    if (h.reminderTime && !h.archivedAt) {
+      for (const id of habitReminderIds(h.id)) owned.add(id);
+    }
+  }
+  const orphans = (await pendingIdsIn('habits')).filter(
+    (id) => id < MILESTONE_BASE && !owned.has(id),
+  );
+  await cancelNotifications(orphans);
 }
 
 function parseHHMM(s: string): { hour: number; minute: number } | null {
@@ -117,14 +154,18 @@ export async function scheduleHabitReminder(
     ? nextDailyFire(parsed.hour, parsed.minute)
     : nextSpecificDaysFire(parsed.hour, parsed.minute, habit.daysOfWeek ?? []);
   if (primaryAt) {
-    const m = habitMessage('primary', habit.title, streak);
+    // v1.18.1 (NCC#138): a repeating reminder shows this text every day, so it
+    // must not carry today's streak.
+    const m = isDaily
+      ? habitMessage('repeating', habit.title, 0)
+      : habitMessage('primary', habit.title, streak);
     await scheduleNotification({
       id: ids.primary,
       category: 'habits',
       title: m.title,
       body: m.body,
       at: primaryAt,
-      ...(isDaily ? { every: 'day' as const } : {}),
+      ...(isDaily ? { every: 'day' as const, dailyTime: parsed } : {}),
       extra: { route: '/habits', habitId: habit.id },
     });
   }

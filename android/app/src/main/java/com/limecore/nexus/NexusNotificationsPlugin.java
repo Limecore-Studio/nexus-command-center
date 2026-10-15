@@ -48,6 +48,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 
 import org.json.JSONObject;
 
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -83,11 +84,15 @@ public class NexusNotificationsPlugin extends Plugin {
     // payload can pass through PendingIntent boundaries without custom
     // Parcelable plumbing.
     public static final String EXTRA_ACTIONS_JSON = "nexus_actions_json";
-    // v1.18.1 (NCC#138): repeat cadence ("day" or absent) and the time this
-    // alarm was set for, so NotificationAlarmReceiver can re-arm a daily
-    // reminder for the same local time tomorrow when it fires.
+    // v1.18.1 (NCC#138): repeat cadence ("day" or absent) and, for a daily
+    // alarm, the wall-clock hour (0-23) and minute it was asked for, so
+    // NotificationAlarmReceiver can re-arm it for that local time when it
+    // fires. The time of day, not the instant: an instant plus a day drifts
+    // for good after a time in the skipped DST hour, and keeps the old zone's
+    // time after the device changes time zone.
     public static final String EXTRA_EVERY = "nexus_every";
-    public static final String EXTRA_AT = "nexus_at";
+    public static final String EXTRA_HOUR = "nexus_hour";
+    public static final String EXTRA_MINUTE = "nexus_minute";
 
     // Singleton handle so the static action-receiver (which has no Plugin
     // reference of its own) can route events back into JS via this
@@ -190,6 +195,8 @@ public class NexusNotificationsPlugin extends Plugin {
         JSObject extra = call.getObject("extra", new JSObject());
         JSArray actions = call.getArray("actions"); // optional
         String every = call.getString("every"); // optional; only "day" is used
+        Integer askedHour = call.getInt("hour"); // optional; with every "day"
+        Integer askedMinute = call.getInt("minute");
 
         if (id == null) {
             call.reject("Missing id");
@@ -218,20 +225,29 @@ public class NexusNotificationsPlugin extends Plugin {
         if (actions != null && actions.length() > 0) {
             intent.putExtra(EXTRA_ACTIONS_JSON, actions.toString());
         }
-        intent.putExtra(EXTRA_AT, fireAt);
         if ("day".equals(every)) {
             intent.putExtra(EXTRA_EVERY, "day");
+            // The time of day JS passed, else the one the requested time shows
+            // in the device's current default time zone. The requested time,
+            // not fireAt, which is floored to "now + 1s" for a past request.
+            int hour;
+            int minute;
+            if (askedHour != null && askedMinute != null
+                    && askedHour >= 0 && askedHour <= 23
+                    && askedMinute >= 0 && askedMinute <= 59) {
+                hour = askedHour;
+                minute = askedMinute;
+            } else {
+                Calendar asked = Calendar.getInstance();
+                asked.setTimeInMillis(atMillis != null ? atMillis : fireAt);
+                hour = asked.get(Calendar.HOUR_OF_DAY);
+                minute = asked.get(Calendar.MINUTE);
+            }
+            intent.putExtra(EXTRA_HOUR, hour);
+            intent.putExtra(EXTRA_MINUTE, minute);
         }
 
-        // FLAG_UPDATE_CURRENT so re-scheduling with the same ID replaces
-        // the existing alarm cleanly. FLAG_IMMUTABLE is required on
-        // Android 12+ — Capacitor's min target is well above that.
-        PendingIntent pi = PendingIntent.getBroadcast(
-            getContext(),
-            id,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
+        PendingIntent pi = alarmPendingIntent(getContext(), id, intent);
 
         AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
@@ -248,6 +264,23 @@ public class NexusNotificationsPlugin extends Plugin {
         result.put("id", id);
         result.put("at", fireAt);
         call.resolve(result);
+    }
+
+    /** The PendingIntent an alarm fires. Shared with NotificationAlarmReceiver's
+     *  daily re-arm (v1.18.1, NCC#138) so both build exactly what cancel()
+     *  looks up: request code = id, and an intent for NotificationAlarmReceiver
+     *  with no action, data or categories (extras don't count in the match).
+     *
+     *  FLAG_UPDATE_CURRENT so re-scheduling with the same ID replaces
+     *  the existing alarm cleanly. FLAG_IMMUTABLE is required on
+     *  Android 12+ — Capacitor's min target is well above that. */
+    static PendingIntent alarmPendingIntent(Context context, int id, Intent intent) {
+        return PendingIntent.getBroadcast(
+            context,
+            id,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
     }
 
     /** Sets one alarm. Shared with NotificationAlarmReceiver, which re-arms

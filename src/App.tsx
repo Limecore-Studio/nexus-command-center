@@ -30,7 +30,7 @@ import { onNotificationAction } from './lib/notifications';
 import { installRatingHistory } from './lib/ratingHistory';
 import { useTaskStore } from './store/useTaskStore';
 import { useSettingsStore } from './store/useSettingsStore';
-import { useHabitsStore } from './store/useHabitsStore';
+import { useHabitsStore, rearmHabitsWhenNotificationsOn } from './store/useHabitsStore';
 import { useBodyMetricsStore } from './store/useBodyMetricsStore';
 import { useWorkQualityStore } from './store/useWorkQualityStore';
 import { useLifeProfileStore } from './store/useLifeProfileStore';
@@ -512,6 +512,12 @@ function NotificationBridge() {
     }
   }, [settingsLoaded, weeklyReminder]);
 
+  // v1.18.1 (NCC#151): re-arm habit reminders once settings and habits are
+  // loaded with notifications on, and each time the master switch turns back
+  // on. A store subscription with its own edge check, so it acts on those
+  // transitions only, not on renders.
+  useEffect(() => rearmHabitsWhenNotificationsOn(), []);
+
   // v1.18.1 (NCC#143): subscribed ONCE. `navigate` changes identity with
   // the route (React Router 7, HashRouter), and every re-subscription drained
   // the native buffer again, replaying an old tap or "Mark done". The
@@ -546,8 +552,10 @@ function NotificationBridge() {
     onNotificationAction((payload) => {
       const { actionId, route, extra } = payload;
       if (actionId === 'done' && extra && typeof extra.taskId === 'string') {
-        // Fire-and-forget — toggleComplete handles its own persistence.
-        void useTaskStore.getState().toggleComplete(extra.taskId);
+        // Fire-and-forget — setComplete handles its own persistence.
+        // v1.18.1 (NCC#143): set, not toggle. The same "Mark done" can arrive
+        // twice (live, then from the native buffer), and a toggle undid it.
+        void useTaskStore.getState().setComplete(extra.taskId, true);
         return;
       }
       if (actionId === 'view' && route) {

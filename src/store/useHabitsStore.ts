@@ -14,9 +14,16 @@
 //   - addHabit / updateHabit reschedule via scheduleHabitReminder (idempotent
 //     by ID). If reminderTime cleared → cancelHabitReminder.
 //   - deleteHabit / archiveHabit always cancels.
-//   - load() sweeps all active habits and re-arms reminders. The native
-//     plugin fires single-shot, so cold-start re-arm is necessary to keep
-//     the daily cadence rolling. This is the same pattern Weekly Review uses.
+//   - load() sweeps all active habits and re-arms reminders. The evening and
+//     morning nudges are one-shot and a specific-days primary is too, so
+//     re-arming on load is what keeps them rolling. A daily habit's primary
+//     re-arms itself natively (v1.18.1, NCC#138); load() refreshes it.
+//   - load() also cancels any habit alarm no active habit owns (v1.18.1,
+//     NCC#138): a habit archived, deleted or cleared of its reminder on
+//     another device arrives by sync, which never cancelled anything, and its
+//     daily reminder would otherwise repeat for good.
+//   - rearmHabitsWhenNotificationsOn() re-arms every habit when the master
+//     switch turns on (v1.18.1, NCC#151); turning it off cancels them.
 
 import { create } from 'zustand';
 import { db } from '../db/database';
@@ -24,8 +31,9 @@ import { generateId } from '../utils/uuid';
 import { enqueue } from '../db/syncQueue';
 import type { Habit, HabitCompletion } from '../types/habits';
 import { computeStreak, dateKey, type StreakResult } from '../lib/habitStreaks';
-import { scheduleHabitReminder, cancelHabitReminder, fireHabitMilestone } from '../lib/habitReminders';
+import { scheduleHabitReminder, cancelHabitReminder, fireHabitMilestone, reconcileHabitReminders } from '../lib/habitReminders';
 import { STREAK_MILESTONES } from '../lib/habitMessages';
+import { useSettingsStore } from './useSettingsStore';
 
 interface HabitsStore {
   habits: Habit[];
@@ -69,6 +77,10 @@ interface HabitsStore {
    *  one-shot evening/morning nudges cancel on log (and re-arm on un-log). */
   _rearmReminder: (habitId: string) => void;
 
+  /** v1.18.1 (NCC#151) — _rearmReminder for every habit (no-op for archived
+   *  ones and ones without a reminder). */
+  rearmAllReminders: () => void;
+
   // ─── Selectors (no React hooks; pure derivations from current slice) ───
   streakFor: (habitId: string) => StreakResult;
   completionsFor: (habitId: string) => HabitCompletion[];
@@ -99,12 +111,14 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
     // Re-arm reminders on cold start with the current streak so copy + the
     // evening nudge are streak-aware. Fire-and-forget — the native plugin
     // tolerates batch scheduling, and any failure logs itself.
-    for (const h of habits) {
-      if (h.reminderTime && !h.archivedAt) {
-        const st = computeStreak(h, completions.filter((c) => c.habitId === h.id));
-        void scheduleHabitReminder(h, st.current, st.todayHit);
-      }
-    }
+    get().rearmAllReminders();
+    // v1.18.1 (NCC#138): and drop the alarms no active habit owns. Touches only
+    // IDs the re-arm above does not, so the two can run side by side.
+    void reconcileHabitReminders(get().habits);
+  },
+
+  rearmAllReminders() {
+    for (const h of get().habits) get()._rearmReminder(h.id);
   },
 
   // v1.7 (BUG-3) — re-arm a single habit's reminders from current completion
@@ -299,3 +313,30 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
     return get().completions.find((c) => c.habitId === habitId && c.date === date);
   },
 }));
+
+/** v1.18.1 (NCC#151) — re-arm every habit's reminders once notifications can
+ *  be scheduled: settings and habits both loaded and the master switch on.
+ *  Runs then, and again each time the switch goes from off to on, never on an
+ *  unrelated store change. Turning the switch off cancels the habits category
+ *  (NotificationsSection), and neither the switch's on-path nor the first-run
+ *  explainer re-armed them, so they stayed silent until the next cold start.
+ *  Returns the unsubscriber. Mounted by NotificationBridge (App.tsx). */
+export function rearmHabitsWhenNotificationsOn(): () => void {
+  const ready = () => {
+    const settings = useSettingsStore.getState();
+    return settings.loaded && settings.notifMasterEnabled && useHabitsStore.getState().loaded;
+  };
+  let wasReady = ready();
+  if (wasReady) useHabitsStore.getState().rearmAllReminders();
+  const check = () => {
+    const isReady = ready();
+    if (isReady && !wasReady) useHabitsStore.getState().rearmAllReminders();
+    wasReady = isReady;
+  };
+  const unsubSettings = useSettingsStore.subscribe(check);
+  const unsubHabits = useHabitsStore.subscribe(check);
+  return () => {
+    unsubSettings();
+    unsubHabits();
+  };
+}

@@ -12,7 +12,11 @@ const plugin = vi.hoisted(() => ({
   consumePendingTap: vi.fn(async () => ({ route: '' })),
   consumePendingAction: vi.fn(async () => ({ actionId: '', route: '', extraJson: '' })),
 }));
-const settings = vi.hoisted(() => ({ notifMasterEnabled: true }));
+const settings = vi.hoisted(() => ({
+  loaded: true,
+  notifMasterEnabled: true,
+  load: vi.fn(async () => {}),
+}));
 
 vi.mock('@capacitor/core', async (orig) => ({
   ...(await orig<typeof import('@capacitor/core')>()),
@@ -25,6 +29,7 @@ vi.mock('./nexusNotificationsPlugin', () => ({
       return { remove: () => {} };
     },
     checkPermission: async () => ({ granted: true }),
+    createChannel: async () => {},
     schedule: plugin.schedule,
     consumePendingTap: plugin.consumePendingTap,
     consumePendingAction: plugin.consumePendingAction,
@@ -43,7 +48,9 @@ beforeEach(() => {
   plugin.schedule.mockClear();
   plugin.consumePendingTap.mockClear();
   plugin.consumePendingAction.mockClear();
+  settings.loaded = true;
   settings.notifMasterEnabled = true;
+  settings.load.mockReset();
 });
 
 describe('dueAtNotifTime (NCC#142)', () => {
@@ -85,6 +92,50 @@ describe('the master switch (NCC#151)', () => {
   it('does not send a repeat the native side cannot honour', async () => {
     await scheduleNotification({ ...base, every: 'week' });
     expect(plugin.schedule.mock.calls[0][0]).not.toHaveProperty('every');
+  });
+
+  // Review B2: the switch defaults to off until settings load, and habits
+  // load beside them (AppShell) or before them (behind the lock screen).
+  it('loads settings before reading the switch when they are not loaded yet', async () => {
+    settings.loaded = false;
+    settings.notifMasterEnabled = false; // the default, before load()
+    settings.load.mockImplementation(async () => {
+      settings.loaded = true;
+      settings.notifMasterEnabled = true; // what the user had saved
+    });
+    const r = await scheduleNotification(base);
+    expect(settings.load).toHaveBeenCalledTimes(1);
+    expect(r.ok).toBe(true);
+    expect(plugin.schedule).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not load settings again once they are loaded', async () => {
+    await scheduleNotification(base);
+    expect(settings.load).not.toHaveBeenCalled();
+  });
+
+  it('refuses rather than throws when settings cannot be read', async () => {
+    settings.loaded = false;
+    settings.load.mockRejectedValue(new Error('no storage'));
+    const r = await scheduleNotification(base);
+    expect(r.ok).toBe(false);
+    expect(plugin.schedule).not.toHaveBeenCalled();
+  });
+
+  // Review N1: 02:30 on a spring-forward day is 03:30 by the clock, so `at`
+  // alone cannot tell the native side which time of day to repeat.
+  it('passes the wall-clock time of a daily repeat through', async () => {
+    await scheduleNotification({ ...base, every: 'day', dailyTime: { hour: 2, minute: 30 } });
+    expect(plugin.schedule).toHaveBeenCalledWith(
+      expect.objectContaining({ every: 'day', hour: 2, minute: 30 }),
+    );
+  });
+
+  it('sends no time of day for a one-shot', async () => {
+    await scheduleNotification({ ...base, dailyTime: { hour: 2, minute: 30 } });
+    const spec = plugin.schedule.mock.calls[0][0];
+    expect(spec).not.toHaveProperty('hour');
+    expect(spec).not.toHaveProperty('minute');
   });
 });
 

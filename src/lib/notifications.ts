@@ -240,6 +240,11 @@ interface ScheduleOptions {
    *  each time it fires. Other values are not, and are not sent: the Weekly
    *  Review flow re-arms itself on every app start. */
   every?: 'day' | 'week' | 'month' | 'year';
+  /** v1.18.1 (NCC#138): with every: 'day', the wall-clock time it repeats at.
+   *  Pass it when you have it: `at` cannot show it on a day when that time
+   *  falls in a skipped DST hour, and the native side would otherwise read it
+   *  off `at`. */
+  dailyTime?: { hour: number; minute: number };
   /** Arbitrary payload — read in the tap handler. Keep small; this rides
    *  the AlarmManager intent. The `route` field is special: if present,
    *  the tap handler navigates there. */
@@ -249,6 +254,24 @@ interface ScheduleOptions {
    *  `onNotificationAction` handler; the action's `extra` payload arrives
    *  as a JSON-encoded string on the event. */
   actions?: NotificationAction[];
+}
+
+/** v1.18.1 (NCC#151): the master switch, read from LOADED settings. Until
+ *  useSettingsStore.load() resolves the switch holds its default, off, and
+ *  habits load beside settings on a cold start (AppShell) and before them
+ *  behind the lock screen (App's cloud hydration), so every reminder they
+ *  re-armed was refused. load() shares one read between concurrent callers. */
+async function masterSwitchOn(): Promise<boolean> {
+  const settings = useSettingsStore.getState();
+  if (!settings.loaded) {
+    try {
+      await settings.load();
+    } catch (e) {
+      console.warn('[notifications] settings load', (e as Error).message);
+      return false;
+    }
+  }
+  return useSettingsStore.getState().notifMasterEnabled;
 }
 
 /** Schedule (or overwrite) a notification. Verifies the ID falls in the
@@ -269,7 +292,7 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
   // v1.18.1 (NCC#151): the master switch, checked here so no scheduler can
   // miss it. Habit reminders, habit milestones and insights tier alerts never
   // checked it, so they kept firing for users who had turned notifications off.
-  if (!useSettingsStore.getState().notifMasterEnabled) {
+  if (!(await masterSwitchOn())) {
     return { ok: false, reason: 'Notifications are turned off.' };
   }
   if (!(await hasNotificationPermission())) {
@@ -286,7 +309,7 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
       atMillis,
       extra: opts.extra,
       actions: opts.actions,
-      ...(opts.every === 'day' ? { every: 'day' } : {}),
+      ...(opts.every === 'day' ? { every: 'day', ...opts.dailyTime } : {}),
     });
     return { ok: true };
   } catch (e) {
@@ -306,21 +329,26 @@ export async function cancelNotifications(ids: number[]): Promise<void> {
   }
 }
 
+/** The plugin's tracked IDs that fall in a category's range. Tracked means
+ *  scheduled and not cancelled since: an alarm that already fired stays on
+ *  the list. Empty off native or on error. */
+export async function pendingIdsIn(category: NotificationCategory): Promise<number[]> {
+  if (!Capacitor.isNativePlatform()) return [];
+  const range = ID_RANGES[category];
+  try {
+    const pending = await NexusNotifications.getPending();
+    return pending.ids.filter((id) => id >= range.base && id < range.base + range.size);
+  } catch (e) {
+    console.warn('[notifications] getPending', category, (e as Error).message);
+    return [];
+  }
+}
+
 /** Cancel every pending notification in a category by enumerating the
  *  plugin's tracked-ID list and filtering by ID range. Used by the master
  *  Settings toggle and per-category off-switches. */
 export async function cancelCategory(category: NotificationCategory): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
-  const range = ID_RANGES[category];
-  try {
-    const pending = await NexusNotifications.getPending();
-    const ids = pending.ids.filter(
-      (id) => id >= range.base && id < range.base + range.size,
-    );
-    if (ids.length) await NexusNotifications.cancel({ ids });
-  } catch (e) {
-    console.warn('[notifications] cancelCategory', category, (e as Error).message);
-  }
+  await cancelNotifications(await pendingIdsIn(category));
 }
 
 // ─── Tap routing ────────────────────────────────────────────────────────

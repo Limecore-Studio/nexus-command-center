@@ -92,7 +92,6 @@ export default function Settings() {
   useEffect(() => {
     if (!signOutOpen) return;
     let cancelled = false;
-    setSignOutError(null);
     void listPending()
       .then((items) => {
         if (!cancelled) setUnsentCount(items.filter((q) => q.owner === user?.id).length);
@@ -202,7 +201,7 @@ export default function Settings() {
               <ChangeEmail user={user} />
               <button
                 className="btn-ghost w-full mt-2 text-danger border-danger/40"
-                onClick={() => setSignOutOpen(true)}
+                onClick={() => (setSignOutError(null), setSignOutOpen(true))}
               >
                 {t('settings.signOut')}
               </button>

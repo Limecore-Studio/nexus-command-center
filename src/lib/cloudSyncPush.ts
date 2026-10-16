@@ -3,10 +3,10 @@
 // pushQueue() in cloudSync.ts. Moved out of cloudSync.ts unchanged (limecore#12).
 import { supabase } from './supabase';
 import { stampOf } from './editStamp';
-import { SyncQueueItem } from '../db/database';
+import { db, SyncQueueItem } from '../db/database';
 import { legacyIdToUuid } from '../utils/uuid';
 import type { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry } from '../types/finance';
-import type { Course, Grade } from '../types/studies';
+import type { CoursePushPayload, Grade } from '../types/studies';
 import type { Task, TaskPriority } from '../types/tasks';
 import type { Goal } from '../types/goals';
 import type { Habit, HabitCompletion } from '../types/habits';
@@ -334,8 +334,25 @@ async function pushCourse(item: SyncQueueItem, ctx: PushContext): Promise<void> 
     if (error) throw error;
     return;
   }
-  const local: Course = JSON.parse(item.payload);
+  const local: CoursePushPayload = JSON.parse(item.payload);
   const uuid = legacyIdToUuid(local.id);
+  const archivedAt = local.archivedAt ?? null;
+  // v1.18.1 (NCC#180) — an archive/restore and nothing else: archived_at only,
+  // never the rest of the row (a stale copy's name/credits would ride along).
+  if (local.archiveEditedAt && local.archiveOnly) {
+    await pushCourseArchiveOnly(item, uuid, archivedAt, local.archiveEditedAt);
+    return;
+  }
+  // v1.18.1 (NCC#180) — `archived_at` is no longer part of the content write.
+  // It used to ride on every course write (`archived_at: local.archivedAt ??
+  // null`), so an edit made on a copy that had not yet seen an archive/restore
+  // done in StudyDesk put the stale state back, re-archiving or un-archiving
+  // the course everywhere; the server cannot tell a stale value from a
+  // deliberate one (20261016_archive_edit_stamp.sql only catches a write
+  // stamped OLDER than the archive). PostgREST's upsert is INSERT … ON
+  // CONFLICT (id) DO UPDATE SET <only the columns sent>, so an existing row
+  // keeps its archived_at and a new row gets the column default (NULL =
+  // active). The archive is sent only by the two paths below.
   const subjectRow = {
     id: uuid,
     user_id: ctx.userId,
@@ -343,15 +360,95 @@ async function pushCourse(item: SyncQueueItem, ctx: PushContext): Promise<void> 
     credits: local.credits,
     semester: local.semester ?? null,
     color: local.color ?? null,
-    // v1.2 — bidirectional archive sync. If NCC ever exposes an archive
-    // toggle for subjects locally, this carries it upstream; for now NCC
-    // is purely a consumer of StudyDesk's archive state but the push
-    // shape stays symmetric so the LWW merge isn't lopsided.
-    archived_at: local.archivedAt ?? null,
     updated_at: stampOf(item),
   };
+  // v1.18.1 (NCC#180) — an insert of a course this device holds as archived
+  // (adoptLocalData re-queues every local course as an insert, and one the
+  // server has never seen would otherwise land active). ON CONFLICT DO
+  // NOTHING: an existing row, whose archive may be newer than ours, is left
+  // alone, and the merge upsert below then writes only the content. No
+  // archived_edited_at is sent, so this works without the 20261016 migration;
+  // with it, the INSERT trigger stamps the archive from updated_at.
+  if (item.operation === 'insert' && local.archivedAt) {
+    const { error: bornErr } = await supabase
+      .from('subjects')
+      .upsert({ ...subjectRow, archived_at: local.archivedAt }, { onConflict: 'id', ignoreDuplicates: true });
+    if (bornErr) throw bornErr;
+  }
+  // v1.18.1 (NCC#180) — keep course pushes single-object upserts. An ARRAY
+  // upsert writes the union of the rows' columns, and with supabase-js's
+  // default `defaultToNull: true` a row missing one that another row carries
+  // gets NULL there; for archived_at that is an un-archive.
   const { error } = await supabase.from('subjects').upsert(subjectRow);
   if (error) throw error;
+  // v1.18.1 (NCC#180) — content AND archive changed in one edit: two writes.
+  // set_updated_at() declines a whole row whose updated_at is older than the
+  // server's, so riding the archive on the content upsert would let a newer
+  // StudyDesk edit discard a newer NCC archive along with the stale content.
+  // The archive write is decided on its own stamp.
+  if (local.archiveEditedAt) {
+    await pushCourseArchiveOnly(item, uuid, archivedAt, local.archiveEditedAt);
+  }
+}
+
+/**
+ * v1.18.1 (NCC#180) — an archive/restore made in NCC, written the way
+ * StudyDesk#172 (setArchivedAt) writes one: only `archived_at` plus
+ * `archived_edited_at` = the moment of the edit. The server keeps whichever
+ * archive change is newer by that stamp and moves `updated_at` by 1 ms, so the
+ * row's content keeps last-writer-wins; `updated_at` is therefore not sent.
+ *
+ * Until that migration is applied the column does not exist and the write is
+ * refused (PGRST204 / 42703 naming it): retry the pre-1.18.1 way, archived_at
+ * stamped with this edit's own `updated_at`.
+ *
+ * 0 rows matched: the server declined or dropped the change (an older archive
+ * stamp, or no change at all), which is final — unless the row is not there
+ * yet because this course's own insert is still queued (created in NCC, then
+ * archived, and the insert failed transiently; pushQueue goes on past a failed
+ * item). Then this item must stay queued and retry after the insert lands.
+ * No insert fallback (StudyDesk has one): the queued insert is that fallback,
+ * and writing the row from here could undo a declined change.
+ */
+async function pushCourseArchiveOnly(
+  item: SyncQueueItem,
+  uuid: string,
+  archivedAt: string | null,
+  editedAt: string,
+): Promise<void> {
+  let { data, error } = await supabase
+    .from('subjects')
+    .update({ archived_at: archivedAt, archived_edited_at: editedAt })
+    .eq('id', uuid)
+    .select('id');
+  if (error) {
+    if (!lacksArchiveStamp(error)) throw error;
+    ({ data, error } = await supabase
+      .from('subjects')
+      .update({ archived_at: archivedAt, updated_at: stampOf(item) })
+      .eq('id', uuid)
+      .select('id'));
+    if (error) throw error;
+  }
+  if (data && data.length > 0) return;
+  if (await insertStillQueued(item.entityId)) {
+    throw new Error('subjects: course not on the server yet (its insert is still queued); retrying the archive change');
+  }
+}
+
+/** v1.18.1 (NCC#180) — an unsynced `course` insert for this id is in the queue. */
+async function insertStillQueued(entityId: string): Promise<boolean> {
+  const n = await db.syncQueue
+    .filter((q) => q.entityType === 'course' && q.entityId === entityId && q.operation === 'insert' && !q.syncedAt)
+    .count();
+  return n > 0;
+}
+
+/** v1.18.1 (NCC#180) — PostgREST's answer to a column it does not know
+ *  (PGRST204), or Postgres's (42703) behind it, naming archived_edited_at. */
+function lacksArchiveStamp(error: { code?: string; message?: string }): boolean {
+  return (error.code === 'PGRST204' || error.code === '42703')
+    && /archived_edited_at/.test(error.message || '');
 }
 
 async function pushGrade(item: SyncQueueItem, ctx: PushContext): Promise<void> {

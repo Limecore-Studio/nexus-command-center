@@ -1,50 +1,82 @@
-// v1.18.1 (NCC#164) — the running-balance column of an account statement.
+// v1.18.1 (NCC#164, NCC#176) — the rows and running-balance column of an
+// account statement.
 //
 // AccountDetail walked the account's transactions oldest-first from
 // `startingBalance`. Deposit, Withdraw and Savings "Invest" lower (or raise)
 // that opening balance, which carries no date, so every row dated before such
-// a move showed the balance short by its amount: put 5 000 into the portfolio
-// today and last March's rows all read 5 000 lower than they were. The move's
-// portfolio cash entry is dated, so each row adds back the moves that happened
-// after it — the same add-back the net-worth trend uses (#149). The newest
-// row, and the current balance, are unchanged when no move came later.
+// a move showed the balance short by its amount (#164). That was first fixed by
+// adding the later moves back onto each row, but the moves themselves stayed
+// invisible: when one came after the newest transaction, the top row did not
+// equal the header balance (#176).
+//
+// Now each move for the account is a row of its own, dated on the local day
+// its cash entry was made, and the walk starts from the opening balance as it
+// was before any move (`startingBalance` minus every move row's delta). Each
+// row is then the balance on its date, and the newest row is the current
+// balance, move or not. A move is taken at the amount the account was actually
+// debited (portfolioMoveIn), so a cross-currency move does not drift.
 //
 // Pure, so it can be tested without the store.
 
-import { laterPortfolioMoves } from './portfolioCash';
-import { localDateKey } from '../utils/formatters';
+import { isPortfolioMove, portfolioMoveIn } from './portfolioCash';
+import { localDayOf } from '../utils/formatters';
 import type { PortfolioCashEntry } from '../types/finance';
 
 export interface StatementRow {
-  /** `YYYY-MM-DD`, the transaction's local date. */
+  /** `YYYY-MM-DD`, the local date. */
   date: string;
   /** ISO timestamp; orders rows that share a date. */
   createdAt: string;
   /** Signed effect on the account, in the account's currency. */
   delta: number;
+  /** A portfolio move: its delta is already inside `startingBalance`. */
+  move?: PortfolioCashEntry;
 }
 
-/** Running balance AFTER each row, for `rows` sorted oldest-first by
- *  date then createdAt (the order AccountDetail sorts them in). */
-export function statementRunningBalances(
-  account: { id: string; currency: string; startingBalance: number },
-  rows: StatementRow[],
+/** The account's Deposit / Withdraw / Invest moves as statement rows. A
+ *  deposit (+ to the portfolio) is a debit here, a withdrawal a credit. A move
+ *  that cannot be converted (another currency, no stored amount, no FX rate
+ *  yet) is left out, from the opening as well, so the balances stay
+ *  consistent with the header; it is counted in `unconvertible` so the screen
+ *  can say so in its "couldn't be FX-converted" notice. */
+export function portfolioMoveRows(
+  account: { id: string; currency: string },
   cashEntries: PortfolioCashEntry[],
   fxRates: Record<string, number> | null,
-): number[] {
-  // A transaction's date is a local calendar day, so a move is placed on the
-  // local day it happened, and after a same-day row only if it was recorded
-  // later — the same tie-break the rows themselves are sorted by.
-  const moveDay = new Map<string, string>();
-  for (const e of cashEntries) moveDay.set(e.id, localDateKey(new Date(e.createdAt)));
-  const after = (e: PortfolioCashEntry, row: StatementRow): boolean => {
-    const day = moveDay.get(e.id) ?? '';
-    return day > row.date || (day === row.date && e.createdAt > row.createdAt);
-  };
+): { rows: StatementRow[]; unconvertible: number } {
+  const rows: StatementRow[] = [];
+  let unconvertible = 0;
+  for (const e of cashEntries) {
+    if (!isPortfolioMove(e, account.id)) continue;
+    const v = portfolioMoveIn(e, account.currency, fxRates);
+    if (v == null) {
+      unconvertible++;
+      continue;
+    }
+    rows.push({ date: localDayOf(e.createdAt), createdAt: e.createdAt, delta: -v, move: e });
+  }
+  return { rows, unconvertible };
+}
 
-  let running = account.startingBalance;
-  return rows.map((row) => {
-    running += row.delta;
-    return running + laterPortfolioMoves(cashEntries, account.id, account.currency, fxRates, (e) => after(e, row));
-  });
+/** Oldest-first by date, then createdAt — the order the walk needs. A move's
+ *  date is the local day it was recorded, but a transaction's is the day the
+ *  user picked, so a transaction backdated onto a move's day sorts after the
+ *  move (its createdAt is later). Accepted: the balances after the day are
+ *  right either way, only the order within that day is a guess. */
+export function compareStatementRows(a: StatementRow, b: StatementRow): number {
+  return a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt);
+}
+
+/** The balance before the first row: `startingBalance` with every move in
+ *  `rows` undone. Equals `startingBalance` when there are no moves. */
+export function statementOpening(startingBalance: number, rows: StatementRow[]): number {
+  return rows.reduce((sum, r) => (r.move ? sum - r.delta : sum), startingBalance);
+}
+
+/** Running balance AFTER each row, for `rows` sorted with
+ *  compareStatementRows. The last one is `startingBalance` plus the
+ *  transaction deltas: the current balance. */
+export function statementRunningBalances(startingBalance: number, rows: StatementRow[]): number[] {
+  let running = statementOpening(startingBalance, rows);
+  return rows.map((r) => (running += r.delta));
 }

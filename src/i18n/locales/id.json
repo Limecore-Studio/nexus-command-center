@@ -883,7 +883,9 @@
       "fromName": "dari {{name}}",
       "fromOther": "dari akun lain",
       "toName": "ke {{name}}",
-      "toOther": "ke akun lain"
+      "toOther": "ke akun lain",
+      "toPortfolio": "Dipindahkan ke portofolio",
+      "fromPortfolio": "Dipindahkan dari portofolio"
     },
     "assetClass": {
       "stock": "Saham",

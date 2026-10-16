@@ -565,7 +565,12 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const newOpening = base - amtInAccount;
     await get().updateManualAsset(accountId, { startingBalance: newOpening, value: newOpening });
     // Credit portfolio cash (+) — stored in the amount's currency.
-    await addCashEntry(set, get, { type: 'deposit', amount, currency, accountId, note });
+    // v1.18.1 (NCC#176) — also record what the account was debited, so the
+    // history views add back that, not a re-conversion at a later rate.
+    await addCashEntry(set, get, {
+      type: 'deposit', amount, currency, accountId, note,
+      accountAmount: amtInAccount, accountCurrency: account.currency,
+    });
   },
 
   async withdrawFromPortfolio({ amount, currency, accountId, note }) {
@@ -583,7 +588,11 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const newOpening = base + amtInAccount;
     await get().updateManualAsset(accountId, { startingBalance: newOpening, value: newOpening });
     // Debit portfolio cash (−).
-    await addCashEntry(set, get, { type: 'withdrawal', amount: -amount, currency, accountId, note });
+    // v1.18.1 (NCC#176) — record what the account was credited (see deposit).
+    await addCashEntry(set, get, {
+      type: 'withdrawal', amount: -amount, currency, accountId, note,
+      accountAmount: -amtInAccount, accountCurrency: account.currency,
+    });
   },
 
   async addManualAsset(a) {
@@ -1017,6 +1026,8 @@ async function addCashEntry(
     accountId?: string;
     relatedId?: string;
     note?: string;
+    accountAmount?: number;
+    accountCurrency?: string;
     /** Explicit deterministic PK (dividend auto-realize). Defaults to a fresh
      *  random UUID for the buy/sell/deposit/withdrawal paths. */
     id?: string;
@@ -1030,6 +1041,10 @@ async function addCashEntry(
     accountId: input.accountId,
     relatedId: input.relatedId,
     note: input.note,
+    // v1.18.1 (NCC#176) — local-only, see PortfolioCashEntry.accountAmount.
+    ...(input.accountAmount != null && input.accountCurrency
+      ? { accountAmount: input.accountAmount, accountCurrency: input.accountCurrency }
+      : {}),
     createdAt: new Date().toISOString(),
     syncStatus: 'pending',
   };

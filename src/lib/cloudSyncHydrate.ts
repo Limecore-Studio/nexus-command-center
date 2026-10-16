@@ -521,6 +521,17 @@ export async function hydratePortfolioCashFromCloud(
         createdAt: r.created_at,
         syncStatus: 'synced' as const,
       }));
+      // v1.18.1 (NCC#176) — accountAmount/accountCurrency are local-only (no
+      // server column), so overwriting with the cloud row would drop them on
+      // every pull. Keep the local values.
+      const local = await db.portfolioCashEntries.bulkGet(rows.map((r) => r.id));
+      rows.forEach((r, i) => {
+        const l = local[i];
+        if (l?.accountAmount != null && l.accountCurrency) {
+          r.accountAmount = l.accountAmount;
+          r.accountCurrency = l.accountCurrency;
+        }
+      });
       await db.portfolioCashEntries.bulkPut(rows);
       count = rows.length;
     }

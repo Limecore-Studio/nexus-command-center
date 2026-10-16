@@ -777,7 +777,9 @@
       "fromName": "from {{name}}",
       "fromOther": "from another account",
       "toName": "to {{name}}",
-      "toOther": "to another account"
+      "toOther": "to another account",
+      "toPortfolio": "Moved to portfolio",
+      "fromPortfolio": "Moved from portfolio"
     },
     "assetClass": {
       "stock": "Stock",

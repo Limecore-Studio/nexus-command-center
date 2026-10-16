@@ -777,7 +777,9 @@
       "fromName": "来自 {{name}}",
       "fromOther": "来自另一个账户",
       "toName": "转入 {{name}}",
-      "toOther": "转入另一个账户"
+      "toOther": "转入另一个账户",
+      "toPortfolio": "转入投资组合",
+      "fromPortfolio": "从投资组合转出"
     },
     "assetClass": {
       "stock": "股票",

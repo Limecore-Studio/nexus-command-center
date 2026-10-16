@@ -777,7 +777,9 @@
       "fromName": "von {{name}}",
       "fromOther": "von einem anderen Konto",
       "toName": "auf {{name}}",
-      "toOther": "auf ein anderes Konto"
+      "toOther": "auf ein anderes Konto",
+      "toPortfolio": "Ins Portfolio übertragen",
+      "fromPortfolio": "Aus dem Portfolio übertragen"
     },
     "assetClass": {
       "stock": "Aktie",

@@ -40,3 +40,40 @@ describe('net-worth trend across a move to or from the portfolio (NCC#149)', () 
     expect(totals(after)).toEqual([15000, 15000, 15000, 15000]);
   });
 });
+
+// v1.18.1 (NCC#176) — a move in another currency was added back at today's
+// rate, so the months before it drifted with the exchange rate. The entry now
+// carries what the account was actually debited.
+describe('net-worth trend across a cross-currency move (NCC#176)', () => {
+  // 1 000 USD went into the portfolio in October, bought with 500 EUR on the
+  // day. Today 1 USD = 0.8 EUR, so a re-conversion would add back 800.
+  const fx = { USD: 1, EUR: 0.8 };
+  const deposit = { id: 'c', type: 'deposit', amount: 1000, currency: 'USD', accountId: 'a', createdAt: '2026-10-12T10:00:00Z', syncStatus: 'pending' };
+
+  it('adds back the amount the account was debited, not today\'s conversion', () => {
+    const t = buildNetWorthTrend({
+      ...common,
+      fxRates: fx,
+      accounts: [acct(9500)] as any,
+      cashEntries: [{ ...deposit, accountAmount: 500, accountCurrency: 'EUR' }] as any,
+    });
+    expect(t.points.slice(0, 3).map((p) => p.accountsBase)).toEqual([10000, 10000, 10000]);
+  });
+
+  it('falls back to today\'s rate for an entry made before the amount was stored', () => {
+    const t = buildNetWorthTrend({ ...common, fxRates: fx, accounts: [acct(9500)] as any, cashEntries: [deposit] as any });
+    expect(t.points[0].accountsBase).toBe(10300);
+  });
+
+  it('adds back in the account currency, then converts with the rest of the balance', () => {
+    // A SEK account (1 EUR = 10 SEK today) debited 5 000 SEK for a 500 EUR deposit.
+    const sek = { ...acct(45000), currency: 'SEK' };
+    const t = buildNetWorthTrend({
+      ...common,
+      fxRates: { EUR: 1, SEK: 10 },
+      accounts: [sek] as any,
+      cashEntries: [{ ...deposit, amount: 500, currency: 'EUR', accountAmount: 5000, accountCurrency: 'SEK' }] as any,
+    });
+    expect(t.points[0].accountsBase).toBe(5000);
+  });
+});

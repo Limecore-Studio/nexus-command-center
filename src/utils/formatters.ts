@@ -66,6 +66,17 @@ export function localDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** v1.18.1 (NCC#176) — the LOCAL day (`YYYY-MM-DD`) of a stored timestamp
+ *  (or date). `iso.slice(0, 10)` is the UTC day, which put a move near
+ *  midnight on a different day, and so maybe a different month, in the
+ *  net-worth trend than in the account statement. Empty for an empty value;
+ *  the UTC prefix for one that does not parse. */
+export function localDayOf(iso: string): string {
+  if (!iso) return '';
+  const d = parseDateLocal(iso);
+  return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : localDateKey(d);
+}
+
 /** Short date — "26 Jul", "26 heinäk.", "२६ जुल".
  *
  *  NC-1 routed ~30 hardcoded `fi-FI` sites through formatLocale() and missed

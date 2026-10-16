@@ -13,7 +13,7 @@
 //     assets - liabilities — so the projection starts from the user's
 //     actual position, not zero.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatLocale } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../../components/AppHeader';
@@ -23,6 +23,8 @@ import { convertSync, normalizeCurrency } from '../../api/fxRates';
 import { LIABILITY_TYPES } from '../../types/finance';
 import { project, yearReachingMilestone } from '../../lib/projection';
 import { RULE, INK_MUTE, SUCCESS } from '../../lib/themeColors';
+// v1.18.1 (NCC#166): typed amounts and rates accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 // Milestones are derived from the user's current net worth rather than fixed,
 // because a fixed euro ladder is meaningless at other currency scales. In IDR
@@ -86,11 +88,25 @@ export default function WhatIf() {
   }, [holdings, stockQuotes, cryptoPrices, fxRates, manualAssets, baseCurrency]);
 
   // Input state — initialised once from current net worth.
-  const [startingBalance, setStartingBalance] = useState<number>(Math.round(currentNetWorth));
+  // v1.18.1 (NCC#166): the three typed fields keep what was typed and are read
+  // with numberInput. `Number(e.target.value) || 0` turned "150,50" into 0,
+  // and since the field showed the parsed number, typing "4," or "4." wiped
+  // the separator before the decimals could follow it.
+  const [startingBalanceText, setStartingBalanceText] = useState<string>(String(Math.round(currentNetWorth)));
   const [monthly, setMonthly] = useState<number>(500);
   const [years, setYears] = useState<number>(20);
-  const [conservativePct, setConservativePct] = useState<number>(CONSERVATIVE_DEFAULT);
-  const [optimisticPct, setOptimisticPct] = useState<number>(OPTIMISTIC_DEFAULT);
+  const [conservativeText, setConservativeText] = useState<string>(String(CONSERVATIVE_DEFAULT));
+  const [optimisticText, setOptimisticText] = useState<string>(String(OPTIMISTIC_DEFAULT));
+  // v1.18.1 (NCC#166): a half-typed or out-of-range entry ("", "-", "1e400",
+  // a rate under -100%) reads as a usable number, never NaN or Infinity.
+  const finite = (s: string) => {
+    const n = numberInput(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const startingBalance = finite(startingBalanceText);
+  const conservativePct = Math.max(-99, finite(conservativeText));
+  const optimisticPct = Math.max(-99, finite(optimisticText));
+  const startingTouched = useRef(false);
   const [inflationPct, setInflationPct] = useState<number>(INFLATION_DEFAULT);
   const [showInToday, setShowInToday] = useState<boolean>(false);
 
@@ -98,11 +114,11 @@ export default function WhatIf() {
   // We only auto-fill when the user hasn't touched the input — a 0 initial
   // value is a strong signal that net worth wasn't ready on first render.
   useEffect(() => {
-    if (startingBalance === 0 && currentNetWorth > 0) {
-      // HYG-4: Seeds an editable input from data that may arrive after mount. The
-      // `=== 0` guard is what stops it from overwriting a value the user typed.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setStartingBalance(Math.round(currentNetWorth));
+    if (!startingTouched.current && startingBalance === 0 && currentNetWorth > 0) {
+      // HYG-4: Seeds an editable input from data that may arrive after mount.
+      // Only until the user types in it: clearing the field or starting "0,5"
+      // is not a reason to put net worth back.
+      setStartingBalanceText(String(Math.round(currentNetWorth)));
     }
   }, [currentNetWorth, startingBalance]);
 
@@ -169,9 +185,14 @@ export default function WhatIf() {
             </div>
             <input
               className="input"
-              inputMode="numeric"
-              value={startingBalance}
-              onChange={(e) => setStartingBalance(Number(e.target.value) || 0)}
+              // v1.18.1 (NCC#166): 'numeric' gives a phone keypad with no
+              // separator at all; the other money fields use 'decimal'.
+              inputMode="decimal"
+              value={startingBalanceText}
+              onChange={(e) => {
+                startingTouched.current = true;
+                setStartingBalanceText(e.target.value);
+              }}
             />
           </div>
 
@@ -225,8 +246,8 @@ export default function WhatIf() {
                 <input
                   className="input flex-1"
                   inputMode="decimal"
-                  value={conservativePct}
-                  onChange={(e) => setConservativePct(Number(e.target.value) || 0)}
+                  value={conservativeText}
+                  onChange={(e) => setConservativeText(e.target.value)}
                 />
                 <span className="text-text-muted text-sm">%</span>
               </div>
@@ -239,8 +260,8 @@ export default function WhatIf() {
                 <input
                   className="input flex-1"
                   inputMode="decimal"
-                  value={optimisticPct}
-                  onChange={(e) => setOptimisticPct(Number(e.target.value) || 0)}
+                  value={optimisticText}
+                  onChange={(e) => setOptimisticText(e.target.value)}
                 />
                 <span className="text-text-muted text-sm">%</span>
               </div>

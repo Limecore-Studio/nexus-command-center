@@ -130,7 +130,7 @@ export default function Dashboard() {
     [transactions, studyCourses, studySessions, sessions, tasks, studies, holdings],
   );
 
-  const gpaSuffix = gradeMode === 'ib' ? '/7' : '';
+  const gpaSuffix = gradeMode === 'ib' ? '/7' : gradeMode === 'custom' ? '/20' : '';
   const gpaDisplay = studies ? studies.calculatedGpa.toFixed(2) + gpaSuffix : '—';
 
   return (
@@ -188,7 +188,9 @@ export default function Dashboard() {
             <div className="space-y-2">
               <RackMeterBank
                 gpa={studies ? studies.calculatedGpa : null}
-                gpaMax={gradeMode === 'ib' ? 7 : 4}
+                // v1.18.1 (NCC#165): an inferred 'custom' scale tops out at
+                // 20 (see inferGradeMode), so a 14/20 does not pin a 0–4 meter.
+                gpaMax={gradeMode === 'ib' ? 7 : gradeMode === 'custom' ? 20 : 4}
                 gpaPrevious={studies ? previousGpa : null}
                 gpaDisplay={gpaDisplay}
                 workouts={workoutsThisWeek}

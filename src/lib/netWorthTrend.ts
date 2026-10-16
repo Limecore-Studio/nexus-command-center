@@ -30,7 +30,7 @@
 //    caller can say that out loud instead of implying precision it lacks.
 
 import { computeAccountBalance } from './accountBalance';
-import { portfolioCashBalance } from './portfolioCash';
+import { laterPortfolioMoves, portfolioCashBalance } from './portfolioCash';
 import { convertSync } from '../api/fxRates';
 import type {
   Account,
@@ -142,18 +142,10 @@ export function buildNetWorthTrend({
   // balance, which is undated, while the cash entry is dated when it
   // happened. Read as-is, every month before a deposit lost the amount and
   // net worth showed a drop that never happened. So for a month before a
-  // move, the move is added back to the account it came from (a withdrawal,
-  // stored negative, is taken back off the account it went to).
-  const moves = cash.filter((e) => e.accountId && (e.type === 'deposit' || e.type === 'withdrawal'));
-  const laterMovesBase = (accountId: string, asOf: string): number => {
-    let sum = 0;
-    for (const e of moves) {
-      if (e.accountId !== accountId || dayOf(e.createdAt) <= asOf) continue;
-      const v = e.currency === baseCurrency ? e.amount : convertSync(e.amount, e.currency, baseCurrency, fxRates);
-      if (v != null) sum += v;
-    }
-    return sum;
-  };
+  // move, the move is added back to the account it came from (see
+  // laterPortfolioMoves, shared with the account statement since #164).
+  const laterMovesBase = (accountId: string, asOf: string): number =>
+    laterPortfolioMoves(cash, accountId, baseCurrency, fxRates, (e) => dayOf(e.createdAt) > asOf);
 
   let txIdx = 0;
   let snapIdx = 0;

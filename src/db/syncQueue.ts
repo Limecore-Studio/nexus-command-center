@@ -15,6 +15,17 @@ export function setQueueOwner(userId: string | null): void {
   queueOwner = userId;
 }
 
+/** NCC#172 — items queued by v1.18.0 or older carry no owner, so any account
+ *  could push them. Called once, at the first known session of a launch: they
+ *  go to whoever that is (null as a guest, so they wait for "Keep"). Older
+ *  builds cleared unsynced items at every sign-out, so what is left was almost
+ *  always made in the session that is still open, or as a guest. (Not always:
+ *  a session that ended without a sign-out left its items for the next one,
+ *  which then pushed them anyway, so this is no worse than before.) */
+export async function claimUnowned(owner: string | null): Promise<void> {
+  await db.syncQueue.filter((q) => !q.syncedAt && q.owner === undefined).modify({ owner });
+}
+
 /** May `userId` push this item? Its own, and items from older builds (no
  *  owner recorded) as before. A guest's (null) wait for "Keep" on the
  *  "Existing data found" prompt (adoptLocalData); another account's wait

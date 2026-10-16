@@ -34,14 +34,18 @@ beforeEach(async () => {
 
 describe('queued edits record their owner', () => {
   // First in the file: the module's owner is still unset.
-  it('records no owner before the session is known, or while it is not initialized', async () => {
+  it('records no owner before the session is known; the first known session claims those (NCC#172)', async () => {
     await enqueue('task', 't0', 'insert', {});
     useSessionStore.setState({ user: { id: 'u9' } as never, initialized: false });
     await enqueue('task', 't00', 'insert', {});
     expect((await db.syncQueue.toArray()).every((q) => !('owner' in q))).toBe(true);
     useSessionStore.setState({ initialized: true });
     await enqueue('task', 't000', 'insert', {});
-    expect((await db.syncQueue.toArray()).find((q) => q.entityId === 't000')?.owner).toBe('u9');
+    // NCC#172: the first known session also claims what was queued without an owner.
+    await vi.waitFor(async () => {
+      const owners = Object.fromEntries((await db.syncQueue.toArray()).map((q) => [q.entityId, q.owner]));
+      expect(owners).toEqual({ t0: 'u9', t00: 'u9', t000: 'u9' });
+    });
     useSessionStore.setState({ user: null, initialized: false });
   });
 

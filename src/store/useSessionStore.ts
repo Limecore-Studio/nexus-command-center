@@ -11,7 +11,7 @@ import { publishSession, clearPublishedSession } from '../lib/ssoPublisher';
 import { setGuestMode } from '../lib/guestMode';
 import { scheduleOriginStamp } from '../lib/originMarker';
 import { db } from '../db/database';
-import { setQueueOwner } from '../db/syncQueue';
+import { claimUnowned, setQueueOwner } from '../db/syncQueue';
 
 interface SessionState {
   session: Session | null;
@@ -234,6 +234,12 @@ export const useSessionStore = create<SessionState>((set) => ({
 // screen (null as a guest), from the moment the session is known. See
 // db/syncQueue.ts. The stored user counts while the server cannot be asked:
 // that is the account the edits are made in.
+let claimed = false;
 useSessionStore.subscribe((s) => {
-  if (s.initialized) setQueueOwner(s.user?.id ?? null);
+  if (!s.initialized) return;
+  setQueueOwner(s.user?.id ?? null);
+  if (!claimed) {
+    claimed = true;
+    claimUnowned(s.user?.id ?? null).catch((e) => console.warn('[sync] claimUnowned failed:', (e as Error).message));
+  }
 });

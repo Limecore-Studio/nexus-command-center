@@ -146,6 +146,7 @@ export const ID_RANGES: Record<NotificationCategory, { base: number; size: numbe
   // v1.2 — one ID per ticker. Hash-derived (see ratingHistory.ts).
   insights: { base: 7000, size: 1000 },
   // v1.2 — one ID per habit. Hash-derived (see habitReminders.ts).
+  // v1.18.1 (NCC#178): per-device assigned slots now, not the hash.
   // v1.18.1 (NCC#168): up to 11099, for one alarm per chosen weekday.
   habits: { base: 8000, size: 3100 },
   // v1.15 — 50 items × above/below. Hash-derived (see watchlistAlerts.ts).
@@ -337,21 +338,23 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
 }
 
 /** Cancel one or more notifications by ID. Safe to call with IDs that were
- *  never scheduled — the native side silently ignores misses. */
-export async function cancelNotifications(ids: number[]): Promise<void> {
-  if (ids.length === 0) return;
-  if (!Capacitor.isNativePlatform()) return;
+ *  never scheduled — the native side silently ignores misses. v1.18.1
+ *  (NCC#178): false when the plugin call failed. */
+export async function cancelNotifications(ids: number[]): Promise<boolean> {
+  if (ids.length === 0 || !Capacitor.isNativePlatform()) return true;
   try {
     await NexusNotifications.cancel({ ids });
+    return true;
   } catch (e) {
     console.warn('[notifications] cancel', (e as Error).message);
+    return false;
   }
 }
 
 /** The plugin's tracked IDs that fall in a category's range. Tracked means
  *  scheduled and not cancelled since: an alarm that already fired stays on
- *  the list. Empty off native or on error. */
-export async function pendingIdsIn(category: NotificationCategory): Promise<number[]> {
+ *  the list. Empty off native; v1.18.1 (NCC#178): null on error. */
+export async function pendingIdsIn(category: NotificationCategory): Promise<number[] | null> {
   if (!Capacitor.isNativePlatform()) return [];
   const range = ID_RANGES[category];
   try {
@@ -359,7 +362,7 @@ export async function pendingIdsIn(category: NotificationCategory): Promise<numb
     return pending.ids.filter((id) => id >= range.base && id < range.base + range.size);
   } catch (e) {
     console.warn('[notifications] getPending', category, (e as Error).message);
-    return [];
+    return null;
   }
 }
 
@@ -367,7 +370,7 @@ export async function pendingIdsIn(category: NotificationCategory): Promise<numb
  *  plugin's tracked-ID list and filtering by ID range. Used by the master
  *  Settings toggle and per-category off-switches. */
 export async function cancelCategory(category: NotificationCategory): Promise<void> {
-  await cancelNotifications(await pendingIdsIn(category));
+  await cancelNotifications((await pendingIdsIn(category)) ?? []);
 }
 
 // ─── Tap routing ────────────────────────────────────────────────────────

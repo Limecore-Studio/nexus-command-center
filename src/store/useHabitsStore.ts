@@ -16,8 +16,8 @@
 //   - updateHabit (archive and restore included) and deleteHabit then run
 //     reconcileHabitReminders (v1.18.1, NCC#168): it cancels what no active
 //     habit owns, so a cleared reminder, an archived or deleted habit, a
-//     dropped weekday or a daily/specific-days switch loses its alarms, and
-//     an active habit sharing the slot (NCC#178) keeps its own.
+//     dropped weekday or a daily/specific-days switch loses its alarms.
+//     v1.18.1 (NCC#178): it then frees the habit's slot (habitReminders.ts).
 //   - load() sweeps all active habits and re-arms reminders. The evening and
 //     morning nudges are one-shot and a specific-days primary is too, so
 //     re-arming on load is what keeps them rolling. A daily habit's primary
@@ -115,15 +115,18 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
       db.habits.toArray(),
       db.habitCompletions.toArray(),
     ]);
-    set({ habits: sortHabits(habits), completions, loaded: true });
+    const sorted = sortHabits(habits);
+    // v1.18.1 (NCC#138): drop the alarms no active habit owns. v1.18.1
+    // (NCC#178): first, before anything can re-arm (the master-switch
+    // subscription does on `loaded`): reconcile assigns the slots, all habits
+    // at once, and the re-arms queue behind it.
+    void reconcileHabitReminders(sorted);
+    set({ habits: sorted, completions, loaded: true });
 
     // Re-arm reminders on cold start with the current streak so copy + the
     // evening nudge are streak-aware. Fire-and-forget — the native plugin
     // tolerates batch scheduling, and any failure logs itself.
     get().rearmAllReminders();
-    // v1.18.1 (NCC#138): and drop the alarms no active habit owns. Touches only
-    // IDs the re-arm above does not, so the two can run side by side.
-    void reconcileHabitReminders(get().habits);
   },
 
   rearmAllReminders() {
@@ -230,7 +233,7 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
       habits: get().habits.filter((h) => h.id !== id),
       completions: get().completions.filter((c) => c.habitId !== id),
     });
-    // v1.18.1 (NCC#168): its alarms, unless an active habit shares them.
+    // v1.18.1 (NCC#168): its alarms. v1.18.1 (NCC#178): then its slot.
     get()._reconcileReminders();
   },
 

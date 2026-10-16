@@ -11,6 +11,8 @@ import type { Task } from '../types/tasks';
 //   S1 — a repeating reminder froze the streak count into its text (NCC#138).
 //   S2 — "Mark done" toggled, so a replayed one undid itself (NCC#143).
 //   NCC#168 — a specific-days habit reminder was one-shot.
+//   NCC#178 — slots are assigned now; habits whose hashes collide no longer
+//             share IDs (habitReminders.slots.test.ts has the slot tests).
 
 const plugin = vi.hoisted(() => ({
   pending: [] as number[],
@@ -57,6 +59,7 @@ const {
   scheduleHabitReminder,
   habitWeekdayReminderId,
   ownedHabitReminderIds,
+  habitHashSlot,
 } = await import('./habitReminders');
 const { habitMessage } = await import('./habitMessages');
 const { scheduleNotification, ID_RANGES } = await import('./notifications');
@@ -81,30 +84,28 @@ function habit(id: string, patch: Partial<Habit> = {}): Habit {
   };
 }
 
-/** Two habit ids whose reminders share alarm IDs (slot = hash % 300), and a
- *  few more that share them with neither. Deterministic. */
+/** Two habit ids whose hashes collide (they shared alarm IDs before
+ *  NCC#178), and a few more that collide with neither. Deterministic. */
 function collidingIds(): { a: string; b: string; others: string[] } {
   const seen = new Map<number, string>();
   let a = '';
   let b = '';
   for (let i = 0; !a; i++) {
     const id = `habit-${i}`;
-    const primary = habitReminderIds(id)[0];
-    const prior = seen.get(primary);
+    const prior = seen.get(habitHashSlot(id));
     if (prior) {
       a = prior;
       b = id;
     } else {
-      seen.set(primary, id);
+      seen.set(habitHashSlot(id), id);
     }
   }
-  const taken = new Set(habitReminderIds(a));
+  const taken = new Set([habitHashSlot(a)]);
   const others: string[] = [];
   for (let i = 0; others.length < 3; i++) {
     const id = `other-${i}`;
-    const ids = habitReminderIds(id);
-    if (ids.some((x) => taken.has(x))) continue;
-    ids.forEach((x) => taken.add(x));
+    if (taken.has(habitHashSlot(id))) continue;
+    taken.add(habitHashSlot(id));
     others.push(id);
   }
   return { a, b, others };
@@ -116,6 +117,8 @@ const cancelledIds = () => plugin.cancel.mock.calls.flatMap((c) => c[0].ids);
 
 beforeEach(async () => {
   plugin.pending = [];
+  // v1.18.1 (NCC#178): frees every slot (and loads the map on first use).
+  await reconcileHabitReminders([]);
   plugin.schedule.mockClear();
   plugin.cancel.mockClear();
   prefs.values = {};
@@ -136,7 +139,7 @@ describe('reconcileHabitReminders (B1)', () => {
     const active = habit(a);
     const habits = [
       active,
-      habit(b, { archivedAt: T0 }), // shares every ID with `active`
+      habit(b, { archivedAt: T0 }), // same hash slot as `active`
       habit(archived, { archivedAt: T0 }),
       habit(cleared, { reminderTime: undefined }),
       // `gone` was deleted: no row at all, only its alarms are left
@@ -357,9 +360,13 @@ describe('a specific-days habit reminder repeats weekly, one alarm per day (NCC#
 
   it('gives each weekday its own ID, in its own sub-range of the habits range', () => {
     const otherRanges = Object.entries(ID_RANGES).filter(([k]) => k !== 'habits');
-    for (let i = 0; i < 400; i++) {
+    const all = new Set<number>();
+    for (let i = 0; i < 300; i++) {
       const id = `h-${i}`;
       const days = weekdays.map((d) => habitWeekdayReminderId(id, d));
+      // v1.18.1 (NCC#178): and no two habits share one
+      for (const x of [...days, ...habitReminderIds(id)]) all.add(x);
+      expect(all.size).toBe((i + 1) * 10);
       expect(new Set(days).size).toBe(7);
       expect(days.every((x, d) => x === days[0] + d)).toBe(true); // weekday-ordered
       for (const x of days) {
@@ -372,9 +379,11 @@ describe('a specific-days habit reminder repeats weekly, one alarm per day (NCC#
     }
   });
 
-  it('two habits share weekday IDs only when they share a slot', () => {
+  // v1.18.1 (NCC#178): they shared them while the slot was the hash.
+  it('two habits whose hashes collide get IDs of their own', () => {
     const { a, b, others } = collidingIds();
-    expect(habitWeekdayReminderId(a, 3)).toBe(habitWeekdayReminderId(b, 3));
+    expect(habitWeekdayReminderId(a, 3)).not.toBe(habitWeekdayReminderId(b, 3));
+    expect(habitReminderIds(a).some((x) => habitReminderIds(b).includes(x))).toBe(false);
     for (const o of others) expect(habitWeekdayReminderId(o, 3)).not.toBe(habitWeekdayReminderId(a, 3));
   });
 
@@ -416,7 +425,7 @@ describe('a specific-days habit reminder repeats weekly, one alarm per day (NCC#
     expect(scheduledSpecs()[0].atMillis).toBe(new Date(2026, 9, 21, 7, 30).getTime());
   });
 
-  it('does not cancel the alarms of a habit of the other kind that shares the slot (NCC#178)', async () => {
+  it('does not cancel the alarms of a habit of the other kind with the same hash slot (NCC#178)', async () => {
     const { a, b } = collidingIds();
     const daily = habit(a);
     const weekly = specific(b, [2, 4]);

@@ -46,6 +46,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Calendar;
@@ -93,6 +95,26 @@ public class NexusNotificationsPlugin extends Plugin {
     public static final String EXTRA_EVERY = "nexus_every";
     public static final String EXTRA_HOUR = "nexus_hour";
     public static final String EXTRA_MINUTE = "nexus_minute";
+    // v1.18.1 (NCC#168) — with EXTRA_EVERY "week", the day of the week it
+    // repeats on, 0 = Sunday .. 6 = Saturday (JS Date.getDay(), not
+    // Calendar.DAY_OF_WEEK), so a specific-days habit reminder re-arms itself
+    // for the same weekday and time one week later.
+    public static final String EXTRA_WEEKDAY = "nexus_weekday";
+
+    // v1.18.1 (NCC#169) — taps and actions waiting for JS, persisted. They
+    // were one static slot in memory: an action whose receiver started the
+    // process was lost when Android killed it before NCC was opened, and a
+    // second "Mark done" tapped while NCC was closed overwrote the first.
+    // Each queue is a JSON array of entries, oldest first, each with a "seq"
+    // (from one counter that only goes up) that JS acknowledges once it has
+    // applied the entry; only then is it removed.
+    private static final String KEY_PENDING_TAPS = "pending_taps";
+    private static final String KEY_PENDING_ACTIONS = "pending_actions";
+    private static final String KEY_PENDING_SEQ = "pending_seq";
+    private static final int PENDING_MAX = 20;
+    // Receivers run on the main thread, plugin methods on the plugin thread,
+    // and every queue change is a read-modify-write of one preference.
+    private static final Object PENDING_LOCK = new Object();
 
     // Singleton handle so the static action-receiver (which has no Plugin
     // reference of its own) can route events back into JS via this
@@ -194,9 +216,10 @@ public class NexusNotificationsPlugin extends Plugin {
         Long atMillis = call.getLong("atMillis");
         JSObject extra = call.getObject("extra", new JSObject());
         JSArray actions = call.getArray("actions"); // optional
-        String every = call.getString("every"); // optional; only "day" is used
-        Integer askedHour = call.getInt("hour"); // optional; with every "day"
+        String every = call.getString("every"); // optional; "day" or "week"
+        Integer askedHour = call.getInt("hour"); // optional; with every "day" or "week"
         Integer askedMinute = call.getInt("minute");
+        Integer askedWeekday = call.getInt("weekday"); // optional; with every "week", 0 = Sunday
 
         if (id == null) {
             call.reject("Missing id");
@@ -225,11 +248,16 @@ public class NexusNotificationsPlugin extends Plugin {
         if (actions != null && actions.length() > 0) {
             intent.putExtra(EXTRA_ACTIONS_JSON, actions.toString());
         }
-        if ("day".equals(every)) {
-            intent.putExtra(EXTRA_EVERY, "day");
+        // v1.18.1 (NCC#168) — "week" too, for a specific-days habit reminder:
+        // one alarm per chosen day, each re-armed a week later by the receiver.
+        boolean weekly = "week".equals(every);
+        if ("day".equals(every) || weekly) {
+            intent.putExtra(EXTRA_EVERY, weekly ? "week" : "day");
             // The time of day JS passed, else the one the requested time shows
             // in the device's current default time zone. The requested time,
             // not fireAt, which is floored to "now + 1s" for a past request.
+            Calendar asked = Calendar.getInstance();
+            asked.setTimeInMillis(atMillis != null ? atMillis : fireAt);
             int hour;
             int minute;
             if (askedHour != null && askedMinute != null
@@ -238,13 +266,21 @@ public class NexusNotificationsPlugin extends Plugin {
                 hour = askedHour;
                 minute = askedMinute;
             } else {
-                Calendar asked = Calendar.getInstance();
-                asked.setTimeInMillis(atMillis != null ? atMillis : fireAt);
                 hour = asked.get(Calendar.HOUR_OF_DAY);
                 minute = asked.get(Calendar.MINUTE);
             }
             intent.putExtra(EXTRA_HOUR, hour);
             intent.putExtra(EXTRA_MINUTE, minute);
+            if (weekly) {
+                // Same rule for the weekday. Calendar.SUNDAY is 1, JS's is 0.
+                int weekday;
+                if (askedWeekday != null && askedWeekday >= 0 && askedWeekday <= 6) {
+                    weekday = askedWeekday;
+                } else {
+                    weekday = asked.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY;
+                }
+                intent.putExtra(EXTRA_WEEKDAY, weekday);
+            }
         }
 
         PendingIntent pi = alarmPendingIntent(getContext(), id, intent);
@@ -375,91 +411,214 @@ public class NexusNotificationsPlugin extends Plugin {
 
     // ─── Tap routing — broadcast a JS event ─────────────────────────────
     //
-    // Called from the receiver via static helper after the notification is
-    // tapped. We emit a Capacitor event that JS subscribes to. If the plugin
-    // instance hasn't been initialized yet (cold start from a tap), we
-    // buffer the event so the first listener registration replays it.
+    // Called from MainActivity after a notification is tapped, and from
+    // NotificationActionReceiver after an action button is tapped. We emit a
+    // Capacitor event that JS subscribes to, and always queue the tap or
+    // action as well (v1.3.1 BUG-14): on a cold start the plugin is loaded
+    // BEFORE the JS that registers the listener runs, so the event fires into
+    // a void, and JS drains the queue (consumePendingTap / consumePendingAction)
+    // right after addListener succeeds.
     //
-    // The same pattern applies to action-button taps (deliverAction below)
-    // — both share the cold-start buffering since a user can launch the
-    // app fresh from either the notification body or an action button.
+    // v1.18.1 (NCC#169) — the queue is persisted (see KEY_PENDING_ACTIONS)
+    // instead of one static slot in memory, and an entry stays until JS
+    // acknowledges it (ackPendingTaps / ackPendingActions). The live event
+    // carries the entry's "seq", so JS can tell the event and the queued
+    // copy are the same tap and apply it once.
 
-    private static String pendingTapRoute = null;
-
-    // Action cold-start buffer. Stores the single most-recent action so the
-    // JS listener can re-emit on first subscription. Coalescing to one entry
-    // is fine — if the user taps two action buttons before opening the app,
-    // only the latter matters (and Android dismisses tapped notifications
-    // before allowing a second tap on the same one).
-    private static String pendingActionId = null;
-    private static String pendingActionRoute = null;
-    private static String pendingActionExtraJson = null;
-
-    public static void deliverTap(NexusNotificationsPlugin instance, String route) {
-        // v1.3.1 BUG-14 — always buffer. notifyListeners is best-effort because
-        // on cold start the plugin is loaded (sInstance != null) BEFORE the JS
-        // useEffect that registers the listener runs, so the event would fire
-        // into a void. JS calls consumePendingTap() right after addListener
-        // succeeds to drain whatever the cold-start path left behind.
-        pendingTapRoute = route;
+    public static void deliverTap(Context context, NexusNotificationsPlugin instance, String route) {
+        JSONObject entry = new JSONObject();
+        try {
+            entry.put("route", route == null ? "" : route);
+        } catch (JSONException ignored) { }
+        long seq = enqueuePending(context, KEY_PENDING_TAPS, entry, null);
         if (instance != null) {
             JSObject ev = new JSObject();
             ev.put("route", route == null ? "" : route);
+            ev.put("seq", seq);
             instance.notifyListeners("notificationTap", ev);
         }
     }
 
     /** Mirror of deliverTap for action-button taps. Forwards the action id
      *  plus optional route + extra payload to the JS `notificationAction`
-     *  event listener. Always buffered (see deliverTap for why); notifyListeners
+     *  event listener. Always queued (see deliverTap for why); notifyListeners
      *  is best-effort. JS drains via consumePendingAction on mount. */
     public static void deliverAction(
+        Context context,
         NexusNotificationsPlugin instance,
+        int notifId,
         String actionId,
         String route,
         String extraJson
     ) {
-        pendingActionId = actionId;
-        pendingActionRoute = route;
-        pendingActionExtraJson = extraJson;
+        String a = actionId == null ? "" : actionId;
+        String r = route == null ? "" : route;
+        String x = extraJson == null ? "" : extraJson;
+        JSONObject entry = new JSONObject();
+        try {
+            entry.put("actionId", a);
+            entry.put("route", r);
+            entry.put("extraJson", x);
+        } catch (JSONException ignored) { }
+        // v1.18.1 (NCC#169) — the same button on the same notification, still
+        // waiting, is one action (a double tap before the shade closes).
+        String sameAs = notifId + "|" + a + "|" + x;
+        long seq = enqueuePending(context, KEY_PENDING_ACTIONS, entry, sameAs);
         if (instance != null) {
             JSObject ev = new JSObject();
-            ev.put("actionId", actionId == null ? "" : actionId);
-            ev.put("route", route == null ? "" : route);
-            ev.put("extraJson", extraJson == null ? "" : extraJson);
+            ev.put("actionId", a);
+            ev.put("route", r);
+            ev.put("extraJson", x);
+            ev.put("seq", seq);
             instance.notifyListeners("notificationAction", ev);
         }
     }
 
-    // ─── Cold-start drain — JS pulls the buffered tap / action ──────────
+    // ─── Pending queue storage (v1.18.1, NCC#169) ───────────────────────
+
+    private static SharedPreferences sharedPrefs(Context context) {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+    }
+
+    private static JSONArray readQueue(SharedPreferences sp, String queueKey) {
+        String raw = sp.getString(queueKey, "[]");
+        try {
+            return new JSONArray(raw == null ? "[]" : raw);
+        } catch (JSONException e) {
+            return new JSONArray();
+        }
+    }
+
+    /** Appends `entry` to a queue, oldest dropped past PENDING_MAX, and
+     *  returns its seq. With `sameAs`, an entry still queued under the same
+     *  key is kept instead and its seq returned. commit(), not apply(): the
+     *  process can be killed as soon as the receiver returns. -1 when it
+     *  could not be queued. */
+    private static long enqueuePending(Context context, String queueKey, JSONObject entry, String sameAs) {
+        synchronized (PENDING_LOCK) {
+            SharedPreferences sp = sharedPrefs(context);
+            JSONArray queue = readQueue(sp, queueKey);
+            if (sameAs != null) {
+                for (int i = 0; i < queue.length(); i++) {
+                    JSONObject q = queue.optJSONObject(i);
+                    if (q != null && sameAs.equals(q.optString("key", null))) {
+                        return q.optLong("seq", -1L);
+                    }
+                }
+            }
+            long seq = sp.getLong(KEY_PENDING_SEQ, 0L) + 1L;
+            try {
+                entry.put("seq", seq);
+                entry.put("at", System.currentTimeMillis());
+                if (sameAs != null) entry.put("key", sameAs);
+            } catch (JSONException e) {
+                return -1L;
+            }
+            JSONArray next = new JSONArray();
+            int start = Math.max(0, queue.length() - (PENDING_MAX - 1));
+            for (int i = start; i < queue.length(); i++) {
+                JSONObject q = queue.optJSONObject(i);
+                if (q != null) next.put(q);
+            }
+            next.put(entry);
+            boolean saved = sp.edit()
+                .putLong(KEY_PENDING_SEQ, seq)
+                .putString(queueKey, next.toString())
+                .commit();
+            // Not saved: nothing is queued, so the live event goes without a
+            // seq (JS applies it, acknowledges nothing), and the seq is not
+            // handed out for an entry that does not exist.
+            return saved ? seq : -1L;
+        }
+    }
+
+    /** Every entry of a queue, oldest first. Leaves the queue as it is. */
+    private static JSArray peekPending(Context context, String queueKey) {
+        synchronized (PENDING_LOCK) {
+            JSONArray queue = readQueue(sharedPrefs(context), queueKey);
+            JSArray out = new JSArray();
+            for (int i = 0; i < queue.length(); i++) {
+                JSONObject q = queue.optJSONObject(i);
+                if (q != null) out.put(q);
+            }
+            return out;
+        }
+    }
+
+    /** Removes the entries whose seq JS acknowledged. */
+    private static void ackPending(Context context, String queueKey, Set<Long> seqs) {
+        if (seqs.isEmpty()) return;
+        synchronized (PENDING_LOCK) {
+            SharedPreferences sp = sharedPrefs(context);
+            JSONArray queue = readQueue(sp, queueKey);
+            JSONArray next = new JSONArray();
+            for (int i = 0; i < queue.length(); i++) {
+                JSONObject q = queue.optJSONObject(i);
+                if (q == null || seqs.contains(q.optLong("seq", -1L))) continue;
+                next.put(q);
+            }
+            sp.edit().putString(queueKey, next.toString()).commit();
+        }
+    }
+
+    private static Set<Long> seqsOf(PluginCall call) {
+        Set<Long> out = new HashSet<>();
+        JSArray arr = call.getArray("seqs");
+        if (arr == null) return out;
+        for (int i = 0; i < arr.length(); i++) {
+            long seq = arr.optLong(i, -1L);
+            if (seq >= 0) out.add(seq);
+        }
+        return out;
+    }
+
+    // ─── Cold-start drain — JS pulls the queued taps / actions ──────────
     //
     // v1.3.1 BUG-14 — On a cold-start launched from a notification tap,
     // notifyListeners fires before the JS useEffect registers its handler,
     // so the event is dropped. JS calls these methods AFTER addListener
-    // resolves to harvest the buffer and complete the navigation. Warm-start
-    // taps still arrive via notifyListeners (the bridge already has a
-    // subscribed listener), AND also write the buffer — the buffer is then
-    // immediately drained by the same call, so the duplicate is a no-op
-    // (react-router navigate to the same route is idempotent).
+    // resolves to harvest the queue and complete the navigation.
+    //
+    // v1.18.1 (NCC#169) — these return the whole queue ("taps" / "actions",
+    // oldest first) and no longer clear it: JS acknowledges what it applied
+    // with ackPendingTaps / ackPendingActions. The old single-entry fields
+    // stay for compatibility: the newest tap's route (the old slot kept the
+    // latest), and the oldest action's fields.
 
     @PluginMethod
     public void consumePendingTap(PluginCall call) {
+        JSArray taps = peekPending(getContext(), KEY_PENDING_TAPS);
+        JSONObject newest = taps.length() > 0 ? taps.optJSONObject(taps.length() - 1) : null;
         JSObject result = new JSObject();
-        result.put("route", pendingTapRoute == null ? "" : pendingTapRoute);
-        pendingTapRoute = null;
+        result.put("route", newest == null ? "" : newest.optString("route", ""));
+        result.put("taps", taps);
         call.resolve(result);
     }
 
     @PluginMethod
     public void consumePendingAction(PluginCall call) {
+        JSArray actions = peekPending(getContext(), KEY_PENDING_ACTIONS);
+        JSONObject oldest = actions.length() > 0 ? actions.optJSONObject(0) : null;
         JSObject result = new JSObject();
-        result.put("actionId", pendingActionId == null ? "" : pendingActionId);
-        result.put("route", pendingActionRoute == null ? "" : pendingActionRoute);
-        result.put("extraJson", pendingActionExtraJson == null ? "" : pendingActionExtraJson);
-        pendingActionId = null;
-        pendingActionRoute = null;
-        pendingActionExtraJson = null;
+        result.put("actionId", oldest == null ? "" : oldest.optString("actionId", ""));
+        result.put("route", oldest == null ? "" : oldest.optString("route", ""));
+        result.put("extraJson", oldest == null ? "" : oldest.optString("extraJson", ""));
+        result.put("actions", actions);
         call.resolve(result);
+    }
+
+    /** v1.18.1 (NCC#169) — JS took these taps: { seqs: number[] }. */
+    @PluginMethod
+    public void ackPendingTaps(PluginCall call) {
+        ackPending(getContext(), KEY_PENDING_TAPS, seqsOf(call));
+        call.resolve();
+    }
+
+    /** v1.18.1 (NCC#169) — JS applied these actions: { seqs: number[] }. */
+    @PluginMethod
+    public void ackPendingActions(PluginCall call) {
+        ackPending(getContext(), KEY_PENDING_ACTIONS, seqsOf(call));
+        call.resolve();
     }
 
     @Override
@@ -471,6 +630,6 @@ public class NexusNotificationsPlugin extends Plugin {
         // cleared the buffer, so the JS drain (consumePendingTap /
         // consumePendingAction, called right after addListener) found
         // nothing: a "Mark done" tapped while the app was closed was lost.
-        // The buffer is left for that drain.
+        // The queue is left for that drain (persisted since NCC#169).
     }
 }

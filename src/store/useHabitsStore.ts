@@ -12,8 +12,12 @@
 //
 // Reminder side-effects:
 //   - addHabit / updateHabit reschedule via scheduleHabitReminder (idempotent
-//     by ID). If reminderTime cleared → cancelHabitReminder.
-//   - deleteHabit / archiveHabit always cancels.
+//     by ID).
+//   - updateHabit (archive and restore included) and deleteHabit then run
+//     reconcileHabitReminders (v1.18.1, NCC#168): it cancels what no active
+//     habit owns, so a cleared reminder, an archived or deleted habit, a
+//     dropped weekday or a daily/specific-days switch loses its alarms, and
+//     an active habit sharing the slot (NCC#178) keeps its own.
 //   - load() sweeps all active habits and re-arms reminders. The evening and
 //     morning nudges are one-shot and a specific-days primary is too, so
 //     re-arming on load is what keeps them rolling. A daily habit's primary
@@ -31,7 +35,7 @@ import { generateId } from '../utils/uuid';
 import { enqueue } from '../db/syncQueue';
 import type { Habit, HabitCompletion } from '../types/habits';
 import { computeStreak, dateKey, type StreakResult } from '../lib/habitStreaks';
-import { scheduleHabitReminder, cancelHabitReminder, fireHabitMilestone, reconcileHabitReminders } from '../lib/habitReminders';
+import { scheduleHabitReminder, fireHabitMilestone, reconcileHabitReminders } from '../lib/habitReminders';
 import { STREAK_MILESTONES } from '../lib/habitMessages';
 import { useSettingsStore } from './useSettingsStore';
 
@@ -76,6 +80,11 @@ interface HabitsStore {
   /** Internal — re-arm a habit's reminders from current completion state so the
    *  one-shot evening/morning nudges cancel on log (and re-arm on un-log). */
   _rearmReminder: (habitId: string) => void;
+
+  /** Internal — v1.18.1 (NCC#168): reconcileHabitReminders over the loaded
+   *  habits. A no-op before load(): an empty list would own nothing, and
+   *  load() reconciles anyway. */
+  _reconcileReminders: () => void;
 
   /** v1.18.1 (NCC#151) — _rearmReminder for every habit (no-op for archived
    *  ones and ones without a reminder). */
@@ -133,6 +142,11 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
     void scheduleHabitReminder(habit, st.current, st.todayHit);
   },
 
+  _reconcileReminders() {
+    if (!get().loaded) return;
+    void reconcileHabitReminders(get().habits);
+  },
+
   // Fire a one-off celebration if the habit's streak just landed on a
   // milestone (7/30/100/365). Called after a completion is recorded.
   _celebrateIfMilestone(habitId: string) {
@@ -182,15 +196,16 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
     await enqueue('habit', id, 'update', merged);
     set({ habits: sortHabits(get().habits.map((h) => (h.id === id ? merged : h))) });
     // Reminder bookkeeping — schedule when the row has a time and isn't
-    // archived; cancel in every other case.
+    // archived.
     if (merged.reminderTime && !merged.archivedAt) {
       // v1.18.1 (NCC#151): with today's streak and completion. Scheduling
       // `merged` alone meant streak 0 and "not done today", so renaming a
       // habit already done today still sent next morning's catch-up ping.
       get()._rearmReminder(id);
-    } else {
-      void cancelHabitReminder({ id });
     }
+    // v1.18.1 (NCC#168): then cancel what it no longer uses (all of it when
+    // archived or cleared; a dropped weekday; the other kind's alarms).
+    get()._reconcileReminders();
   },
 
   async archiveHabit(id) {
@@ -202,9 +217,8 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
   },
 
   async deleteHabit(id) {
-    // Cancel any standing reminder, then cascade-delete completions locally
-    // (the cloud FK has ON DELETE CASCADE so the remote side cleans up too).
-    void cancelHabitReminder({ id });
+    // Cascade-delete completions locally (the cloud FK has ON DELETE CASCADE
+    // so the remote side cleans up too), then cancel the reminders (below).
     const childCompletions = get().completions.filter((c) => c.habitId === id);
     for (const c of childCompletions) {
       await db.habitCompletions.delete(c.id);
@@ -216,6 +230,8 @@ export const useHabitsStore = create<HabitsStore>((set, get) => ({
       habits: get().habits.filter((h) => h.id !== id),
       completions: get().completions.filter((c) => c.habitId !== id),
     });
+    // v1.18.1 (NCC#168): its alarms, unless an active habit shares them.
+    get()._reconcileReminders();
   },
 
   async toggleCompletion(habitId, date) {

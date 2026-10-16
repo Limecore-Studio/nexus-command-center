@@ -38,8 +38,9 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         // v1.18.1 (NCC#138): a daily reminder re-arms itself first, so a
-        // failure further down cannot stop tomorrow's.
-        rearmIfDaily(context, intent);
+        // failure further down cannot stop tomorrow's. v1.18.1 (NCC#168): a
+        // weekly one too, for next week's.
+        rearmIfRepeating(context, intent);
 
         int id = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_ID, 0);
         String title = intent.getStringExtra(NexusNotificationsPlugin.EXTRA_TITLE);
@@ -61,7 +62,8 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
 
         // Unique request code per notification so each tap intent is its own
         // PendingIntent and one doesn't overwrite another. Use the notif id —
-        // they're already unique within our 1000-5999 range.
+        // they're already unique: each category owns a disjoint ID range
+        // (1000-11099 since v1.18.1, NCC#168; see ID_RANGES in notifications.ts).
         int piFlags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             piFlags |= PendingIntent.FLAG_IMMUTABLE;
@@ -154,24 +156,41 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
      *  plugin's alarmPendingIntent from a fresh intent for this receiver with
      *  the extras copied over, so cancel() in the plugin still finds it.
      *  Not covered: a reboot or force-stop clears all alarms until the app
-     *  is opened again (no boot receiver; the owner's call, see NCC#138). */
-    private static void rearmIfDaily(Context context, Intent intent) {
-        if (!"day".equals(intent.getStringExtra(NexusNotificationsPlugin.EXTRA_EVERY))) return;
+     *  is opened again (no boot receiver; the owner's call, see NCC#138).
+     *
+     *  v1.18.1 (NCC#168) — `every: "week"` the same way: a specific-days habit
+     *  reminder has one alarm per chosen day (EXTRA_WEEKDAY), each re-armed
+     *  for the same weekday and wall-clock time a week later. */
+    private static void rearmIfRepeating(Context context, Intent intent) {
+        String every = intent.getStringExtra(NexusNotificationsPlugin.EXTRA_EVERY);
+        boolean weekly = "week".equals(every);
+        if (!weekly && !"day".equals(every)) return;
         int id = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_ID, 0);
         int hour = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_HOUR, -1);
         int minute = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_MINUTE, -1);
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-            Log.w(TAG, "Daily reminder id=" + id + " has no time of day; not re-armed");
+            Log.w(TAG, "Repeating reminder id=" + id + " has no time of day; not re-armed");
             return;
         }
-        long fireAt = nextDailyFire(hour, minute, System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        long fireAt;
+        if (weekly) {
+            int weekday = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_WEEKDAY, -1);
+            if (weekday < 0 || weekday > 6) {
+                Log.w(TAG, "Weekly reminder id=" + id + " has no weekday; not re-armed");
+                return;
+            }
+            fireAt = nextWeeklyFire(weekday, hour, minute, now);
+        } else {
+            fireAt = nextDailyFire(hour, minute, now);
+        }
 
         Intent again = new Intent(context, NotificationAlarmReceiver.class);
         again.putExtras(intent);
         PendingIntent pi = NexusNotificationsPlugin.alarmPendingIntent(context, id, again);
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
-            Log.w(TAG, "AlarmManager unavailable; daily reminder id=" + id + " not re-armed");
+            Log.w(TAG, "AlarmManager unavailable; repeating reminder id=" + id + " not re-armed");
             return;
         }
         NexusNotificationsPlugin.setAlarm(am, fireAt, pi);
@@ -194,16 +213,49 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
         next.setTimeInMillis(now);
         int nowHour = next.get(Calendar.HOUR_OF_DAY);
         int nowMinute = next.get(Calendar.MINUTE);
+        // v1.18.1 (NCC#168) — the day first, then the time of day. Set first
+        // and then moved onto a spring-forward day, a time in the skipped hour
+        // came out an hour early (02:30 → 01:30 standard time), not past the
+        // gap as described above; set last, it resolves to 03:30.
+        if (nowHour > hour || (nowHour == hour && nowMinute >= minute)) {
+            next.add(Calendar.DAY_OF_MONTH, 1);
+        }
         next.set(Calendar.HOUR_OF_DAY, hour);
         next.set(Calendar.MINUTE, minute);
         next.set(Calendar.SECOND, 0);
         next.set(Calendar.MILLISECOND, 0);
-        if (nowHour > hour || (nowHour == hour && nowMinute >= minute)) {
-            next.add(Calendar.DAY_OF_MONTH, 1);
-        }
         // Belt and braces for a resolution quirk: never at or before now.
         while (next.getTimeInMillis() <= now) {
             next.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        return next.getTimeInMillis();
+    }
+
+    /** v1.18.1 (NCC#168) — the next `weekday` (0 = Sunday .. 6 = Saturday, as
+     *  JS getDay()) at hour:minute on the wall clock strictly after `now`, in
+     *  the current default time zone. Same rules as nextDailyFire: the day is
+     *  chosen by comparing wall-clock fields, so a reminder that just fired
+     *  goes to next week, and one that fired late, past midnight, still gets
+     *  the coming one (six days on, not thirteen). */
+    static long nextWeeklyFire(int weekday, int hour, int minute, long now) {
+        Calendar next = Calendar.getInstance();
+        next.setTimeInMillis(now);
+        int nowWeekday = next.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY; // SUNDAY is 1
+        int nowHour = next.get(Calendar.HOUR_OF_DAY);
+        int nowMinute = next.get(Calendar.MINUTE);
+        int days = (weekday - nowWeekday + 7) % 7;
+        if (days == 0 && (nowHour > hour || (nowHour == hour && nowMinute >= minute))) {
+            days = 7;
+        }
+        // The day first, then the time of day (see nextDailyFire).
+        next.add(Calendar.DAY_OF_MONTH, days);
+        next.set(Calendar.HOUR_OF_DAY, hour);
+        next.set(Calendar.MINUTE, minute);
+        next.set(Calendar.SECOND, 0);
+        next.set(Calendar.MILLISECOND, 0);
+        // Belt and braces, as above: never at or before now.
+        while (next.getTimeInMillis() <= now) {
+            next.add(Calendar.DAY_OF_MONTH, 7);
         }
         return next.getTimeInMillis();
     }

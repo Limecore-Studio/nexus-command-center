@@ -545,18 +545,21 @@ function NotificationBridge() {
   //   'view'  → open a target route (e.g. /finance/budgets with cat id)
   //   future actions add a case here. Unknown IDs are silently dropped.
   // The notification is auto-dismissed by NotificationActionReceiver
-  // before this fires, so no manual cancel is needed.
+  // before this fires, so no manual cancel is needed. Actions taken while
+  // NCC was closed are queued natively and handed over here in order, each
+  // once (NCC#169).
   useEffect(() => {
     let unsub: () => void = () => {};
     let cancelled = false;
     onNotificationAction((payload) => {
       const { actionId, route, extra } = payload;
       if (actionId === 'done' && extra && typeof extra.taskId === 'string') {
-        // Fire-and-forget — setComplete handles its own persistence.
+        // setComplete handles its own persistence.
         // v1.18.1 (NCC#143): set, not toggle. The same "Mark done" can arrive
         // twice (live, then from the native buffer), and a toggle undid it.
-        void useTaskStore.getState().setComplete(extra.taskId, true);
-        return;
+        // v1.18.1 (NCC#169): returned, so a drain of several queued actions
+        // applies them one after another and acknowledges them once written.
+        return useTaskStore.getState().setComplete(extra.taskId, true);
       }
       if (actionId === 'view' && route) {
         navigateRef.current(route);

@@ -11,6 +11,8 @@ const plugin = vi.hoisted(() => ({
   schedule: vi.fn(async (_spec: Record<string, unknown>) => ({})),
   consumePendingTap: vi.fn(async () => ({ route: '' })),
   consumePendingAction: vi.fn(async () => ({ actionId: '', route: '', extraJson: '' })),
+  ackPendingTaps: vi.fn(async (_spec: { seqs: number[] }) => {}),
+  ackPendingActions: vi.fn(async (_spec: { seqs: number[] }) => {}),
 }));
 const settings = vi.hoisted(() => ({
   loaded: true,
@@ -33,6 +35,8 @@ vi.mock('./nexusNotificationsPlugin', () => ({
     schedule: plugin.schedule,
     consumePendingTap: plugin.consumePendingTap,
     consumePendingAction: plugin.consumePendingAction,
+    ackPendingTaps: plugin.ackPendingTaps,
+    ackPendingActions: plugin.ackPendingActions,
   },
 }));
 vi.mock('../store/useSettingsStore', () => ({
@@ -48,6 +52,8 @@ beforeEach(() => {
   plugin.schedule.mockClear();
   plugin.consumePendingTap.mockClear();
   plugin.consumePendingAction.mockClear();
+  plugin.ackPendingTaps.mockClear();
+  plugin.ackPendingActions.mockClear();
   settings.loaded = true;
   settings.notifMasterEnabled = true;
   settings.load.mockReset();
@@ -131,6 +137,14 @@ describe('the master switch (NCC#151)', () => {
     );
   });
 
+  // v1.18.1 (NCC#168): a weekly repeat is sent only with its weekday and time.
+  it('passes a weekly repeat with its weekday and time through', async () => {
+    await scheduleNotification({ ...base, every: 'week', weeklyTime: { weekday: 3, hour: 18, minute: 5 } });
+    expect(plugin.schedule).toHaveBeenCalledWith(
+      expect.objectContaining({ every: 'week', weekday: 3, hour: 18, minute: 5 }),
+    );
+  });
+
   it('sends no time of day for a one-shot', async () => {
     await scheduleNotification({ ...base, dailyTime: { hour: 2, minute: 30 } });
     const spec = plugin.schedule.mock.calls[0][0];
@@ -140,21 +154,20 @@ describe('the master switch (NCC#151)', () => {
 });
 
 describe('a notification delivered live is not replayed (NCC#143)', () => {
-  it('clears the tap buffer after a live tap', async () => {
+  // v1.18.1 (NCC#169): cleared by acknowledging its seq, not by draining.
+  it('clears the tap from the queue after a live tap', async () => {
     const opened: string[] = [];
     await onNotificationTap((r) => opened.push(r));
-    plugin.consumePendingTap.mockClear(); // the cold-start drain
-    plugin.listeners.notificationTap({ route: '/tasks' });
+    plugin.listeners.notificationTap({ route: '/tasks', seq: 143 });
     expect(opened).toEqual(['/tasks']);
-    expect(plugin.consumePendingTap).toHaveBeenCalledTimes(1);
+    expect(plugin.ackPendingTaps).toHaveBeenCalledWith({ seqs: [143] });
   });
 
-  it('clears the action buffer after a live action', async () => {
+  it('clears the action from the queue after a live action', async () => {
     const seen: string[] = [];
     await onNotificationAction((a) => seen.push(a.actionId));
-    plugin.consumePendingAction.mockClear();
-    plugin.listeners.notificationAction({ actionId: 'done', route: '/tasks', extraJson: '' });
+    plugin.listeners.notificationAction({ actionId: 'done', route: '/tasks', extraJson: '', seq: 144 });
     expect(seen).toEqual(['done']);
-    expect(plugin.consumePendingAction).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(plugin.ackPendingActions).toHaveBeenCalledWith({ seqs: [144] }));
   });
 });

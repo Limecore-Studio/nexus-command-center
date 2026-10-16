@@ -4,8 +4,9 @@
 // load()), up to three local notifications:
 //
 //   1. PRIMARY      at reminderTime — varied copy. Repeats daily for a daily
-//                   habit (so it never carries the streak; see below), one-shot
-//                   for a specific-days habit (streak-aware copy).
+//                   habit (so it never carries the streak; see below). A
+//                   specific-days habit has one alarm per chosen weekday
+//                   instead, each repeating weekly (v1.18.1, NCC#168).
 //   2. EVENING NUDGE ~3h later (daily habits only, streak > 0, capped ≤ 21:00)
 //                   — soft "streak at risk" message.
 //   3. MORNING CATCH-UP at 08:00 (daily habits only) — "did you do it last
@@ -38,10 +39,23 @@
 // showing the count after the streak broke. A repeating reminder now takes the
 // streak-free 'repeating' copy (habitMessages.ts).
 //
-// ID allocation: 3 slots per habit inside the 8000-8999 habits range —
-//   slot = hash(id) % 300; base = 8000 + slot*3 → {primary, evening, morning}.
-// Milestones use a small shared sub-range (8990-8998), one-off so collisions
-// are harmless.
+// v1.18.1 (NCC#168): a specific-days habit's reminder was one-shot: it fired
+// on the next chosen day and then stayed silent until NCC was opened. Each
+// chosen weekday now has its own alarm, which the native receiver re-arms for
+// the same weekday a week later (every: 'week'), with the streak-free
+// 'repeating' copy for the same reason as the daily one.
+//
+// ID allocation inside the habits range (8000-11099), slot = hash(id) % 300:
+//   8000 + slot*3 + {0,1,2}  → {primary, evening, morning} of a daily habit
+//   8990-8998                → milestones, shared, one-off so collisions are
+//                              harmless
+//   9000 + slot*7 + weekday  → a specific-days habit's reminder on that
+//                              weekday (0 = Sunday .. 6 = Saturday)
+// A habit owns the IDs of its current kind only (ownedHabitReminderIds), so
+// switching kind, or dropping a weekday, leaves alarms that
+// reconcileHabitReminders cancels. Scheduling never cancels another kind's
+// IDs or another weekday's itself: two habits can share a slot (NCC#178), and
+// only reconcile knows which habit owns what.
 
 import { scheduleNotification, cancelNotifications, pendingIdsIn, ID_RANGES } from './notifications';
 import { habitMessage } from './habitMessages';
@@ -54,8 +68,16 @@ function habitSlot(habitId: string): number {
 }
 
 const MILESTONE_BASE = ID_RANGES.habits.base + 990; // 8990-8998
+// v1.18.1 (NCC#168): 9000-11099, 7 per slot.
+const WEEKDAY_BASE = ID_RANGES.habits.base + 1000;
 
-function habitIds(habitId: string): { primary: number; evening: number; morning: number; milestone: number } {
+function habitIds(habitId: string): {
+  primary: number;
+  evening: number;
+  morning: number;
+  milestone: number;
+  weekdays: number[];
+} {
   const slot = habitSlot(habitId);
   const base = ID_RANGES.habits.base + slot * 3; // 8000 + slot*3
   return {
@@ -63,14 +85,41 @@ function habitIds(habitId: string): { primary: number; evening: number; morning:
     evening: base + 1,
     morning: base + 2,
     milestone: MILESTONE_BASE + (slot % 9),
+    weekdays: [0, 1, 2, 3, 4, 5, 6].map((d) => WEEKDAY_BASE + slot * 7 + d),
   };
 }
 
-/** The reminder alarm IDs a habit owns: primary, evening, morning. Two habits
- *  can share them (slot = hash % 300). */
+/** The daily reminder alarm IDs of a habit: primary, evening, morning. Two
+ *  habits can share them (slot = hash % 300). */
 export function habitReminderIds(habitId: string): number[] {
   const ids = habitIds(habitId);
   return [ids.primary, ids.evening, ids.morning];
+}
+
+/** v1.18.1 (NCC#168): the alarm ID of a specific-days habit's reminder on one
+ *  weekday (0 = Sunday .. 6 = Saturday, as Date.getDay()). */
+export function habitWeekdayReminderId(habitId: string, weekday: number): number {
+  return habitIds(habitId).weekdays[weekday];
+}
+
+/** v1.18.1 (NCC#168): the chosen weekdays of a specific-days habit, valid
+ *  and without repeats. */
+function chosenWeekdays(habit: Pick<Habit, 'daysOfWeek'>): Set<number> {
+  return new Set((habit.daysOfWeek ?? []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6));
+}
+
+/** v1.18.1 (NCC#168): the reminder alarm IDs a habit uses as it is now: none
+ *  without a usable reminder or when archived, primary/evening/morning for a
+ *  daily habit, one per chosen weekday for a specific-days habit. */
+export function ownedHabitReminderIds(habit: Habit): number[] {
+  if (!habit.reminderTime || habit.archivedAt || !parseHHMM(habit.reminderTime)) return [];
+  if (habit.frequencyKind === 'daily') return habitReminderIds(habit.id);
+  const ids = habitIds(habit.id);
+  return [...chosenWeekdays(habit)].map((d) => ids.weekdays[d]);
+}
+
+function isMilestoneId(id: number): boolean {
+  return id >= MILESTONE_BASE && id < WEEKDAY_BASE;
 }
 
 /** v1.18.1 (NCC#138): cancel every alarm in the habits range that no active
@@ -80,16 +129,18 @@ export function habitReminderIds(habitId: string): number[] {
  *  cancel their own alarms, sync never did. IDs an active habit owns are kept,
  *  not wiped and re-armed, because slots collide (hash % 300): an archived
  *  habit can share its IDs with an active one. Milestones are left alone; they
- *  are one-off and fire within seconds. */
+ *  are one-off and fire within seconds.
+ *
+ *  v1.18.1 (NCC#168): what a habit owns depends on its kind and days, so a
+ *  weekday alarm left by a habit since switched to daily, or by a day
+ *  dropped on another device, goes too. */
 export async function reconcileHabitReminders(habits: Habit[]): Promise<void> {
   const owned = new Set<number>();
   for (const h of habits) {
-    if (h.reminderTime && !h.archivedAt) {
-      for (const id of habitReminderIds(h.id)) owned.add(id);
-    }
+    for (const id of ownedHabitReminderIds(h)) owned.add(id);
   }
   const orphans = (await pendingIdsIn('habits')).filter(
-    (id) => id < MILESTONE_BASE && !owned.has(id),
+    (id) => !isMilestoneId(id) && !owned.has(id),
   );
   await cancelNotifications(orphans);
 }
@@ -103,22 +154,26 @@ function parseHHMM(s: string): { hour: number; minute: number } | null {
   return { hour, minute };
 }
 
-function nextDailyFire(hour: number, minute: number, from: Date = new Date()): Date {
+/** hour:minute on the day `offset` days after `from`. v1.18.1 (NCC#168): the
+ *  day first, then the time. Set on today first, a time in a skipped DST hour
+ *  (02:30 on a spring-forward day) became 03:30 and stayed 03:30 on the day it
+ *  was then moved to. */
+function atDayOffset(from: Date, offset: number, hour: number, minute: number): Date {
   const c = new Date(from);
-  c.setSeconds(0, 0);
+  c.setDate(c.getDate() + offset);
   c.setHours(hour, minute, 0, 0);
-  if (c.getTime() <= from.getTime()) c.setDate(c.getDate() + 1);
   return c;
+}
+
+function nextDailyFire(hour: number, minute: number, from: Date = new Date()): Date {
+  const c = atDayOffset(from, 0, hour, minute);
+  return c.getTime() > from.getTime() ? c : atDayOffset(from, 1, hour, minute);
 }
 
 function nextSpecificDaysFire(hour: number, minute: number, daysOfWeek: number[], from: Date = new Date()): Date | null {
   if (daysOfWeek.length === 0) return null;
-  const c = new Date(from);
-  c.setSeconds(0, 0);
-  c.setHours(hour, minute, 0, 0);
   for (let offset = 0; offset < 8; offset++) {
-    const probe = new Date(c);
-    probe.setDate(probe.getDate() + offset);
+    const probe = atDayOffset(from, offset, hour, minute);
     if (probe.getTime() <= from.getTime()) continue;
     if (daysOfWeek.includes(probe.getDay())) return probe;
   }
@@ -136,46 +191,38 @@ export async function scheduleHabitReminder(
 ): Promise<void> {
   const ids = habitIds(habit.id);
 
-  // No reminder / archived / malformed → make sure nothing is left scheduled.
-  if (!habit.reminderTime || habit.archivedAt) {
-    await cancelNotifications([ids.primary, ids.evening, ids.morning]);
-    return;
-  }
+  // No reminder / archived / malformed → nothing to schedule. v1.18.1
+  // (NCC#168, NCC#178): what it had is left to reconcileHabitReminders, which
+  // the store runs after every habit change; cancelling the IDs here also hit
+  // any active habit sharing the slot.
+  if (!habit.reminderTime || habit.archivedAt) return;
   const parsed = parseHHMM(habit.reminderTime);
-  if (!parsed) {
-    await cancelNotifications([ids.primary, ids.evening, ids.morning]);
+  if (!parsed) return;
+
+  // v1.18.1 (NCC#168): a specific-days habit has its own alarms, one per
+  // chosen weekday, and no evening nudge or morning catch-up (their messaging
+  // assumes "every day"; specific-days eligibility would make them misleading).
+  if (habit.frequencyKind !== 'daily') {
+    await scheduleWeekdayReminders(habit, parsed);
     return;
   }
-
-  const isDaily = habit.frequencyKind === 'daily';
+  // A habit switched from specific days to daily leaves its weekday alarms;
+  // reconcileHabitReminders cancels them (see the ID allocation note).
 
   // ── 1. Primary reminder ──────────────────────────────────────────────
-  const primaryAt = isDaily
-    ? nextDailyFire(parsed.hour, parsed.minute)
-    : nextSpecificDaysFire(parsed.hour, parsed.minute, habit.daysOfWeek ?? []);
-  if (primaryAt) {
-    // v1.18.1 (NCC#138): a repeating reminder shows this text every day, so it
-    // must not carry today's streak.
-    const m = isDaily
-      ? habitMessage('repeating', habit.title, 0)
-      : habitMessage('primary', habit.title, streak);
-    await scheduleNotification({
-      id: ids.primary,
-      category: 'habits',
-      title: m.title,
-      body: m.body,
-      at: primaryAt,
-      ...(isDaily ? { every: 'day' as const, dailyTime: parsed } : {}),
-      extra: { route: '/habits', habitId: habit.id },
-    });
-  }
-
-  // Evening nudge + morning catch-up are daily-habit only (the messaging
-  // assumes "every day"; specific-days eligibility would make them misleading).
-  if (!isDaily) {
-    await cancelNotifications([ids.evening, ids.morning]);
-    return;
-  }
+  // v1.18.1 (NCC#138): a repeating reminder shows this text every day, so it
+  // must not carry today's streak.
+  const m = habitMessage('repeating', habit.title, 0);
+  await scheduleNotification({
+    id: ids.primary,
+    category: 'habits',
+    title: m.title,
+    body: m.body,
+    at: nextDailyFire(parsed.hour, parsed.minute),
+    every: 'day',
+    dailyTime: parsed,
+    extra: { route: '/habits', habitId: habit.id },
+  });
 
   // ── 2. Evening risk nudge — only when there's a streak to protect, the
   //       habit ISN'T already done today, and ~3h after the reminder still
@@ -215,15 +262,34 @@ export async function scheduleHabitReminder(
   }
 }
 
+/** v1.18.1 (NCC#168): a specific-days habit's reminders. Each chosen weekday
+ *  gets an alarm at the next such day, repeating weekly (the native receiver
+ *  re-arms it a week on). The other weekdays, and the daily IDs (a habit
+ *  switched from daily, or a v1.18.0 one-shot primary), are left to
+ *  reconcileHabitReminders. The text repeats unchanged, so it is the
+ *  streak-free 'repeating' copy. */
+async function scheduleWeekdayReminders(habit: Habit, time: { hour: number; minute: number }): Promise<void> {
+  const ids = habitIds(habit.id);
+  const m = habitMessage('repeating', habit.title, 0);
+  for (const weekday of chosenWeekdays(habit)) {
+    const at = nextSpecificDaysFire(time.hour, time.minute, [weekday]);
+    if (!at) continue;
+    await scheduleNotification({
+      id: ids.weekdays[weekday],
+      category: 'habits',
+      title: m.title,
+      body: m.body,
+      at,
+      every: 'week',
+      weeklyTime: { weekday, ...time },
+      extra: { route: '/habits', habitId: habit.id },
+    });
+  }
+}
+
 /** ~3h after the reminder still lands at or before 21:00 (a sane evening). */
 function eveningHourInRange(reminderHour: number): boolean {
   return reminderHour + 3 <= 21;
-}
-
-/** Cancel all of a habit's reminders. */
-export async function cancelHabitReminder(habit: Pick<Habit, 'id'>): Promise<void> {
-  const ids = habitIds(habit.id);
-  await cancelNotifications([ids.primary, ids.evening, ids.morning]);
 }
 
 /** Fire a one-off streak-milestone celebration immediately. Called from the

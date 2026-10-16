@@ -10,6 +10,7 @@ import type { Task } from '../types/tasks';
 //        never re-armed when it went back on (NCC#151).
 //   S1 — a repeating reminder froze the streak count into its text (NCC#138).
 //   S2 — "Mark done" toggled, so a replayed one undid itself (NCC#143).
+//   NCC#168 — a specific-days habit reminder was one-shot.
 
 const plugin = vi.hoisted(() => ({
   pending: [] as number[],
@@ -50,7 +51,13 @@ vi.stubGlobal('document', {
   documentElement: { style: { setProperty: () => {}, removeProperty: () => {} } },
 });
 
-const { reconcileHabitReminders, habitReminderIds, scheduleHabitReminder } = await import('./habitReminders');
+const {
+  reconcileHabitReminders,
+  habitReminderIds,
+  scheduleHabitReminder,
+  habitWeekdayReminderId,
+  ownedHabitReminderIds,
+} = await import('./habitReminders');
 const { habitMessage } = await import('./habitMessages');
 const { scheduleNotification, ID_RANGES } = await import('./notifications');
 const { useHabitsStore, rearmHabitsWhenNotificationsOn } = await import('../store/useHabitsStore');
@@ -283,16 +290,22 @@ describe('a repeating reminder carries no streak (S1)', () => {
     expect(`${primary.title} ${primary.body}`).not.toMatch(/12|streak/i);
   });
 
-  it('a specific-days habit is one-shot and keeps its streak-aware copy', async () => {
+  // v1.18.1 (NCC#168): was one-shot with streak-aware copy; it repeats
+  // weekly now, so it takes the streak-free copy too.
+  it('a specific-days habit repeats weekly per day, with that copy', async () => {
     const { a } = collidingIds();
     await scheduleHabitReminder(
       habit(a, { frequencyKind: 'specific_days', daysOfWeek: [0, 1, 2, 3, 4, 5, 6] }),
       12,
       false,
     );
-    const primary = plugin.schedule.mock.calls.find((c) => c[0].id === habitReminderIds(a)[0])![0];
-    expect(primary).not.toHaveProperty('every');
-    expect(primary.title).toContain('12');
+    expect(scheduledIds()).not.toContain(habitReminderIds(a)[0]);
+    const specs = plugin.schedule.mock.calls.map((c) => c[0]);
+    expect(specs).toHaveLength(7);
+    for (const spec of specs) {
+      expect(spec).toMatchObject({ every: 'week' });
+      expect(`${spec.title} ${spec.body}`).not.toMatch(/12|streak/i);
+    }
   });
 });
 
@@ -329,5 +342,161 @@ describe('"Mark done" sets, it does not toggle (S2)', () => {
     expect((await db.tasks.get(task.id))?.completed).toBe(true);
     await useTaskStore.getState().toggleComplete(task.id);
     expect((await db.tasks.get(task.id))?.completed).toBe(false);
+  });
+});
+
+describe('a specific-days habit reminder repeats weekly, one alarm per day (NCC#168)', () => {
+  const weekdays = [0, 1, 2, 3, 4, 5, 6];
+  const specific = (id: string, daysOfWeek: number[], patch: Partial<Habit> = {}) =>
+    habit(id, { frequencyKind: 'specific_days', daysOfWeek, ...patch });
+  const scheduledSpecs = () => plugin.schedule.mock.calls.map((c) => c[0]);
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('gives each weekday its own ID, in its own sub-range of the habits range', () => {
+    const otherRanges = Object.entries(ID_RANGES).filter(([k]) => k !== 'habits');
+    for (let i = 0; i < 400; i++) {
+      const id = `h-${i}`;
+      const days = weekdays.map((d) => habitWeekdayReminderId(id, d));
+      expect(new Set(days).size).toBe(7);
+      expect(days.every((x, d) => x === days[0] + d)).toBe(true); // weekday-ordered
+      for (const x of days) {
+        expect(x).toBeGreaterThanOrEqual(ID_RANGES.habits.base + 1000);
+        expect(x).toBeLessThan(ID_RANGES.habits.base + ID_RANGES.habits.size);
+        for (const [, r] of otherRanges) expect(x >= r.base && x < r.base + r.size).toBe(false);
+        // never one of the daily IDs (8000-8899) or the milestones (8990-8998)
+        expect(habitReminderIds(id)).not.toContain(x);
+      }
+    }
+  });
+
+  it('two habits share weekday IDs only when they share a slot', () => {
+    const { a, b, others } = collidingIds();
+    expect(habitWeekdayReminderId(a, 3)).toBe(habitWeekdayReminderId(b, 3));
+    for (const o of others) expect(habitWeekdayReminderId(o, 3)).not.toBe(habitWeekdayReminderId(a, 3));
+  });
+
+  it('the highest weekday ID is accepted by the habits range check', async () => {
+    const top = ID_RANGES.habits.base + 1000 + 299 * 7 + 6;
+    expect(top).toBe(ID_RANGES.habits.base + ID_RANGES.habits.size - 1);
+    const r = await scheduleNotification({
+      id: top,
+      category: 'habits',
+      title: 't',
+      body: 'b',
+      at: new Date(Date.now() + 60_000),
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('arms the chosen days only, each weekly at its own weekday and time; today, once past, is next week', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 21, 9, 0)); // Wednesday 09:00
+    const { a } = collidingIds();
+    await scheduleHabitReminder(specific(a, [5, 1, 3], { reminderTime: '07:30' }), 4, false);
+
+    const specs = scheduledSpecs();
+    expect(specs.map((s) => s.id)).toEqual([5, 1, 3].map((d) => habitWeekdayReminderId(a, d)));
+    for (const s of specs) expect(s).toMatchObject({ every: 'week', hour: 7, minute: 30 });
+    const at = Object.fromEntries(specs.map((s) => [s.weekday, s.atMillis]));
+    expect(at[1]).toBe(new Date(2026, 9, 26, 7, 30).getTime()); // next Monday
+    expect(at[3]).toBe(new Date(2026, 9, 28, 7, 30).getTime()); // today was 07:30: +7 days
+    expect(at[5]).toBe(new Date(2026, 9, 23, 7, 30).getTime()); // this Friday
+    // Nothing is cancelled by scheduling (NCC#178): reconcile does that.
+    expect(plugin.cancel).not.toHaveBeenCalled();
+  });
+
+  it("arms today's alarm today while its time is still ahead", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 21, 7, 29)); // Wednesday 07:29
+    const { a } = collidingIds();
+    await scheduleHabitReminder(specific(a, [3], { reminderTime: '07:30' }), 0, false);
+    expect(scheduledSpecs()[0].atMillis).toBe(new Date(2026, 9, 21, 7, 30).getTime());
+  });
+
+  it('does not cancel the alarms of a habit of the other kind that shares the slot (NCC#178)', async () => {
+    const { a, b } = collidingIds();
+    const daily = habit(a);
+    const weekly = specific(b, [2, 4]);
+    plugin.pending = [...habitReminderIds(a), habitWeekdayReminderId(b, 2), habitWeekdayReminderId(b, 4)];
+    await scheduleHabitReminder(daily, 3, false);
+    await scheduleHabitReminder(weekly, 3, false);
+    await reconcileHabitReminders([daily, weekly]);
+    expect(cancelledIds().filter((id) => plugin.pending.includes(id))).toEqual([]);
+  });
+
+  it('editing the days arms an added day, and reconcile cancels the dropped one', async () => {
+    const { a } = collidingIds();
+    await db.habits.put(specific(a, [1, 3]));
+    useHabitsStore.setState({ habits: [specific(a, [1, 3])], loaded: true });
+    plugin.pending = [habitWeekdayReminderId(a, 1), habitWeekdayReminderId(a, 3)];
+
+    await useHabitsStore.getState().updateHabit(a, { daysOfWeek: [1, 5] });
+    await vi.waitFor(() => expect(scheduledIds()).toContain(habitWeekdayReminderId(a, 5)));
+    expect(scheduledIds()).toContain(habitWeekdayReminderId(a, 1));
+    expect(scheduledIds()).not.toContain(habitWeekdayReminderId(a, 3));
+    await vi.waitFor(() => expect(cancelledIds()).toEqual([habitWeekdayReminderId(a, 3)]));
+  });
+
+  it('switching to daily cancels the weekday alarms, and back again the daily ones', async () => {
+    const { a } = collidingIds();
+    await db.habits.put(specific(a, [0, 6]));
+    useHabitsStore.setState({ habits: [specific(a, [0, 6])], loaded: true });
+    plugin.pending = [habitWeekdayReminderId(a, 0), habitWeekdayReminderId(a, 6)];
+
+    await useHabitsStore.getState().updateHabit(a, { frequencyKind: 'daily' });
+    await vi.waitFor(() => {
+      expect(cancelledIds()).toContain(habitWeekdayReminderId(a, 0));
+      expect(cancelledIds()).toContain(habitWeekdayReminderId(a, 6));
+    });
+
+    plugin.cancel.mockClear();
+    plugin.pending = habitReminderIds(a);
+    await useHabitsStore.getState().updateHabit(a, { frequencyKind: 'specific_days' });
+    await vi.waitFor(() => expect(new Set(cancelledIds())).toEqual(new Set(habitReminderIds(a))));
+  });
+
+  it('deleting, archiving or clearing the reminder cancels every per-day alarm', async () => {
+    const { others } = collidingIds();
+    const [del, arch, clr] = others;
+    for (const id of others) await db.habits.put(specific(id, [0, 2, 4]));
+    useHabitsStore.setState({ habits: others.map((id) => specific(id, [0, 2, 4])), loaded: true });
+    plugin.pending = others.flatMap((id) => [0, 2, 4].map((d) => habitWeekdayReminderId(id, d)));
+
+    await useHabitsStore.getState().deleteHabit(del);
+    await useHabitsStore.getState().archiveHabit(arch);
+    await useHabitsStore.getState().updateHabit(clr, { reminderTime: undefined });
+
+    await vi.waitFor(() => {
+      for (const id of [del, arch, clr]) {
+        for (const d of [0, 2, 4]) expect(cancelledIds()).toContain(habitWeekdayReminderId(id, d));
+      }
+    });
+    expect(plugin.schedule).not.toHaveBeenCalled();
+  });
+
+  it('reconcile keeps the chosen days and cancels a dropped day, a kind switch and the old one-shot', async () => {
+    const { others } = collidingIds();
+    const [spec, wasSpecific] = others;
+    const milestone = ID_RANGES.habits.base + 993;
+    plugin.pending = [
+      habitWeekdayReminderId(spec, 1),
+      habitWeekdayReminderId(spec, 3), // a day dropped on another device
+      habitReminderIds(spec)[0], // the one-shot primary from before NCC#168
+      ...habitReminderIds(wasSpecific),
+      habitWeekdayReminderId(wasSpecific, 2), // now daily
+      milestone,
+    ];
+    await reconcileHabitReminders([specific(spec, [1, 5]), habit(wasSpecific)]);
+
+    expect(new Set(cancelledIds())).toEqual(
+      new Set([habitWeekdayReminderId(spec, 3), habitReminderIds(spec)[0], habitWeekdayReminderId(wasSpecific, 2)]),
+    );
+    expect(ownedHabitReminderIds(specific(spec, [1, 5, 5, 9]))).toEqual([
+      habitWeekdayReminderId(spec, 1),
+      habitWeekdayReminderId(spec, 5),
+    ]);
   });
 });

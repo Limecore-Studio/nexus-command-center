@@ -27,10 +27,22 @@
 //   4000-4099  Portfolio end-of-day (4001 = 4:05pm primary, 4002 = 4:35pm backup)
 //   5000-5999  News alerts (one ID per news item, derived from item ID)
 //   6000-6099  Watchlist price targets (one ID per item × side, v1.15)
+//   7000-7999  Insights tier changes (one ID per ticker, v1.2)
+//   8000-11099 Habits (v1.2): 8000-8899 daily reminders (3 per slot),
+//              8990-8998 milestones, 9000-11099 weekday reminders of a
+//              specific-days habit (7 per slot, v1.18.1 NCC#168). See
+//              habitReminders.ts.
 // ────────────────────────────────────────────────────────────────────────
 
 import { Capacitor } from '@capacitor/core';
-import { NexusNotifications, type NotificationAction } from './nexusNotificationsPlugin';
+import {
+  NexusNotifications,
+  type NotificationAction,
+  type PendingActionResult,
+  type PendingTapResult,
+  type QueuedAction,
+  type QueuedTap,
+} from './nexusNotificationsPlugin';
 import { useSettingsStore } from '../store/useSettingsStore';
 
 export type { NotificationAction };
@@ -134,7 +146,8 @@ export const ID_RANGES: Record<NotificationCategory, { base: number; size: numbe
   // v1.2 — one ID per ticker. Hash-derived (see ratingHistory.ts).
   insights: { base: 7000, size: 1000 },
   // v1.2 — one ID per habit. Hash-derived (see habitReminders.ts).
-  habits: { base: 8000, size: 1000 },
+  // v1.18.1 (NCC#168): up to 11099, for one alarm per chosen weekday.
+  habits: { base: 8000, size: 3100 },
   // v1.15 — 50 items × above/below. Hash-derived (see watchlistAlerts.ts).
   watchlist: { base: 6000, size: 100 },
 };
@@ -237,14 +250,19 @@ interface ScheduleOptions {
   at?: Date;
   /** Repeat cadence. v1.18.1 (NCC#138): 'day' is honoured by the native
    *  plugin, which re-arms the alarm for the same local time the next day
-   *  each time it fires. Other values are not, and are not sent: the Weekly
-   *  Review flow re-arms itself on every app start. */
+   *  each time it fires. v1.18.1 (NCC#168): 'week' too, but only with
+   *  `weeklyTime`. Other values are not honoured and are not sent; nor is
+   *  'week' without `weeklyTime`: the Weekly Review flow re-arms itself on
+   *  every app start. */
   every?: 'day' | 'week' | 'month' | 'year';
   /** v1.18.1 (NCC#138): with every: 'day', the wall-clock time it repeats at.
    *  Pass it when you have it: `at` cannot show it on a day when that time
    *  falls in a skipped DST hour, and the native side would otherwise read it
    *  off `at`. */
   dailyTime?: { hour: number; minute: number };
+  /** v1.18.1 (NCC#168): with every: 'week', the weekday (0 = Sunday, as
+   *  Date.getDay()) and wall-clock time it repeats at. */
+  weeklyTime?: { weekday: number; hour: number; minute: number };
   /** Arbitrary payload — read in the tap handler. Keep small; this rides
    *  the AlarmManager intent. The `route` field is special: if present,
    *  the tap handler navigates there. */
@@ -310,6 +328,7 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
       extra: opts.extra,
       actions: opts.actions,
       ...(opts.every === 'day' ? { every: 'day', ...opts.dailyTime } : {}),
+      ...(opts.every === 'week' && opts.weeklyTime ? { every: 'week', ...opts.weeklyTime } : {}),
     });
     return { ok: true };
   } catch (e) {
@@ -374,6 +393,90 @@ export function isAppRoute(route: unknown): route is string {
   );
 }
 
+// ─── Queued taps and actions (v1.18.1, NCC#169) ────────────────────────
+//
+// The native side queues every tap and action (persisted, oldest first,
+// each with a `seq`) and sends it live as well. An entry stays queued until
+// JS acknowledges it, so an action taken while NCC was closed survives the
+// process being killed before NCC is opened, and two of them are both kept.
+// The same entry can therefore reach JS more than once: live and then in a
+// drain, or in two drains (a re-subscription, or an ack that has not landed
+// yet). These make each seq count once per JS lifetime.
+
+const appliedTapSeqs = new Set<number>();
+/** Actions by seq: being applied (the path applying it acknowledges it once
+ *  done) or handled (applied, or skipped by a drain; safe to acknowledge). */
+const actionSeqState = new Map<number, 'applying' | 'handled'>();
+
+/** A queued tap older than this is acknowledged but not followed: it is from
+ *  a launch whose process died before JS read it, and navigating there on a
+ *  later, unrelated open would be a surprise. The same goes for a queued
+ *  action other than 'done' (they navigate, e.g. 'view'). */
+export const TAP_MAX_AGE_MS = 10 * 60_000;
+
+/** A queued 'done' older than this is acknowledged but not applied. It
+ *  outlives a closed app for days on purpose; the cap is for a replay after a
+ *  crash or a lost ack, which must not complete a task reopened since. */
+export const DONE_ACTION_MAX_AGE_MS = 7 * 86_400_000;
+
+/** Queued within `maxAge` of `now`. An entry without a time (the pre-NCC#169
+ *  single slot) counts as fresh. */
+function isFresh(item: { at?: unknown }, maxAge: number, now: number): boolean {
+  return typeof item.at !== 'number' || now - item.at <= maxAge;
+}
+
+function hasSeq(item: { seq?: unknown }): item is { seq: number } {
+  return typeof item.seq === 'number' && Number.isInteger(item.seq) && item.seq >= 0;
+}
+
+/** True the first time a seq is seen, and records it. An entry without one
+ *  (the native side could not queue it) cannot be told apart, so it counts. */
+function firstTime(applied: Set<number>, item: { seq?: unknown }): boolean {
+  if (!hasSeq(item)) return true;
+  if (applied.has(item.seq)) return false;
+  applied.add(item.seq);
+  return true;
+}
+
+function seqsOf(items: { seq?: unknown }[]): number[] {
+  return items.filter(hasSeq).map((i) => i.seq);
+}
+
+/** The queue from a consumePendingTap result, oldest first. A result without
+ *  `taps` is the pre-NCC#169 single slot. */
+export function queuedTaps(r: PendingTapResult | null | undefined): QueuedTap[] {
+  if (!r) return [];
+  if (Array.isArray(r.taps)) return r.taps;
+  return r.route ? [{ seq: -1, route: r.route }] : [];
+}
+
+/** The queue from a consumePendingAction result, oldest first; as queuedTaps. */
+export function queuedActions(r: PendingActionResult | null | undefined): QueuedAction[] {
+  if (!r) return [];
+  if (Array.isArray(r.actions)) return r.actions;
+  return r.actionId ? [{ seq: -1, actionId: r.actionId, route: r.route, extraJson: r.extraJson }] : [];
+}
+
+async function ackTaps(items: { seq?: unknown }[]): Promise<void> {
+  const seqs = seqsOf(items);
+  if (seqs.length === 0) return;
+  try {
+    await NexusNotifications.ackPendingTaps({ seqs });
+  } catch (e) {
+    console.warn('[notifications] ackPendingTaps failed:', (e as Error).message);
+  }
+}
+
+async function ackActions(items: { seq?: unknown }[]): Promise<void> {
+  const seqs = seqsOf(items);
+  if (seqs.length === 0) return;
+  try {
+    await NexusNotifications.ackPendingActions({ seqs });
+  } catch (e) {
+    console.warn('[notifications] ackPendingActions failed:', (e as Error).message);
+  }
+}
+
 /** Subscribe to notification taps. Calls `onOpen(route)` with the route
  *  encoded in the notification's `extra.route` payload. Returns an
  *  unsubscriber. Safe to call on web — returns a no-op unsubscriber.
@@ -387,20 +490,30 @@ export async function onNotificationTap(
   if (!Capacitor.isNativePlatform()) return () => {};
   try {
     const handle = await NexusNotifications.addListener('notificationTap', (event) => {
-      if (isAppRoute(event.route)) onOpen(event.route);
-      // v1.18.1 (NCC#143): the native side also buffers every tap for the
-      // cold-start drain below. This one was delivered live, so clear the
-      // buffer, or the next subscription would replay it.
-      void NexusNotifications.consumePendingTap().catch(() => {});
+      if (firstTime(appliedTapSeqs, event) && isAppRoute(event.route)) onOpen(event.route);
+      // v1.18.1 (NCC#143): the native side also queues every tap for the
+      // cold-start drain below. This one was delivered live, so acknowledge
+      // it, or the next subscription would replay it. v1.18.1 (NCC#169): by
+      // its seq, so the rest of the queue stays.
+      void ackTaps([event]);
     });
-    // v1.3.1 BUG-14 — drain the cold-start buffer. If the app was launched
+    // v1.3.1 BUG-14 — drain the cold-start queue. If the app was launched
     // from a notification tap, the native event already fired (before this
-    // listener was registered) and the route was buffered. Pull it now so
+    // listener was registered) and the route was queued. Pull it now so
     // the navigation lands. Warm-start taps arrive via the listener above;
-    // the buffer is then empty so this is a cheap no-op.
+    // the queue is then empty so this is a cheap no-op.
     try {
-      const pending = await NexusNotifications.consumePendingTap();
-      if (isAppRoute(pending.route)) onOpen(pending.route);
+      const taps = queuedTaps(await NexusNotifications.consumePendingTap());
+      // v1.18.1 (NCC#169): only the newest fresh tap is followed; stepping
+      // through older ones would only fill the back stack.
+      const now = Date.now();
+      let target: string | null = null;
+      for (const tap of taps) {
+        if (!firstTime(appliedTapSeqs, tap)) continue;
+        if (isFresh(tap, TAP_MAX_AGE_MS, now) && isAppRoute(tap.route)) target = tap.route;
+      }
+      if (target) onOpen(target);
+      await ackTaps(taps);
     } catch (e) {
       console.warn('[notifications] consumePendingTap failed:', (e as Error).message);
     }
@@ -422,48 +535,97 @@ interface NotificationActionPayload {
   extra: Record<string, unknown> | null;
 }
 
+/** May return a promise (v1.18.1, NCC#169): it is awaited before the next
+ *  queued action. Any other return value is ignored. */
+type NotificationActionHandler = (payload: NotificationActionPayload) => unknown;
+
+/** Hands one action to the handler and waits for it. A handler that throws
+ *  is logged, not retried: the action is still acknowledged, or it would
+ *  fail again on every launch. */
+async function applyAction(
+  handler: NotificationActionHandler,
+  item: { actionId: string; route: string; extraJson: string },
+): Promise<void> {
+  let extra: Record<string, unknown> | null = null;
+  if (item.extraJson) {
+    try {
+      extra = JSON.parse(item.extraJson);
+    } catch {
+      // Malformed JSON shouldn't break the handler. Just leave extra null.
+    }
+  }
+  try {
+    await handler({ actionId: item.actionId, route: isAppRoute(item.route) ? item.route : '', extra });
+  } catch (e) {
+    console.warn('[notifications] action handler failed:', item.actionId, (e as Error).message);
+  }
+}
+
 /** Subscribe to action-button taps (NOT the notification body itself —
  *  that's `onNotificationTap`). Handler receives the actionId, the
  *  optional route, and the parsed extra payload. The notification is
  *  auto-dismissed on the native side before the event reaches JS, so
- *  the handler doesn't need to clear it. */
-export async function onNotificationAction(
-  handler: (payload: NotificationActionPayload) => void,
-): Promise<() => void> {
+ *  the handler doesn't need to clear it.
+ *
+ *  v1.18.1 (NCC#169): each queued action is handed over once, oldest
+ *  first, each awaited before the next when the handler returns a promise,
+ *  and acknowledged (removed from the native queue) only after that. A
+ *  drain applies every 'done' younger than DONE_ACTION_MAX_AGE_MS, and of
+ *  the other actions, which navigate, only the newest one younger than
+ *  TAP_MAX_AGE_MS. A live action is always applied. */
+export async function onNotificationAction(handler: NotificationActionHandler): Promise<() => void> {
   if (!Capacitor.isNativePlatform()) return () => {};
   try {
     const sub = await NexusNotifications.addListener('notificationAction', (event) => {
-      let extra: Record<string, unknown> | null = null;
-      if (event.extraJson) {
-        try {
-          extra = JSON.parse(event.extraJson);
-        } catch {
-          // Malformed JSON shouldn't break the handler. Just leave extra null.
+      void (async () => {
+        if (!hasSeq(event)) {
+          await applyAction(handler, event);
+          return;
         }
-      }
-      handler({ actionId: event.actionId, route: isAppRoute(event.route) ? event.route : '', extra });
-      // v1.18.1 (NCC#143): delivered live, so clear the native buffer; left
-      // there, the next subscription replayed it and a "Mark done" flipped
-      // the task back to not done.
-      void NexusNotifications.consumePendingAction().catch(() => {});
+        const state = actionSeqState.get(event.seq);
+        if (state === 'applying') return; // the drain applying it acknowledges it
+        if (!state) {
+          actionSeqState.set(event.seq, 'applying');
+          await applyAction(handler, event);
+          actionSeqState.set(event.seq, 'handled');
+        }
+        // v1.18.1 (NCC#143): delivered live, so acknowledge it; left queued,
+        // the next subscription replayed it and a "Mark done" flipped the
+        // task back to not done. v1.18.1 (NCC#169): by its seq, after the
+        // handler has run.
+        await ackActions([event]);
+      })();
     });
-    // v1.3.1 BUG-14 — drain the cold-start action buffer (same rationale as
+    // v1.3.1 BUG-14 — drain the cold-start action queue (same rationale as
     // onNotificationTap's drain). Cold-start from a "Mark done" tap would
     // otherwise leave the task untoggled because the JS handler missed the
     // event window.
     try {
-      const pending = await NexusNotifications.consumePendingAction();
-      if (pending.actionId) {
-        let extra: Record<string, unknown> | null = null;
-        if (pending.extraJson) {
-          try {
-            extra = JSON.parse(pending.extraJson);
-          } catch {
-            // Malformed JSON shouldn't break the drain — handler gets null.
-          }
-        }
-        handler({ actionId: pending.actionId, route: isAppRoute(pending.route) ? pending.route : '', extra });
+      const actions = queuedActions(await NexusNotifications.consumePendingAction());
+      const now = Date.now();
+      const unseen = (a: QueuedAction) => !hasSeq(a) || !actionSeqState.has(a.seq);
+      // The newest fresh navigation; following older ones too would only
+      // chain screens and fill the back stack.
+      let navigation: QueuedAction | null = null;
+      for (const a of actions) {
+        if (a.actionId !== 'done' && unseen(a) && isFresh(a, TAP_MAX_AGE_MS, now)) navigation = a;
       }
+      // Acknowledged: what this drain applied or skipped, and what was
+      // handled before. Not what the live path is still applying; it
+      // acknowledges that itself when done.
+      const taken: QueuedAction[] = [];
+      for (const a of actions) {
+        if (!unseen(a)) {
+          if (actionSeqState.get(a.seq) === 'handled') taken.push(a);
+          continue;
+        }
+        const due = a.actionId === 'done' ? isFresh(a, DONE_ACTION_MAX_AGE_MS, now) : a === navigation;
+        if (hasSeq(a)) actionSeqState.set(a.seq, 'applying');
+        if (due) await applyAction(handler, a);
+        if (hasSeq(a)) actionSeqState.set(a.seq, 'handled');
+        taken.push(a);
+      }
+      await ackActions(taken);
     } catch (e) {
       console.warn('[notifications] consumePendingAction failed:', (e as Error).message);
     }

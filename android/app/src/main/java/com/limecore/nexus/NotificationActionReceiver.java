@@ -8,9 +8,9 @@ package com.limecore.nexus;
 //   2. Forward the action to the JS side as a `notificationAction` event
 //      so the app can do whatever the action ID maps to (mark task done,
 //      navigate to a category page, etc.).
-//   3. If the plugin instance isn't ready yet (cold start from an action
-//      tap), buffer the event so the first listener registration replays
-//      it — same pattern as deliverTap.
+//   3. Queue the action (persisted, v1.18.1 NCC#169) so the JS drain after
+//      the first listener registration applies it if the live event went
+//      nowhere (cold start from an action tap) — same pattern as deliverTap.
 //
 // All work is synchronous in onReceive — broadcast receivers have ~10s
 // before the system kills them. Forwarding an event is far under that.
@@ -47,9 +47,14 @@ public class NotificationActionReceiver extends BroadcastReceiver {
 
         // Forward to JS. Plugin instance may be null if this is a cold-start
         // (the app process wasn't alive when the user tapped the action) —
-        // the buffer in the plugin handles that.
+        // the queue in the plugin handles that. v1.18.1 (NCC#169) — the
+        // queue is persisted before this returns, so the action survives the
+        // process being killed before NCC is opened; the notification id
+        // lets a double tap on the same button count once.
         NexusNotificationsPlugin.deliverAction(
+            context,
             NexusNotificationsPlugin.getInstance(),
+            notifId,
             actionId,
             route,
             extraJson

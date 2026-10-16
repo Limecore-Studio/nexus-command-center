@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import PolicyUpdatedNote from './PolicyUpdatedNote';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import BottomTabBar from './BottomTabBar';
@@ -9,8 +9,6 @@ import OfflineBanner from './OfflineBanner';
 import FdroidUpdateNote from './FdroidUpdateNote';
 import { useShellTier, useSidebarRail } from '../lib/useShell';
 import QuickLogFAB from './QuickLogFAB';
-import QuickLogBottomSheet from './QuickLogBottomSheet';
-import QuickAddOverlay from './QuickAddOverlay';
 import PageTransition from './ui/PageTransition';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
@@ -30,6 +28,14 @@ import { reconcileTaskReminders } from '../lib/taskReminders';
 import { runPortfolioEodTick } from '../lib/portfolioEod';
 import { runNewsAlertsTick } from '../lib/newsAlerts';
 
+// v1.18.1 (NCC#173) — the two quick-entry sheets open only on a tap or a
+// shortcut, so they are lazy chunks like the screens, kept out of the startup
+// JS that every cold start parses. Each mounts (closed) two seconds after
+// start, or at its first open if that comes sooner, and then stays mounted
+// (its close animation and per-open refresh need that).
+const QuickLogBottomSheet = lazy(() => import('./QuickLogBottomSheet'));
+const QuickAddOverlay = lazy(() => import('./QuickAddOverlay'));
+
 // How long the app needs to have been backgrounded before a foreground
 // transition counts as a "resume" worth re-fetching live data for. 20 min
 // is the user-configured value: short enough to keep numbers fresh after a
@@ -40,6 +46,18 @@ const RESUME_REFRESH_THRESHOLD_MS = 20 * 60 * 1000;
 export default function AppShell() {
   const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickLogMounted, setQuickLogMounted] = useState(false);
+  const [quickAddMounted, setQuickAddMounted] = useState(false);
+  // Mounted closed shortly after start, so the first open slides in like the
+  // rest (a sheet mounted already open skips its CSS transition). A tap before
+  // then mounts it open.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setQuickLogMounted(true);
+      setQuickAddMounted(true);
+    }, 2000);
+    return () => window.clearTimeout(id);
+  }, []);
   const location = useLocation();
   // v1.9 Item 14, Phase 1 — desktop shell. Above 769px the bottom tab bar is
   // replaced by a persistent SideNav and the content column widens.
@@ -273,11 +291,13 @@ export default function AppShell() {
           el.isContentEditable);
       if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        setQuickAddMounted(true);
         setQuickAddOpen(true);
         return;
       }
       if (e.key === 'n' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
+        setQuickAddMounted(true);
         setQuickAddOpen(true);
       }
     };
@@ -348,10 +368,12 @@ export default function AppShell() {
           </div>
         </main>
       </div>
-      {showFAB && <QuickLogFAB onClick={() => setQuickLogOpen(true)} />}
+      {showFAB && <QuickLogFAB onClick={() => (setQuickLogMounted(true), setQuickLogOpen(true))} />}
       {isPhone && <BottomTabBar />}
-      <QuickLogBottomSheet open={quickLogOpen} onClose={() => setQuickLogOpen(false)} />
-      <QuickAddOverlay open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+      <Suspense fallback={null}>
+        {quickLogMounted && <QuickLogBottomSheet open={quickLogOpen} onClose={() => setQuickLogOpen(false)} />}
+        {quickAddMounted && <QuickAddOverlay open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />}
+      </Suspense>
     </div>
   );
 }

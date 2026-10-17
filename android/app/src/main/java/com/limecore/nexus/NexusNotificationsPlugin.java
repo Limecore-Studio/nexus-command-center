@@ -51,8 +51,10 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 @CapacitorPlugin(
@@ -100,6 +102,24 @@ public class NexusNotificationsPlugin extends Plugin {
     // Calendar.DAY_OF_WEEK), so a specific-days habit reminder re-arms itself
     // for the same weekday and time one week later.
     public static final String EXTRA_WEEKDAY = "nexus_weekday";
+    // v1.18.1 (NCC#168) — the instant this alarm was set for, so a fired
+    // one-shot forgets its stored spec only if that spec is still the one
+    // that fired (not a newer schedule() under the same id). Extras do not
+    // count in PendingIntent matching, so cancel() still finds the alarm.
+    public static final String EXTRA_AT = "nexus_at";
+
+    // v1.18.1 (NCC#168) — what each scheduled alarm needs to be rebuilt after
+    // a reboot without opening NCC (AlarmRearmReceiver): its own preference
+    // file, key = the notification id, value = a JSON spec (see specFromIntent).
+    // One key per alarm so a schedule() is one small write, not a rewrite of
+    // every alarm's spec. Written whenever an alarm is set (armAlarm), removed
+    // on cancel (cancelAlarm) and when a one-shot fires; a daily/weekly one's
+    // "at" moves on each time it re-arms itself.
+    private static final String SPECS_PREFS = "nexus_alarm_specs";
+    // Guards every alarm set/cancel together with its spec write: receivers
+    // run on the main thread, plugin methods on the plugin thread. Package-
+    // private because AlarmRearmReceiver holds it across its whole pass.
+    static final Object SPECS_LOCK = new Object();
 
     // v1.18.1 (NCC#169) — taps and actions waiting for JS, persisted. They
     // were one static slot in memory: an action whose receiver started the
@@ -251,6 +271,8 @@ public class NexusNotificationsPlugin extends Plugin {
         // v1.18.1 (NCC#168) — "week" too, for a specific-days habit reminder:
         // one alarm per chosen day, each re-armed a week later by the receiver.
         boolean weekly = "week".equals(every);
+        // v1.18.1 (NCC#168) — see EXTRA_AT.
+        intent.putExtra(EXTRA_AT, fireAt);
         if ("day".equals(every) || weekly) {
             intent.putExtra(EXTRA_EVERY, weekly ? "week" : "day");
             // The time of day JS passed, else the one the requested time shows
@@ -283,18 +305,20 @@ public class NexusNotificationsPlugin extends Plugin {
             }
         }
 
-        PendingIntent pi = alarmPendingIntent(getContext(), id, intent);
-
         AlarmManager am = (AlarmManager) getContext().getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
             call.reject("AlarmManager unavailable");
             return;
         }
 
-        setAlarm(am, fireAt, pi);
-
         // Track the ID so cancelAll / getPending can enumerate it later.
+        // v1.18.1 (NCC#168) — before armAlarm, so a stored spec is never one
+        // that getPending, and so the reconcile, cannot see.
         addTrackedId(id);
+
+        // v1.18.1 (NCC#168) — sets the alarm (alarmPendingIntent + setAlarm,
+        // as before) and stores its spec, for the re-arm after a reboot.
+        armAlarm(getContext(), am, id, intent, fireAt);
 
         JSObject result = new JSObject();
         result.put("id", id);
@@ -303,7 +327,8 @@ public class NexusNotificationsPlugin extends Plugin {
     }
 
     /** The PendingIntent an alarm fires. Shared with NotificationAlarmReceiver's
-     *  daily re-arm (v1.18.1, NCC#138) so both build exactly what cancel()
+     *  daily re-arm (v1.18.1, NCC#138) and, through armAlarm, the boot re-arm
+     *  (v1.18.1, NCC#168), so all of them build exactly what cancel()
      *  looks up: request code = id, and an intent for NotificationAlarmReceiver
      *  with no action, data or categories (extras don't count in the match).
      *
@@ -348,14 +373,10 @@ public class NexusNotificationsPlugin extends Plugin {
         try {
             for (int i = 0; i < ids.length(); i++) {
                 int id = ids.getInt(i);
-                Intent intent = new Intent(getContext(), NotificationAlarmReceiver.class);
-                PendingIntent pi = PendingIntent.getBroadcast(
-                    getContext(),
-                    id,
-                    intent,
-                    PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
-                );
-                if (pi != null && am != null) am.cancel(pi);
+                // v1.18.1 (NCC#168) — the same FLAG_NO_CREATE lookup and
+                // am.cancel as before, plus the stored spec, so a cancelled
+                // reminder does not come back at boot.
+                cancelAlarm(getContext(), am, id);
                 if (nm != null) nm.cancel(id); // also drop any already-posted notif
                 removeTrackedId(id);
             }
@@ -364,6 +385,151 @@ public class NexusNotificationsPlugin extends Plugin {
             return;
         }
         call.resolve();
+    }
+
+    // ─── Alarm specs, for the re-arm after a reboot (v1.18.1, NCC#168) ──
+
+    private static SharedPreferences specPrefs(Context context) {
+        return context.getSharedPreferences(SPECS_PREFS, Context.MODE_PRIVATE);
+    }
+
+    /** v1.18.1 (NCC#168) — the extras of an alarm intent (as schedule() and
+     *  the receiver's re-arm build it), as JSON; "at" is EXTRA_AT, the instant
+     *  it is set for. intentFromSpec is the inverse. Absent extras stay
+     *  absent, so the rebuilt intent carries exactly the extras the original
+     *  did. */
+    static JSONObject specFromIntent(Intent intent) {
+        JSONObject spec = new JSONObject();
+        try {
+            spec.put("id", intent.getIntExtra(EXTRA_ID, 0));
+            spec.put("at", intent.getLongExtra(EXTRA_AT, 0L));
+            putIfSet(spec, "title", intent.getStringExtra(EXTRA_TITLE));
+            putIfSet(spec, "body", intent.getStringExtra(EXTRA_BODY));
+            putIfSet(spec, "channelId", intent.getStringExtra(EXTRA_CHANNEL_ID));
+            putIfSet(spec, "route", intent.getStringExtra(EXTRA_ROUTE));
+            putIfSet(spec, "actionsJson", intent.getStringExtra(EXTRA_ACTIONS_JSON));
+            String every = intent.getStringExtra(EXTRA_EVERY);
+            if (every != null) {
+                spec.put("every", every);
+                spec.put("hour", intent.getIntExtra(EXTRA_HOUR, -1));
+                spec.put("minute", intent.getIntExtra(EXTRA_MINUTE, -1));
+                spec.put("weekday", intent.getIntExtra(EXTRA_WEEKDAY, -1));
+            }
+        } catch (JSONException ignored) { }
+        return spec;
+    }
+
+    private static void putIfSet(JSONObject spec, String key, String value) throws JSONException {
+        if (value != null) spec.put(key, value);
+    }
+
+    /** v1.18.1 (NCC#168) — a fresh intent for NotificationAlarmReceiver (no
+     *  action, data or categories, like schedule() and cancel() build) with
+     *  the spec's extras. `at` goes into EXTRA_AT as stored, even when the
+     *  alarm is set for another instant, so the fire still matches the spec. */
+    static Intent intentFromSpec(Context context, int id, JSONObject spec) {
+        Intent intent = new Intent(context, NotificationAlarmReceiver.class);
+        intent.putExtra(EXTRA_ID, id);
+        intent.putExtra(EXTRA_AT, spec.optLong("at", 0L));
+        putExtraIfSet(intent, EXTRA_TITLE, spec, "title");
+        putExtraIfSet(intent, EXTRA_BODY, spec, "body");
+        putExtraIfSet(intent, EXTRA_CHANNEL_ID, spec, "channelId");
+        putExtraIfSet(intent, EXTRA_ROUTE, spec, "route");
+        putExtraIfSet(intent, EXTRA_ACTIONS_JSON, spec, "actionsJson");
+        String every = spec.optString("every", "");
+        if (!every.isEmpty()) {
+            intent.putExtra(EXTRA_EVERY, every);
+            intent.putExtra(EXTRA_HOUR, spec.optInt("hour", -1));
+            intent.putExtra(EXTRA_MINUTE, spec.optInt("minute", -1));
+            if ("week".equals(every)) intent.putExtra(EXTRA_WEEKDAY, spec.optInt("weekday", -1));
+        }
+        return intent;
+    }
+
+    private static void putExtraIfSet(Intent intent, String extra, JSONObject spec, String key) {
+        if (spec.has(key)) intent.putExtra(extra, spec.optString(key, ""));
+    }
+
+    /** v1.18.1 (NCC#168) — set an alarm and store its spec as one step, so
+     *  the stored specs always mirror the alarms that are set: schedule(), the
+     *  receiver's daily/weekly re-arm and the boot re-arm all come through
+     *  here, and cancel() undoes both under the same lock. The spec's "at" is
+     *  the intent's EXTRA_AT, which the caller sets; `armAt` is when the alarm
+     *  goes off (the same, except for a reminder the boot re-arm fires late). */
+    static void armAlarm(Context context, AlarmManager am, int id, Intent intent, long armAt) {
+        String json = specFromIntent(intent).toString();
+        synchronized (SPECS_LOCK) {
+            setAlarm(am, armAt, alarmPendingIntent(context, id, intent));
+            specPrefs(context).edit().putString(String.valueOf(id), json).commit();
+        }
+    }
+
+    /** v1.18.1 (NCC#168) — cancel an alarm and forget its spec, so a
+     *  cancelled reminder cannot come back at boot. */
+    static void cancelAlarm(Context context, AlarmManager am, int id) {
+        synchronized (SPECS_LOCK) {
+            Intent intent = new Intent(context, NotificationAlarmReceiver.class);
+            PendingIntent pi = PendingIntent.getBroadcast(
+                context,
+                id,
+                intent,
+                PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE
+            );
+            if (pi != null && am != null) am.cancel(pi);
+            specPrefs(context).edit().remove(String.valueOf(id)).commit();
+        }
+    }
+
+    /** v1.18.1 (NCC#168) — a one-shot fired: forget its spec, unless a newer
+     *  schedule() under the same id has replaced it since (its "at" differs
+     *  from the fired intent's EXTRA_AT). An intent without EXTRA_AT is from
+     *  an alarm set before this version, which never had a spec of its own. */
+    static void forgetFiredOneShot(Context context, Intent fired) {
+        int id = fired.getIntExtra(EXTRA_ID, 0);
+        long firedAt = fired.getLongExtra(EXTRA_AT, -1L);
+        if (firedAt < 0) return;
+        String key = String.valueOf(id);
+        synchronized (SPECS_LOCK) {
+            SharedPreferences sp = specPrefs(context);
+            JSONObject spec = parseSpec(sp.getString(key, null));
+            if (spec == null || spec.optLong("at", 0L) != firedAt) return;
+            sp.edit().remove(key).commit();
+        }
+    }
+
+    static JSONObject parseSpec(String raw) {
+        if (raw == null) return null;
+        try {
+            return new JSONObject(raw);
+        } catch (JSONException e) {
+            return null;
+        }
+    }
+
+    /** v1.18.1 (NCC#168) — every stored spec by id. Unreadable entries are
+     *  removed. Callers that act on the result hold SPECS_LOCK around both. */
+    static Map<Integer, JSONObject> readSpecs(Context context) {
+        Map<Integer, JSONObject> out = new HashMap<>();
+        synchronized (SPECS_LOCK) {
+            SharedPreferences sp = specPrefs(context);
+            SharedPreferences.Editor drop = null;
+            for (Map.Entry<String, ?> e : sp.getAll().entrySet()) {
+                Object v = e.getValue();
+                JSONObject spec = v instanceof String ? parseSpec((String) v) : null;
+                Integer id = null;
+                try {
+                    id = Integer.valueOf(e.getKey());
+                } catch (NumberFormatException ignored) { }
+                if (spec == null || id == null) {
+                    if (drop == null) drop = sp.edit();
+                    drop.remove(e.getKey());
+                    continue;
+                }
+                out.put(id, spec);
+            }
+            if (drop != null) drop.commit();
+        }
+        return out;
     }
 
     @PluginMethod

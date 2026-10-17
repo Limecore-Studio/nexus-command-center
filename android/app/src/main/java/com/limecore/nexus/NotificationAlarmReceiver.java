@@ -39,8 +39,11 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         // v1.18.1 (NCC#138): a daily reminder re-arms itself first, so a
         // failure further down cannot stop tomorrow's. v1.18.1 (NCC#168): a
-        // weekly one too, for next week's.
-        rearmIfRepeating(context, intent);
+        // weekly one too, for next week's. v1.18.1 (NCC#168) — a one-shot
+        // forgets its stored spec instead, so a reboot does not fire it again.
+        if (!rearmIfRepeating(context, intent)) {
+            NexusNotificationsPlugin.forgetFiredOneShot(context, intent);
+        }
 
         int id = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_ID, 0);
         String title = intent.getStringExtra(NexusNotificationsPlugin.EXTRA_TITLE);
@@ -155,22 +158,26 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
      *  EXTRA_MINUTE), in the device's time zone as it is now. Built by the
      *  plugin's alarmPendingIntent from a fresh intent for this receiver with
      *  the extras copied over, so cancel() in the plugin still finds it.
-     *  Not covered: a reboot or force-stop clears all alarms until the app
-     *  is opened again (no boot receiver; the owner's call, see NCC#138).
+     *  v1.18.1 (NCC#168) — a reboot no longer loses it: AlarmRearmReceiver
+     *  re-arms from the spec armAlarm stores. A force-stop still clears it
+     *  until NCC is opened again.
      *
      *  v1.18.1 (NCC#168) — `every: "week"` the same way: a specific-days habit
      *  reminder has one alarm per chosen day (EXTRA_WEEKDAY), each re-armed
-     *  for the same weekday and wall-clock time a week later. */
-    private static void rearmIfRepeating(Context context, Intent intent) {
+     *  for the same weekday and wall-clock time a week later.
+     *
+     *  v1.18.1 (NCC#168) — true for a daily/weekly reminder (re-armed or
+     *  not), false for a one-shot. */
+    private static boolean rearmIfRepeating(Context context, Intent intent) {
         String every = intent.getStringExtra(NexusNotificationsPlugin.EXTRA_EVERY);
         boolean weekly = "week".equals(every);
-        if (!weekly && !"day".equals(every)) return;
+        if (!weekly && !"day".equals(every)) return false;
         int id = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_ID, 0);
         int hour = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_HOUR, -1);
         int minute = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_MINUTE, -1);
         if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
             Log.w(TAG, "Repeating reminder id=" + id + " has no time of day; not re-armed");
-            return;
+            return true;
         }
         long now = System.currentTimeMillis();
         long fireAt;
@@ -178,7 +185,7 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
             int weekday = intent.getIntExtra(NexusNotificationsPlugin.EXTRA_WEEKDAY, -1);
             if (weekday < 0 || weekday > 6) {
                 Log.w(TAG, "Weekly reminder id=" + id + " has no weekday; not re-armed");
-                return;
+                return true;
             }
             fireAt = nextWeeklyFire(weekday, hour, minute, now);
         } else {
@@ -187,13 +194,18 @@ public class NotificationAlarmReceiver extends BroadcastReceiver {
 
         Intent again = new Intent(context, NotificationAlarmReceiver.class);
         again.putExtras(intent);
-        PendingIntent pi = NexusNotificationsPlugin.alarmPendingIntent(context, id, again);
+        // v1.18.1 (NCC#168) — the new instant, which armAlarm stores as the
+        // spec's "at" (the boot re-arm's record of when this is due next).
+        again.putExtra(NexusNotificationsPlugin.EXTRA_AT, fireAt);
         AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
             Log.w(TAG, "AlarmManager unavailable; repeating reminder id=" + id + " not re-armed");
-            return;
+            return true;
         }
-        NexusNotificationsPlugin.setAlarm(am, fireAt, pi);
+        // v1.18.1 (NCC#168) — alarmPendingIntent + setAlarm as before, and the
+        // stored spec moved on to fireAt.
+        NexusNotificationsPlugin.armAlarm(context, am, id, again, fireAt);
+        return true;
     }
 
     /** v1.18.1 (NCC#138) — the next hour:minute on the wall clock strictly

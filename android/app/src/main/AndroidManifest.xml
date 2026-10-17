@@ -104,6 +104,18 @@
             android:name=".NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- v1.18.1 (NCC#168) — re-arms the stored reminders after a reboot.
+             Not exported: BOOT_COMPLETED comes from the system, which reaches
+             non-exported receivers (WorkManager's RescheduleReceiver is
+             declared the same way). onReceive ignores any other action. -->
+        <receiver
+            android:name=".AlarmRearmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <!-- v1.1 cross-app SSO publisher. Exposes the current Supabase
              session via a read-only ContentProvider. Access control lives
              inside SessionContentProvider.query() via a getCallingPackage()
@@ -118,6 +130,11 @@
 
     <!-- Permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- v1.18.1 — lets the WebView see network changes, so navigator.onLine
+         and the 'online' event (sync store) follow the real connection.
+         Without it Chromium's WebView doesn't watch connectivity and reports
+         online throughout. A normal permission: granted at install, no prompt. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- Android 13 (API 33) and above require an explicit runtime permission
@@ -131,11 +148,11 @@
     <!-- AlarmManager.setAndAllowWhileIdle needs WAKE_LOCK to wake the device
          from Doze when an alarm fires (e.g. the 4:05pm portfolio recap). -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <!-- RECEIVE_BOOT_COMPLETED would let us re-arm pending alarms after a
-         device reboot. We intentionally DON'T request it for v1.0.x — the
-         app does a full reconcile at next launch anyway, and avoiding this
-         permission keeps the privacy profile cleaner. Future: add if users
-         need notifications across reboots without opening the app. -->
+    <!-- v1.18.1 (NCC#168) — owner's call: reminders survive a reboot without
+         NCC being opened. Android drops every alarm on restart; with this,
+         AlarmRearmReceiver re-arms them from the specs the plugin stores.
+         Before, they stayed gone until the next launch's reconcile. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
 
     <!-- Health Connect permissions removed in v1.9: the Fitness view that used

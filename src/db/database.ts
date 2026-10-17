@@ -9,6 +9,7 @@ import { WorkQualityLog } from '../types/work';
 import { BraindumpEntry } from '../types/braindump';
 import { generateId } from '../utils/uuid';
 import { clearEntitlement } from '../lib/entitlement';
+import { cancelAllReminders } from '../lib/notifications';
 
 // v1.2 — Insights rating-history row. One per recompute per ticker. Used to
 // detect tier changes between consecutive recomputes (gating the push
@@ -949,4 +950,12 @@ export async function clearAllLocalData(): Promise<void> {
   // site because this function is the single entry point every one of them
   // already goes through — Settings, AdoptionPrompt and the App-level wipe.
   clearEntitlement();
+  // v1.18.1 (NCC#186) — the reminders built from the rows just deleted go
+  // with them, for the same reason: every wipe comes through here. The one
+  // that needs it most is AdoptionPrompt's Discard. When B signs in after A
+  // chose "Keep local data", the mount arms reminders from A's rows still on
+  // the device. Habits' load never cancels a habit it no longer has, so
+  // without this A's daily habit reminders outlived the discard. Best-effort
+  // and time-capped; the next mount re-arms from what is left.
+  await cancelAllReminders();
 }

@@ -22,16 +22,28 @@ import { Preferences } from '@capacitor/preferences';
 
 const KEY = 'nexus.guestMode';
 
+// v1.18.1 (NCC#186) — the last value read or written, for callers that must
+// answer synchronously (the reminder gate in lib/notifications.ts). App.tsx
+// reads the flag at startup, before anything can schedule a reminder.
+let known = false;
+
+/** v1.18.1 (NCC#186) — the guest flag as last read or written; false until then. */
+export function isGuestModeKnown(): boolean {
+  return known;
+}
+
 export async function isGuestMode(): Promise<boolean> {
   try {
     const { value } = await Preferences.get({ key: KEY });
-    return value === '1';
+    known = value === '1';
+    return known;
   } catch {
     return false;
   }
 }
 
 export async function setGuestMode(enabled: boolean): Promise<void> {
+  known = enabled;
   try {
     if (enabled) {
       await Preferences.set({ key: KEY, value: '1' });

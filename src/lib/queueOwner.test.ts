@@ -14,7 +14,7 @@ vi.mock('./supabase', () => ({
 }));
 vi.mock('./ssoPublisher', () => ({ publishSession: async () => {}, clearPublishedSession: async () => {} }));
 vi.mock('./originMarker', () => ({ scheduleOriginStamp: () => {} }));
-vi.mock('./guestMode', () => ({ setGuestMode: async () => {} }));
+vi.mock('./guestMode', () => ({ setGuestMode: async () => {}, isGuestModeKnown: () => false }));
 vi.stubGlobal('window', { dispatchEvent: () => true, addEventListener: () => {}, removeEventListener: () => {} });
 
 const { db } = await import('../db/database');

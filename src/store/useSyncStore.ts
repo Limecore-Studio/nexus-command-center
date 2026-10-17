@@ -2,6 +2,7 @@ import { create, type StoreApi } from 'zustand';
 import { listOwnPending } from '../db/syncQueue';
 import { fullSync, PushResult, PullResult } from '../lib/cloudSync';
 import { coalesce } from '../lib/coalesce';
+import { reconcileTaskRemindersIfChanged } from '../lib/taskReminders';
 import { useSessionStore } from './useSessionStore';
 import { useFinanceStore } from './useFinanceStore';
 import { useStudiesStore } from './useStudiesStore';
@@ -92,6 +93,19 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     // hard — nothing new would be there to surface anyway.
     if (pull.errors.length === 0) {
       await reloadDataStores();
+      // v1.18.1 (NCC#186) — tasks that arrived with this pull get their
+      // reminders. AppShell's mount reconcile runs before the first pull, so
+      // after a sign-in on a wiped device (or a new account's first sync)
+      // they had none until the next app start. A no-op when the tasks are
+      // the ones already armed. Only while this sync's user is still signed
+      // in: a sign-out in the meantime has cancelled every reminder and must
+      // not see them re-armed.
+      const stillSignedIn = () => useSessionStore.getState().user?.id === user.id;
+      if (stillSignedIn()) {
+        void reconcileTaskRemindersIfChanged(useTaskStore.getState().tasks, stillSignedIn).catch((e) =>
+          console.warn('[sync] task reminder reconcile failed:', (e as Error).message),
+        );
+      }
     }
     const pending = await listOwnPending();
     // Surface up to 5 of the most recent item errors for diagnostics.

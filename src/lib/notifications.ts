@@ -254,6 +254,8 @@ interface ScheduleOptions {
  *  catch range collisions in dev rather than have notifications stomp on
  *  each other in prod. */
 export async function scheduleNotification(opts: ScheduleOptions): Promise<NotificationResult> {
+  // v1.18.1 (NCC#186) — taken before the first await; see reminderGate.
+  const epoch = cancelAllEpoch;
   const range = ID_RANGES[opts.category];
   if (opts.id < range.base || opts.id >= range.base + range.size) {
     throw new Error(
@@ -269,6 +271,17 @@ export async function scheduleNotification(opts: ScheduleOptions): Promise<Notif
   }
   await ensureChannel(opts.category);
   const atMillis = opts.at ? opts.at.getTime() : Date.now() + 1000;
+  // v1.18.1 (NCC#186) — the last check before the native call. Everything
+  // that schedules (task/habit re-arms, the EoD/news/watchlist ticks, budget
+  // and insight alerts) comes through here, and its awaits above can resolve
+  // after a sign-out's cancelAllReminders. An involuntary sign-out does not
+  // reload, so without this a refresh still in flight could arm the previous
+  // account's recap or post its news on the Login screen.
+  const refused = reminderGate(epoch);
+  if (refused) {
+    console.warn('[notifications] not scheduled:', opts.category, opts.id, refused);
+    return { ok: false, reason: refused };
+  }
   try {
     await NexusNotifications.schedule({
       id: opts.id,
@@ -311,6 +324,90 @@ export async function cancelCategory(category: NotificationCategory): Promise<vo
     if (ids.length) await NexusNotifications.cancel({ ids });
   } catch (e) {
     console.warn('[notifications] cancelCategory', category, (e as Error).message);
+  }
+}
+
+// v1.18.1 (NCC#186) — how long cancelAllReminders waits for the plugin. Its
+// two calls answer in milliseconds; the cap is there so a wedged bridge can
+// never hold up a sign-out or a wipe.
+export const CANCEL_ALL_WAIT_MS = 3000;
+
+let cancelAllEpoch = 0;
+
+// v1.18.1 (NCC#186) — who the reminders are for. Registered by
+// useSessionStore (a signed-in user, or guest mode); this module cannot import
+// it without a cycle. Unregistered (unit tests of this module alone) means yes.
+let hasAudience: () => boolean = () => true;
+
+/** v1.18.1 (NCC#186) — see hasAudience. */
+export function setReminderAudience(check: () => boolean): void {
+  hasAudience = check;
+}
+
+/** v1.18.1 (NCC#186) — why a schedule that began at `epoch` must not reach the
+ *  plugin, or null when it may: everything was cancelled since it began
+ *  (sign-out, wipe, master switch off), or nobody is signed in and the app is
+ *  not in guest mode. */
+function reminderGate(epoch: number): string | null {
+  if (epoch !== cancelAllEpoch) return 'Reminders were cancelled while this one was being scheduled.';
+  let present: boolean;
+  try {
+    present = hasAudience();
+  } catch {
+    present = true;
+  }
+  return present ? null : 'Nobody is signed in.';
+}
+
+/** v1.18.1 (NCC#186) — bumped by every cancelAllReminders call, so code that
+ *  remembers "these reminders are already armed" (reconcileTaskRemindersIfChanged)
+ *  knows that memory is stale. */
+export function reminderEpoch(): number {
+  return cancelAllEpoch;
+}
+
+/** v1.18.1 (NCC#186) — cancel every reminder NCC has scheduled, of every
+ *  category, and remove any already posted. One getPending and one cancel.
+ *
+ *  Why every tracked ID rather than a list of categories: every ID the plugin
+ *  tracks was scheduled through scheduleNotification, which only accepts IDs
+ *  inside ID_RANGES. Taking them all means a category added later is covered
+ *  without anyone editing a list (the Settings master switch used to name six
+ *  of the eight categories and missed habits and insights). The plugin has no
+ *  cancelAll of its own (NexusNotificationsPlugin.java has cancel/getPending).
+ *
+ *  Used by sign-out, by the involuntary SIGNED_OUT, by clearAllLocalData and by
+ *  the master switch. Never throws and never waits longer than
+ *  CANCEL_ALL_WAIT_MS: a failure is logged and the caller carries on.
+ *  Resolves true when the plugin confirmed the cancel (or there was nothing
+ *  to cancel, or the platform has no notifications). */
+export async function cancelAllReminders(): Promise<boolean> {
+  cancelAllEpoch++;
+  const work = (async () => {
+    if (!Capacitor.isNativePlatform()) return true;
+    const pending = await NexusNotifications.getPending();
+    const ids = pending.ids;
+    if (ids.length) await NexusNotifications.cancel({ ids });
+    return true;
+  })().catch((e: unknown) => {
+    // Caught here, not around the race, so a failure that lands after the
+    // timeout is still logged rather than left as an unhandled rejection.
+    console.warn('[notifications] cancelAllReminders', (e as Error)?.message ?? String(e));
+    return false;
+  });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<boolean>((res) => {
+        timer = setTimeout(() => {
+          console.warn('[notifications] cancelAllReminders timed out');
+          res(false);
+        }, CANCEL_ALL_WAIT_MS);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
   }
 }
 

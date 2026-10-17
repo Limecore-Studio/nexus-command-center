@@ -14,6 +14,9 @@ const h = vi.hoisted(() => ({
   published: [] as unknown[],
   signOut: null as null | (() => Promise<{ error: unknown }>),
   cleared: 0,
+  // v1.18.1 (NCC#186): the order of reminder cancels vs the auth call.
+  log: [] as string[],
+  audience: null as null | (() => boolean),
 }));
 
 vi.mock('../lib/supabase', () => ({
@@ -24,7 +27,10 @@ vi.mock('../lib/supabase', () => ({
         h.listener = cb;
         return { data: { subscription: { unsubscribe() {} } } };
       },
-      signOut: () => h.signOut!(),
+      signOut: () => {
+        h.log.push('auth');
+        return h.signOut!();
+      },
     },
   },
   readStoredSession: async () => h.stored,
@@ -35,8 +41,17 @@ vi.mock('../lib/ssoPublisher', () => ({
   clearPublishedSession: async () => {},
 }));
 vi.mock('../lib/originMarker', () => ({ scheduleOriginStamp: () => {} }));
-vi.mock('../lib/guestMode', () => ({ setGuestMode: async () => {} }));
+vi.mock('../lib/guestMode', () => ({ setGuestMode: async () => {}, isGuestModeKnown: () => false }));
 vi.mock('../db/database', () => ({ db: {} }));
+vi.mock('../lib/notifications', () => ({
+  cancelAllReminders: async () => {
+    h.log.push('cancel');
+    return true;
+  },
+  setReminderAudience: (check: () => boolean) => {
+    h.audience = check;
+  },
+}));
 
 vi.stubGlobal('window', { dispatchEvent: () => true });
 const { useSessionStore } = await import('./useSessionStore');
@@ -56,6 +71,7 @@ beforeEach(() => {
   h.listener = null;
   h.published = [];
   h.cleared = 0;
+  h.log = [];
   useSessionStore.setState({
     session: null,
     user: null,
@@ -209,5 +225,60 @@ describe('useSessionStore.signOut (NCC#141 review)', () => {
     expect(h.cleared).toBe(1);
     expect(useSessionStore.getState().user).toBeNull();
     expect(useSessionStore.getState().sessionUnverified).toBe(false);
+  });
+});
+
+describe('sign-out cancels every reminder (NCC#186)', () => {
+  beforeEach(() => {
+    useSessionStore.setState({ session: FRESH as never, user: FRESH.user as never, sessionUnverified: false });
+  });
+
+  it('cancels before the auth call, and again once no user is on screen', async () => {
+    h.signOut = async () => ({ error: null });
+    await useSessionStore.getState().signOut();
+    expect(h.log).toEqual(['cancel', 'auth', 'cancel']);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+
+  it('offline: the cancel is done before the 3 s wait, not after it', async () => {
+    h.signOut = () => new Promise(() => {});
+    const p = useSessionStore.getState().signOut();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(h.log).toEqual(['cancel', 'auth']);
+    await vi.advanceTimersByTimeAsync(3000);
+    await p;
+    expect(h.log).toEqual(['cancel', 'auth', 'cancel']);
+    expect(h.cleared).toBe(1);
+  });
+
+  it('an involuntary SIGNED_OUT cancels; a token refresh does not', async () => {
+    h.answer = Promise.resolve({ data: { session: FRESH }, error: null });
+    useSessionStore.setState({ initialized: false });
+    await useSessionStore.getState().init();
+    h.listener!('TOKEN_REFRESHED', FRESH);
+    expect(h.log).toEqual([]);
+    h.listener!('SIGNED_OUT', null);
+    expect(h.log).toEqual(['cancel']);
+    expect(useSessionStore.getState().user).toBeNull();
+  });
+});
+
+describe('reminder audience and account switch (NCC#186)', () => {
+  it('reminders are for a signed-in user only (guest mode aside)', () => {
+    useSessionStore.setState({ user: FRESH.user as never });
+    expect(h.audience!()).toBe(true);
+    useSessionStore.setState({ user: null });
+    expect(h.audience!()).toBe(false);
+  });
+
+  it('SIGNED_IN for a different account cancels first; for the same account it does not', async () => {
+    h.answer = Promise.resolve({ data: { session: FRESH }, error: null });
+    await useSessionStore.getState().init();
+    h.listener!('SIGNED_IN', FRESH);
+    expect(h.log).toEqual([]);
+    const OTHER = { ...FRESH, user: { id: 'u-2' } };
+    h.listener!('SIGNED_IN', OTHER);
+    expect(h.log).toEqual(['cancel']);
+    expect(useSessionStore.getState().user).toEqual(OTHER.user);
   });
 });

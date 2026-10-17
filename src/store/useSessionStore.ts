@@ -8,10 +8,11 @@ import { create } from 'zustand';
 import { isAuthRetryableFetchError, type Session, type User } from '@supabase/supabase-js';
 import { clearStoredSession, readStoredSession, supabase } from '../lib/supabase';
 import { publishSession, clearPublishedSession } from '../lib/ssoPublisher';
-import { setGuestMode } from '../lib/guestMode';
+import { isGuestModeKnown, setGuestMode } from '../lib/guestMode';
 import { scheduleOriginStamp } from '../lib/originMarker';
 import { db } from '../db/database';
 import { claimUnowned, setQueueOwner } from '../db/syncQueue';
+import { cancelAllReminders, setReminderAudience } from '../lib/notifications';
 
 interface SessionState {
   session: Session | null;
@@ -77,7 +78,21 @@ export const useSessionStore = create<SessionState>((set) => ({
       if (event === 'INITIAL_SESSION' && !session && useSessionStore.getState().sessionUnverified) {
         return;
       }
+      // v1.18.1 (NCC#186) — a different account signing in over this one (the
+      // OAuth deep link while signed in) emits SIGNED_IN with no SIGNED_OUT
+      // first. Cancel before the new user is set, so nothing the old account
+      // armed survives and its in-flight schedules are refused.
+      const previousId = useSessionStore.getState().user?.id;
+      if (event === 'SIGNED_IN' && session && previousId && previousId !== session.user.id) {
+        void cancelAllReminders();
+      }
       set({ session, user: session?.user ?? null, sessionUnverified: false });
+      // v1.18.1 (NCC#186) — a sign-out NCC did not ask for (refresh token
+      // revoked, the account deleted, auth-js giving up) leaves no reload
+      // behind it, so the reminders of the account that just left would keep
+      // firing on the Login screen. Our own signOut cancels too; twice is
+      // harmless (the second finds nothing pending).
+      if (event === 'SIGNED_OUT') void cancelAllReminders();
       scheduleOriginStamp(session?.user ?? null);
       // Republish on every auth change — token refreshes, sign-in,
       // sign-out (null clears the bridge for siblings). Fire-and-forget
@@ -164,6 +179,14 @@ export const useSessionStore = create<SessionState>((set) => ({
     // invalidated. onAuthStateChange's null fire will also clear, but
     // this closes the race window cleanly.
     await clearPublishedSession();
+    // v1.18.1 (NCC#186) — cancel every scheduled reminder, Keep and Wipe
+    // alike. They carry this account's task and habit titles and used to keep
+    // firing after sign-out (and, with the boot re-arm, after a reboot). Done
+    // first, so it is local and finished before the offline wait below, and
+    // before anything that can fail. cancelAllReminders never throws and is
+    // time-capped; the next sign-in's load re-arms (AppShell mount, habits
+    // load, the post-sync task reconcile).
+    await cancelAllReminders();
     // v1.2.1 — security audit finding FSG-2/FSG-6.
     //
     // Drain the unsynced syncQueue BEFORE clearing the session.
@@ -227,8 +250,17 @@ export const useSessionStore = create<SessionState>((set) => ({
     // onAuthStateChange will fire with null and update state. Also set here
     // to avoid a one-frame flash of stale user data.
     set({ session: null, user: null, sessionUnverified: false });
+    // v1.18.1 (NCC#186) — and once more now that no user is on screen: a sync
+    // that finished during the wait above may have re-armed task reminders
+    // (useSyncStore only does so while its user is still the one signed in).
+    await cancelAllReminders();
   },
 }));
+
+// v1.18.1 (NCC#186): a reminder is scheduled only while someone is there to
+// get it: a user on screen, or guest mode. Checked by scheduleNotification
+// right before the native call.
+setReminderAudience(() => !!useSessionStore.getState().user || isGuestModeKnown());
 
 // v1.18.1 (limecore#59 §2, NCC#140): queued edits are tagged with the user on
 // screen (null as a guest), from the moment the session is known. See

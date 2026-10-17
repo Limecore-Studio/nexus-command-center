@@ -148,10 +148,11 @@
     "body": "You have data stored locally on this device from before signing in. Should we adopt it into your account and sync it to the cloud, or discard it?",
     "keep": "Keep & sync to cloud",
     "discard": "Discard local data",
-    "later": "Decide later",
     "working": "Working…",
     "failed": "Couldn't save your choice on this device. Try again.",
-    "footer": "You won't be asked again on this account."
+    "footer": "You won't be asked again on this account.",
+    "switchBody": "This device holds another account's or a guest's data. Add it to your account and sync it, or delete it here? Signing out leaves it as is.",
+    "switchFooter": "Nothing here is shown or synced until you choose."
   },
   "onboarding": {
     "welcomeTitle": "Let's set up your life OS",

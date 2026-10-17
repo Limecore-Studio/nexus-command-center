@@ -4,6 +4,7 @@ import { fullSync, PushResult, PullResult } from '../lib/cloudSync';
 import { coalesce } from '../lib/coalesce';
 import { reconcileTaskRemindersIfChanged } from '../lib/taskReminders';
 import { useSessionStore } from './useSessionStore';
+import { adoptionClearFor } from '../lib/adoptionGate';
 import { useFinanceStore } from './useFinanceStore';
 import { useStudiesStore } from './useStudiesStore';
 import { useFitnessStore } from './useFitnessStore';
@@ -82,6 +83,12 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     set({ lastError: 'Not signed in.' });
     return;
   }
+  // v1.18.1 — account switch: the adoption choice comes first. Before this
+  // account has answered "Existing data found", a sync would load the device's
+  // rows into the stores and arm task reminders from them. The `online`, 30 s
+  // and window-focus triggers can fire that early; App.tsx starts the first
+  // sync once the answer is in.
+  if (!adoptionClearFor(user.id)) return;
 
   set({ syncing: true, lastError: null });
   try {

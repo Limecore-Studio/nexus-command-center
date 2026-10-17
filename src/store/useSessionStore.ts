@@ -219,9 +219,13 @@ export const useSessionStore = create<SessionState>((set) => ({
     // signs in on this device. Deleting them lost every offline edit at
     // sign-out. Items with no owner (queued by an older build) still go:
     // those are the ones that could reach B.
-    const owner = useSessionStore.getState().user?.id;
+    //
+    // v1.18.1 — and another account's stay too. Only that account can push
+    // them (pushableFor), so deleting them only lost its offline edits, e.g.
+    // when B signs out from the "Existing data found" prompt over A's kept
+    // data. A guest's (null) still go, as before.
     try {
-      await db.syncQueue.filter((q) => !q.syncedAt && !(owner && q.owner === owner)).delete();
+      await db.syncQueue.filter((q) => !q.syncedAt && typeof q.owner !== 'string').delete();
     } catch (e) {
       console.warn('[auth] signOut: syncQueue drain failed:', (e as Error).message);
     }

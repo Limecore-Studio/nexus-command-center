@@ -9,10 +9,12 @@ const h = vi.hoisted(() => ({
   pullErrors: [] as string[],
   reconciles: [] as { tasks: unknown[]; stillCurrent: () => boolean }[],
   onPull: null as null | (() => void),
+  pulls: 0,
 }));
 
 vi.mock('../lib/cloudSync', () => ({
   fullSync: async () => {
+    h.pulls++;
     h.onPull?.();
     return { push: { errors: [] }, pull: { errors: h.pullErrors } };
   },
@@ -38,12 +40,15 @@ vi.mock('./useTaskStore', () => ({ useTaskStore: { getState: () => ({ load: asyn
 
 vi.stubGlobal('navigator', { onLine: true });
 const { useSyncStore } = await import('./useSyncStore');
+const { setAdoptionStatus } = await import('../lib/adoptionGate');
 
 beforeEach(() => {
   h.user = { id: 'u-1' };
   h.pullErrors = [];
   h.reconciles = [];
   h.onPull = null;
+  h.pulls = 0;
+  setAdoptionStatus('u-1', 'clear');
 });
 
 describe('task reminders after a pull (NCC#186)', () => {
@@ -68,5 +73,26 @@ describe('task reminders after a pull (NCC#186)', () => {
     h.pullErrors = ['tasks: boom'];
     await useSyncStore.getState().syncNow();
     expect(h.reconciles).toHaveLength(0);
+  });
+});
+
+// v1.18.1 — account switch: the adoption choice comes first. Until the account
+// has answered "Existing data found", no sync loads the device's rows into the
+// stores or arms reminders from them.
+describe('before the adoption choice', () => {
+  it('does not sync, load or reconcile while the answer is pending or being worked out', async () => {
+    setAdoptionStatus('u-1', 'ask');
+    await useSyncStore.getState().syncNow();
+    setAdoptionStatus('u-1', 'checking');
+    await useSyncStore.getState().syncNow();
+    // A gate opened for another account does not count for this one.
+    setAdoptionStatus('u-other', 'clear');
+    await useSyncStore.getState().syncNow();
+    expect(h.pulls).toBe(0);
+    expect(h.reconciles).toHaveLength(0);
+    setAdoptionStatus('u-1', 'clear');
+    await useSyncStore.getState().syncNow();
+    expect(h.pulls).toBe(1);
+    expect(h.reconciles).toHaveLength(1);
   });
 });

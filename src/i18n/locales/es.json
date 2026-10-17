@@ -148,10 +148,11 @@
     "body": "Tienes datos guardados en este dispositivo de antes de iniciar sesión. ¿Los añadimos a tu cuenta y los sincronizamos con la nube, o los descartamos?",
     "keep": "Conservar y sincronizar con la nube",
     "discard": "Descartar datos locales",
-    "later": "Decidir más tarde",
     "working": "Procesando…",
     "failed": "No se pudo guardar tu elección en este dispositivo. Inténtalo de nuevo.",
-    "footer": "No te lo volveremos a preguntar en esta cuenta."
+    "footer": "No te lo volveremos a preguntar en esta cuenta.",
+    "switchBody": "Este dispositivo todavía guarda datos de una cuenta que cerró sesión aquí o del uso como invitado. ¿Los añadimos a tu cuenta y los sincronizamos con la nube, o los borramos de este dispositivo? Si cierras sesión, se quedan como están.",
+    "switchFooter": "Estos datos no se muestran ni se sincronizan hasta que elijas."
   },
   "onboarding": {
     "welcomeTitle": "Configuremos el sistema de tu vida",

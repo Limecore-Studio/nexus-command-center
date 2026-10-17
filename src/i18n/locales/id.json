@@ -79,10 +79,11 @@
     "body": "Ada data yang tersimpan di perangkat ini dari sebelum Anda masuk. Tambahkan ke akun Anda dan sinkronkan ke cloud, atau buang?",
     "keep": "Simpan & sinkronkan ke cloud",
     "discard": "Buang data lokal",
-    "later": "Putuskan nanti",
     "working": "Memproses…",
     "failed": "Pilihan Anda tidak dapat disimpan di perangkat ini. Coba lagi.",
-    "footer": "Anda tidak akan ditanya lagi di akun ini."
+    "footer": "Anda tidak akan ditanya lagi di akun ini.",
+    "switchBody": "Perangkat ini masih menyimpan data dari akun yang keluar di sini, atau dari penggunaan sebagai tamu. Tambahkan ke akun Anda dan sinkronkan ke cloud, atau hapus dari perangkat ini? Jika Anda keluar, data tetap seperti semula.",
+    "switchFooter": "Data ini tidak ditampilkan atau disinkronkan sampai Anda memilih."
   },
   "app": {
     "name": "Nexus Command Center",

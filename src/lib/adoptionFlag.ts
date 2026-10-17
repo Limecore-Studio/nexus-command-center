@@ -12,8 +12,8 @@ import { supabase } from './supabase';
 //     never depends on the cloud write landing ("pending" until it does, and
 //     the write is retried on later launches);
 //   - Keep only queues the rows (local work) and lets the sync run in the
-//     background, and "Decide later" (also Escape / Android back) closes the
-//     prompt for this launch without touching any data.
+//     background.
+// (v1.18.1 — the prompt's "Decide later" is gone; see lib/adoptionChoice.ts.)
 export const DECIDED_PREFIX = 'nexus.adoptionDecided.';
 export type Decided = 'pending' | 'synced';
 export function readDecided(userId: string): Decided | null {

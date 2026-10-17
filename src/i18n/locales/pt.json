@@ -79,10 +79,11 @@
     "body": "Você tem dados salvos neste dispositivo de antes de entrar na conta. Vamos adicioná-los à sua conta e sincronizar com a nuvem, ou descartá-los?",
     "keep": "Manter e sincronizar com a nuvem",
     "discard": "Descartar dados locais",
-    "later": "Decidir depois",
     "working": "Processando…",
     "failed": "Não foi possível salvar sua escolha neste dispositivo. Tente de novo.",
-    "footer": "Você não verá esta pergunta de novo nesta conta."
+    "footer": "Você não verá esta pergunta de novo nesta conta.",
+    "switchBody": "Este dispositivo ainda guarda dados de uma conta que saiu dele ou do uso como convidado. Vamos adicioná-los à sua conta e sincronizar com a nuvem, ou apagá-los deste dispositivo? Se você sair, eles ficam como estão.",
+    "switchFooter": "Esses dados não são exibidos nem sincronizados até você escolher."
   },
   "app": {
     "name": "Nexus Command Center",

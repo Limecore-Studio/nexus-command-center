@@ -10,6 +10,7 @@ import { BraindumpEntry } from '../types/braindump';
 import { generateId } from '../utils/uuid';
 import { clearEntitlement } from '../lib/entitlement';
 import { cancelAllReminders } from '../lib/notifications';
+import { Preferences } from '@capacitor/preferences';
 
 // v1.2 — Insights rating-history row. One per recompute per ticker. Used to
 // detect tier changes between consecutive recomputes (gating the push
@@ -950,6 +951,12 @@ export async function clearAllLocalData(): Promise<void> {
   // site because this function is the single entry point every one of them
   // already goes through — Settings, AdoptionPrompt and the App-level wipe.
   clearEntitlement();
+  // v1.18.1 — the person's own values kept outside Dexie go too. After a
+  // Discard, the life profile and the onboarded flag were back-filled into the
+  // next account's cloud (useLifeProfileStore.load, hydrateOnboardedFromCloud),
+  // and the manual fitness values were shown to it. Device settings (theme,
+  // language, notification switches, the app lock) stay.
+  await removePersonalKeys();
   // v1.18.1 (NCC#186) — the reminders built from the rows just deleted go
   // with them, for the same reason: every wipe comes through here. The one
   // that needs it most is AdoptionPrompt's Discard. When B signs in after A
@@ -958,4 +965,19 @@ export async function clearAllLocalData(): Promise<void> {
   // without this A's daily habit reminders outlived the discard. Best-effort
   // and time-capped; the next mount re-arms from what is left.
   await cancelAllReminders();
+}
+
+/** v1.18.1 — see clearAllLocalData. The fitness values live in Capacitor
+ *  Preferences on native (localStorage on web), the rest in localStorage. */
+export const PERSONAL_LOCAL_KEYS = ['ncc.lifeProfile', 'ncc.onboarded', 'nexus.referralAsked'];
+export const PERSONAL_PREF_KEYS = ['fitness.manualWeightKg', 'fitness.manualSteps', 'fitness.stepHistory'];
+async function removePersonalKeys(): Promise<void> {
+  for (const key of [...PERSONAL_LOCAL_KEYS, ...PERSONAL_PREF_KEYS]) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* private mode — nothing stored */
+    }
+  }
+  await Promise.all(PERSONAL_PREF_KEYS.map((key) => Preferences.remove({ key }).catch(() => undefined)));
 }

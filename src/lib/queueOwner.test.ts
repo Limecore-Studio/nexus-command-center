@@ -104,4 +104,13 @@ describe('sign-out (NCC#140)', () => {
     await useSessionStore.getState().signOut();
     expect((await db.syncQueue.toArray()).map((q) => q.id).sort()).toEqual(['done-older', 'own']);
   });
+
+  // v1.18.1 — e.g. B signing out from the "Existing data found" prompt over
+  // A's kept data: A's offline edits wait for A, as they did before B came.
+  it('keeps another account\'s unsynced edits; only that account can push them', async () => {
+    useSessionStore.setState({ user: { id: 'u1' } as never, initialized: true });
+    await db.syncQueue.bulkAdd([item('own', 'u1'), item('other', 'u2'), item('guest', null), item('older')]);
+    await useSessionStore.getState().signOut();
+    expect((await db.syncQueue.toArray()).map((q) => q.id).sort()).toEqual(['other', 'own']);
+  });
 });

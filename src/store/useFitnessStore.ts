@@ -164,13 +164,20 @@ export const useFitnessStore = create<FitnessStore>((set, get) => ({
   lastSync: null,
 
   async load() {
-    const sessions = await db.workoutSessions.orderBy('date').reverse().limit(20).toArray();
-    const enriched = await Promise.all(
-      sessions.map(async (s) => ({
-        ...s,
-        sets: await db.workoutSets.where('sessionId').equals(s.id).toArray(),
-      }))
-    );
+    // v1.18.1 (NCC#153): every session, newest first. This list was capped
+    // at 20, and goals (workout_count, lift_pr), Year Review, Life and the
+    // weekly review all read it: a "30 workouts" goal stopped at 20 and an
+    // older PR read as 0. Nothing renders the list itself. The sets come in
+    // one query rather than one per session, since the list is no longer short.
+    const sessions = await db.workoutSessions.orderBy('date').reverse().toArray();
+    const setsBySession = new Map<string, WorkoutSet[]>();
+    const allSets = await db.workoutSets.where('sessionId').anyOf(sessions.map((s) => s.id)).toArray();
+    for (const set of allSets) {
+      const list = setsBySession.get(set.sessionId);
+      if (list) list.push(set);
+      else setsBySession.set(set.sessionId, [set]);
+    }
+    const enriched = sessions.map((s) => ({ ...s, sets: setsBySession.get(s.id) ?? [] }));
     const todays = enriched.find((s) => s.date === today()) ?? null;
 
     const [goal, manualWeight, manualSteps, hcConnected] = await Promise.all([

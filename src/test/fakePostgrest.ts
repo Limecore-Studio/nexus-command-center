@@ -55,9 +55,16 @@ export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}
 
   function writeBuilder(table: string, op: 'update' | 'delete', patch?: any) {
     const filters: FakeRequest['filters'] = [];
+    // `.select()` after a write asks for the affected rows back, as PostgREST's
+    // `Prefer: return=representation` does.
+    let returning = false;
     const wb: any = {
       eq(col: string, val: unknown) {
         filters.push(['eq', col, val]);
+        return wb;
+      },
+      select() {
+        returning = true;
         return wb;
       },
       then(resolve: (v: any) => any, reject?: (e: any) => any) {
@@ -65,15 +72,16 @@ export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}
           .then(() => {
             writes.push({ op, table, row: patch, filters });
             const hit = rowsOf(table).filter((r) => filters.every((f) => matches(r, f)));
+            const data = returning ? hit.map((r) => ({ ...r, ...(op === 'update' ? patch : {}) })) : null;
             if (op === 'delete') {
               tables[table] = rowsOf(table).filter((r) => !hit.includes(r));
-              return { data: null, error: null, count: null };
+              return { data, error: null, count: null };
             }
             for (const r of hit) {
               if (collides(table, { ...r, ...patch }, r.id)) return dup(table);
             }
             for (const r of hit) Object.assign(r, patch);
-            return { data: null, error: null, count: null };
+            return { data, error: null, count: null };
           })
           .then(resolve, reject);
       },

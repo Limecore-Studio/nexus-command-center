@@ -22,6 +22,16 @@ const config: CapacitorConfig = {
     CapacitorHttp: {
       enabled: false,
     },
+    // Capacitor 8's core System Bars plugin defaults to style DEFAULT, which
+    // follows the DEVICE's light/dark mode: on a phone in light mode it drew
+    // dark status-bar icons over NCC's dark UI, all but invisible (NCC#49,
+    // checked on an Android 17 emulator against the Capacitor 7 build, which
+    // showed light icons). Every NCC theme is dark (free #0B0C0E, Rack
+    // #1C1D1F), so the content is always light. insetsHandling stays at its
+    // default ('css'); the layout was identical to Capacitor 7's.
+    SystemBars: {
+      style: 'DARK',
+    },
   },
 };
 

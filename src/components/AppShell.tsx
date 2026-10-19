@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import PolicyUpdatedNote from './PolicyUpdatedNote';
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import BottomTabBar from './BottomTabBar';
@@ -9,8 +9,6 @@ import OfflineBanner from './OfflineBanner';
 import FdroidUpdateNote from './FdroidUpdateNote';
 import { useShellTier, useSidebarRail } from '../lib/useShell';
 import QuickLogFAB from './QuickLogFAB';
-import QuickLogBottomSheet from './QuickLogBottomSheet';
-import QuickAddOverlay from './QuickAddOverlay';
 import PageTransition from './ui/PageTransition';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
@@ -30,6 +28,32 @@ import { reconcileTaskReminders } from '../lib/taskReminders';
 import { runPortfolioEodTick } from '../lib/portfolioEod';
 import { runNewsAlertsTick } from '../lib/newsAlerts';
 
+// v1.18.1 (NCC#173) — the two quick-entry sheets open only on a tap or a
+// shortcut, so they are lazy chunks like the screens, kept out of the startup
+// JS that every cold start parses. Each mounts (closed) two seconds after
+// start, or at its first open if that comes sooner, and then stays mounted
+// (its close animation and per-open refresh need that). Quick Add is
+// desktop-only, so it is fetched only there.
+const loadQuickLog = () => import('./QuickLogBottomSheet');
+const loadQuickAdd = () => import('./QuickAddOverlay');
+
+/** A sheet whose chunk failed to load (web, network gone) renders nothing and
+ *  reports it, instead of reaching the app-wide error screen; the parent then
+ *  unmounts it and makes a fresh lazy() so the next open tries again (React
+ *  caches a rejected lazy import). */
+class SheetBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onFail();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
 // How long the app needs to have been backgrounded before a foreground
 // transition counts as a "resume" worth re-fetching live data for. 20 min
 // is the user-configured value: short enough to keep numbers fresh after a
@@ -40,12 +64,27 @@ const RESUME_REFRESH_THRESHOLD_MS = 20 * 60 * 1000;
 export default function AppShell() {
   const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickLogMounted, setQuickLogMounted] = useState(false);
+  const [quickAddMounted, setQuickAddMounted] = useState(false);
+  const [QuickLogBottomSheet, setQuickLogSheet] = useState(() => lazy(loadQuickLog));
+  const [QuickAddOverlay, setQuickAddSheet] = useState(() => lazy(loadQuickAdd));
   const location = useLocation();
   // v1.9 Item 14, Phase 1 — desktop shell. Above 769px the bottom tab bar is
   // replaced by a persistent SideNav and the content column widens.
   const tier = useShellTier();
   const [rail, toggleRail] = useSidebarRail(tier);
   const isPhone = tier === 'phone';
+  // Mounted closed shortly after start, so the first open slides in like the
+  // rest (a sheet mounted already open skips its CSS transition). A tap before
+  // then mounts it open. Not while offline: on the web the chunk would fail.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      if (!navigator.onLine) return;
+      setQuickLogMounted(true);
+      if (tier === 'desktop') setQuickAddMounted(true);
+    }, 2000);
+    return () => window.clearTimeout(id);
+  }, [tier]);
   const loadFinance = useFinanceStore((s) => s.load);
   const loadStudies = useStudiesStore((s) => s.load);
   const loadFitness = useFitnessStore((s) => s.load);
@@ -276,11 +315,13 @@ export default function AppShell() {
           el.isContentEditable);
       if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        setQuickAddMounted(true);
         setQuickAddOpen(true);
         return;
       }
       if (e.key === 'n' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey) {
         e.preventDefault();
+        setQuickAddMounted(true);
         setQuickAddOpen(true);
       }
     };
@@ -351,10 +392,35 @@ export default function AppShell() {
           </div>
         </main>
       </div>
-      {showFAB && <QuickLogFAB onClick={() => setQuickLogOpen(true)} />}
+      {showFAB && <QuickLogFAB onClick={() => (setQuickLogMounted(true), setQuickLogOpen(true))} />}
       {isPhone && <BottomTabBar />}
-      <QuickLogBottomSheet open={quickLogOpen} onClose={() => setQuickLogOpen(false)} />
-      <QuickAddOverlay open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+      {/* One boundary each: a sheet still loading must not hide the other. */}
+      {quickLogMounted && (
+        <SheetBoundary
+          onFail={() => {
+            setQuickLogMounted(false);
+            setQuickLogOpen(false);
+            setQuickLogSheet(() => lazy(loadQuickLog));
+          }}
+        >
+          <Suspense fallback={null}>
+            <QuickLogBottomSheet open={quickLogOpen} onClose={() => setQuickLogOpen(false)} />
+          </Suspense>
+        </SheetBoundary>
+      )}
+      {quickAddMounted && (
+        <SheetBoundary
+          onFail={() => {
+            setQuickAddMounted(false);
+            setQuickAddOpen(false);
+            setQuickAddSheet(() => lazy(loadQuickAdd));
+          }}
+        >
+          <Suspense fallback={null}>
+            <QuickAddOverlay open={quickAddOpen} onClose={() => setQuickAddOpen(false)} />
+          </Suspense>
+        </SheetBoundary>
+      )}
     </div>
   );
 }

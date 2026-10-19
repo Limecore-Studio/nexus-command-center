@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'com.android.tools.build:gradle:8.13.0'
         // The GMS Gradle plugin is intentionally NOT declared here — see
         // android/app/build.gradle for the rationale (F-Droid compliance:
         // keeps the build free of Play-Services-bound classpath entries).

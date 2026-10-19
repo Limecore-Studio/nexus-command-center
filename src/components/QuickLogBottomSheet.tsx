@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import BottomSheet from './BottomSheet';
 import TemplateChips from './TemplateChips';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -78,8 +79,12 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   // Only expense-type templates show on this tab (the tab is hard-coded
   // expense). Filtering here is cheaper than maintaining a separate cache.
-  const templates = useTemplatesStore((s) =>
-    s.transactions.filter((t) => t.type === 'expense'),
+  // useShallow is required, not an optimisation: zustand 5 compares selector
+  // results with Object.is, a fresh filtered array never matches, and since
+  // this sheet is mounted in AppShell even while closed, that render loop
+  // took down every screen (limecore#21).
+  const templates = useTemplatesStore(
+    useShallow((s) => s.transactions.filter((t) => t.type === 'expense')),
   );
 
   // When the user picks a category that has a pre-selected account (the

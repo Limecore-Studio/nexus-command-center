@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -33,8 +34,10 @@ export default function AddTransaction() {
   // destination pickers. We hide archived accounts from the dropdown to
   // keep it tidy, but accept them on edit (a transaction's account might
   // have been archived between creation + edit).
-  const accounts = useFinanceStore((s) =>
-    s.manualAssets.filter((a) => !a.archivedAt),
+  // useShallow: a fresh filtered array is a render loop under zustand 5
+  // (limecore#21).
+  const accounts = useFinanceStore(
+    useShallow((s) => s.manualAssets.filter((a) => !a.archivedAt)),
   );
 
   const [type, setType] = useState<TransactionType>('expense');

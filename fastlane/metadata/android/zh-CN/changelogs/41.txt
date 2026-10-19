@@ -1,0 +1,3 @@
+底层更新。
+
+NCC 升级到 Capacitor 8 和 React 19，与 StudyDesk 和 LimeLog 使用相同的现代基础，并面向最新的 Android。翻译和图标改用更新的库。使用方式没有变化；此版本为接下来的修复做准备。

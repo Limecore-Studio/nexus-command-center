@@ -23,7 +23,12 @@ import { readFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const BUDGET_KIB = 915; // measured 2026-10-05 after limecore#12 (axios + CSV importer out of startup): 880.7 KiB
+// Raised once, on purpose (owner decision 2026-10-08, limecore#21): React 19's
+// client renderer is 78.3 KiB larger than 18's, and no app change avoids it.
+// Measured one package at a time on the same commit: react-router 7 +17.3,
+// React 19 +78.3, zustand 5 -3.0 KiB. 915 -> 985 covers that and nothing else;
+// from here the budget only goes down again.
+const BUDGET_KIB = 985; // measured 2026-10-08 after limecore#21 (on top of #22): 980.4 KiB
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');

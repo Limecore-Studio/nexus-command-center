@@ -12,6 +12,7 @@ import type { Goal } from '../types/goals';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
+import { dueAtForServer, dueLocalDate } from './taskDue';
 
 // ============================================================================
 // Push mappers — local entity → remote upsert payload
@@ -306,7 +307,11 @@ async function pushTask(item: SyncQueueItem, ctx: PushContext): Promise<void> {
     description: local.notes ?? null,
     status: mapTaskStatus(local.completed),
     priority: mapTaskPriority(local.priority),
-    due_date: local.dueDate ?? null,
+    // v1.18.1 (NCC#193) - the local calendar day, plus the full instant in
+    // due_at. Sending the instant as due_date kept only its UTC day, and the
+    // time was lost on the next pull.
+    due_date: local.dueDate ? dueLocalDate(local.dueDate) : null,
+    due_at: local.dueDate ? dueAtForServer(local.dueDate) : null,
     updated_at: updatedAt,
   };
   const { error } = await supabase.from('tasks').upsert(row);

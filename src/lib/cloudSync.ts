@@ -38,6 +38,7 @@ import type { Goal, GoalType } from '../types/goals';
 import { selectRequeue, REQUEUE_TAG } from './requeueDropped';
 import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, putFromCloud, removeTombstoned } from './cloudSyncHydrate';
 import { pushHandlers } from './cloudSyncPush';
+import { dueFromServer } from './taskDue';
 export { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydrateStudiesFromCloud, hydrateWorkQualityFromCloud } from './cloudSyncHydrate';
 
 // ============================================================================
@@ -442,7 +443,8 @@ export async function pullAll(_userId: string): Promise<PullResult> {
     (r) => ({
       id: r.id,
       title: r.title,
-      dueDate: r.due_date ?? undefined,
+      // v1.18.1 (NCC#193) - due_at keeps the time; due_date alone is a day.
+      dueDate: dueFromServer(r),
       priority: (r.priority === 'normal' ? 'medium' : r.priority) as Task['priority'],
       completed: r.status === 'done',
       notes: r.description ?? undefined,

@@ -10,6 +10,7 @@ import { currencySymbol, formatMoney } from '../../lib/currencies';
 import { formatLocale } from '../../utils/formatters';
 import { BudgetCategory } from '../../types/finance';
 import {
+  SHARING_ENABLED,
   listBudgetCategoryShares,
   shareBudgetCategoryByEmail,
   revokeBudgetCategoryShare,
@@ -233,7 +234,7 @@ export default function ManageBudgets() {
                   <div className="text-[0.625rem] text-text-muted">{t('fin.budg.perMonth', { amount: formatMoney(c.monthlyLimit, baseCurrency, { locale: formatLocale() }) })}</div>
                 </div>
                 <RowActions
-                  onShare={!sharedFromOther ? () => setSharing(c) : undefined}
+                  onShare={SHARING_ENABLED && !sharedFromOther ? () => setSharing(c) : undefined}
                   onEdit={() => startEdit(c)}
                   onDelete={!sharedFromOther ? () => deleteCategory(c.id) : undefined}
                   confirmMsg={t('fin.budg.deleteConfirm', { name: c.name })}

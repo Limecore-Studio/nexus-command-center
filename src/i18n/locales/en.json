@@ -608,7 +608,8 @@
     "bioUnavailable": "Biometric unavailable on this device",
     "setPinFirst": "Set a PIN first — biometric unlocks AFTER initial setup",
     "bio": "Bio",
-    "forgotPin": "Forgot PIN? Reset in Settings → Clear All Data"
+    "forgotPin": "Forgot PIN? Reset in Settings → Clear All Data",
+    "pinUnreadable": "This phone can't read your saved PIN right now. Try restarting the app. If fingerprint unlock is on, you can use it, and Settings → Clear All Data lets you start again with a new PIN. Otherwise clear the app's storage in Android settings. Synced data comes back when you sign in."
   },
   "fin": {
     "flow": {

@@ -13,6 +13,7 @@
 // Request  (POST JSON): { prompt: string, maxTokens?: number, temperature?: number, json?: boolean }
 // Response (200 JSON):   { text: string }
 // Errors:                { error: string, detail?/reason? } with an appropriate status.
+//                        401 when the caller is not a signed-in user (v1.18.1).
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
@@ -89,7 +90,13 @@ const GLOBAL_KEY = "__global__";
 // The default is deliberately conservative. CONFIRM THE CURRENT FREE-TIER RPD
 // IN GOOGLE AI STUDIO before raising it — Google has changed that figure more
 // than once, so it is env-tunable rather than baked in.
-const USER_DAY_LIMIT = Number(Deno.env.get("AI_USER_DAY_LIMIT") ?? 50);
+//
+// v1.18.1 — the per-user default was 50 against a global 200: four accounts
+// could switch AI off for everyone until the window reset. 20 keeps a real
+// user's day (a few debriefs and narratives) and makes that take ten. Signup
+// is open, so no per-user cap can stop rotation outright; it only raises the
+// cost. If AI_USER_DAY_LIMIT is set as a secret, it overrides this default.
+const USER_DAY_LIMIT = Number(Deno.env.get("AI_USER_DAY_LIMIT") ?? 20);
 const GLOBAL_DAY_LIMIT = Number(Deno.env.get("AI_GLOBAL_DAY_LIMIT") ?? 200);
 const DAY_WINDOW_MS = 24 * 60 * 60_000; // for Retry-After on a daily rejection
 
@@ -113,21 +120,26 @@ function checkAndRecord(key: string, windowMs: number, limit: number, now: numbe
 
 // The gateway already verified this JWT's signature (verify_jwt = true), so
 // it's safe to just decode the payload locally to bucket requests per-user —
-// no need to pull in a JWT library or re-verify anything. If the header is
-// missing or the payload can't be parsed, every such caller shares one
-// "anon" bucket: still rate-limited, never bypassed.
-function getUserIdFromAuthHeader(req: Request): string {
+// no need to pull in a JWT library or re-verify anything.
+//
+// v1.18.1 — only a signed-in user's token is accepted. verify_jwt passes ANY
+// token the project signed, including the public anon key bundled in every
+// app, so the old "anon" bucket handed AI to anyone holding that key, and a
+// few such callers could use up the global daily cap for every real user.
+// Returns null when the token is not a signed-in user's.
+function getUserIdFromAuthHeader(req: Request): string | null {
   const auth = req.headers.get("Authorization") ?? req.headers.get("authorization") ?? "";
   const token = auth.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!token) return "anon";
+  if (!token) return null;
   try {
     const payloadSeg = token.split(".")[1];
     const b64 = payloadSeg.replace(/-/g, "+").replace(/_/g, "/");
     const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
     const payload = JSON.parse(atob(padded));
-    return typeof payload.sub === "string" && payload.sub ? payload.sub : "anon";
+    if (payload.role !== "authenticated" || payload.is_anonymous === true) return null;
+    return typeof payload.sub === "string" && payload.sub ? payload.sub : null;
   } catch {
-    return "anon";
+    return null;
   }
 }
 
@@ -241,6 +253,7 @@ Deno.serve(async (req: Request) => {
   // Gemini and never costs anything.
   const now = Date.now();
   const userId = getUserIdFromAuthHeader(req);
+  if (!userId) return json({ error: "sign in required" }, 401);
   const rejectedWindowMs = await checkLimits(userId, now);
   if (rejectedWindowMs !== null) return rateLimited(rejectedWindowMs);
 
@@ -270,30 +283,33 @@ Deno.serve(async (req: Request) => {
   };
   if (wantJson) generationConfig.responseMimeType = "application/json";
 
+  // v1.18.1 — the key goes in a header, never the URL. Fetch errors carry the
+  // request URL, and the old catch below returned that message to the caller,
+  // so any network failure toward Google could hand the key to whoever called.
   const url =
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
   let resp: Response;
   try {
     resp = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
         generationConfig,
       }),
     });
   } catch (e) {
-    return json({ error: "upstream fetch failed: " + (e as Error).message }, 502);
+    // The detail stays in the function logs; the caller gets a generic error.
+    console.error("ai-generate: upstream fetch failed:", (e as Error).message);
+    return json({ error: "upstream unavailable" }, 502);
   }
 
   if (!resp.ok) {
+    // The body can carry project and quota details; it goes to the logs only.
     const detail = await resp.text();
-    // Never echo the key; cap detail length.
-    return json(
-      { error: `Gemini ${resp.status}`, detail: detail.slice(0, 500) },
-      resp.status === 429 ? 429 : 502,
-    );
+    console.error(`ai-generate: Gemini ${resp.status}:`, detail.slice(0, 500));
+    return json({ error: `Gemini ${resp.status}` }, resp.status === 429 ? 429 : 502);
   }
 
   const data = await resp.json();

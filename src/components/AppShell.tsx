@@ -193,6 +193,9 @@ export default function AppShell() {
     let lastBackgroundedAt = 0;
     const subPromise = CapacitorApp.addListener('appStateChange', (state) => {
       if (state.isActive) {
+        // v1.18.1 (limecore#58): the auto-lock check also runs on resume, so
+        // returning after the idle limit locks straight away.
+        bumpActivity();
         if (
           lastBackgroundedAt > 0 &&
           Date.now() - lastBackgroundedAt > RESUME_REFRESH_THRESHOLD_MS
@@ -219,7 +222,7 @@ export default function AppShell() {
       // safe even if the component is unmounted in between.
       subPromise.then((s) => s.remove()).catch(() => {});
     };
-  }, [refreshPortfolio, recomputeInsights, recomputeFundamentals]);
+  }, [refreshPortfolio, recomputeInsights, recomputeFundamentals, bumpActivity]);
 
   // Auto-lock timer. Never armed off Android (desktop, and web since
   // 2026-09-18): with the lock screen gone there,

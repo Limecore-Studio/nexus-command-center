@@ -12,6 +12,7 @@ export default function LockScreen() {
   const unlock = useAuthStore((s) => s.unlock);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const lockedUntil = useAuthStore((s) => s.lockedUntil);
+  const pinUnreadable = useAuthStore((s) => s.pinUnreadable);
 
   const [mode, setMode] = useState<'enter' | 'set' | 'confirm'>(hasPin ? 'enter' : 'set');
   const [code, setCode] = useState('');
@@ -96,6 +97,10 @@ export default function LockScreen() {
           );
           setShake(true);
           setTimeout(() => setShake(false), 400);
+          setCode('');
+        } else if (result.unreadable) {
+          // The notice below the keypad explains it; no shake, it wasn't a miss.
+          setError(null);
           setCode('');
         } else {
           setError(t('lock.wrongPin'));
@@ -240,7 +245,13 @@ export default function LockScreen() {
           </div>
         </div>
 
-        <div className="text-[0.625rem] desktop:tall:text-xs text-text-muted/60">{t('lock.forgotPin')}</div>
+        {pinUnreadable && mode === 'enter' ? (
+          <div role="alert" className="text-xs desktop:tall:text-sm text-danger text-center px-2">
+            {t('lock.pinUnreadable')}
+          </div>
+        ) : (
+          <div className="text-[0.625rem] desktop:tall:text-xs text-text-muted/60">{t('lock.forgotPin')}</div>
+        )}
       </div>
     </div>
   );

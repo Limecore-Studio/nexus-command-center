@@ -608,7 +608,8 @@
     "bioUnavailable": "Biometrie auf diesem Gerät nicht verfügbar",
     "setPinFirst": "Lege zuerst eine PIN fest — Biometrie entsperrt erst NACH der Ersteinrichtung",
     "bio": "Bio",
-    "forgotPin": "PIN vergessen? Zurücksetzen unter Einstellungen → Alle Daten löschen"
+    "forgotPin": "PIN vergessen? Zurücksetzen unter Einstellungen → Alle Daten löschen",
+    "pinUnreadable": "Dieses Telefon kann deine gespeicherte PIN gerade nicht lesen. Starte die App neu. Ist das Entsperren per Fingerabdruck an, kannst du es nutzen; unter Einstellungen → Alle Daten löschen fängst du mit einer neuen PIN von vorn an. Sonst lösche den App-Speicher in den Android-Einstellungen. Synchronisierte Daten kehren nach der Anmeldung zurück."
   },
   "fin": {
     "flow": {

@@ -431,7 +431,8 @@
     "bioUnavailable": "Biometria indisponível neste aparelho",
     "setPinFirst": "Defina um PIN primeiro — a biometria só funciona APÓS a configuração inicial",
     "bio": "Bio",
-    "forgotPin": "Esqueceu o PIN? Redefina em Configurações → Apagar todos os dados"
+    "forgotPin": "Esqueceu o PIN? Redefina em Configurações → Apagar todos os dados",
+    "pinUnreadable": "Este telefone não consegue ler o PIN salvo agora. Tente reiniciar o app. Se o desbloqueio por digital estiver ativado, você pode usá-lo, e Configurações → Apagar todos os dados permite recomeçar com um PIN novo. Caso contrário, limpe o armazenamento do app nas configurações do Android. Os dados sincronizados voltam quando você entrar."
   },
   "tasks": {
     "new": "Nova",

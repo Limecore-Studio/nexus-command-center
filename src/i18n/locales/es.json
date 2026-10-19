@@ -608,7 +608,8 @@
     "bioUnavailable": "Biometría no disponible en este dispositivo",
     "setPinFirst": "Define primero un PIN — la biometría desbloquea DESPUÉS de la configuración inicial",
     "bio": "Bio",
-    "forgotPin": "¿PIN olvidado? Restablece en Ajustes → Borrar todos los datos"
+    "forgotPin": "¿PIN olvidado? Restablece en Ajustes → Borrar todos los datos",
+    "pinUnreadable": "Este teléfono no puede leer tu PIN guardado ahora mismo. Prueba a reiniciar la app. Si el desbloqueo con huella está activado, puedes usarlo, y Ajustes → Borrar todos los datos te permite empezar de nuevo con un PIN nuevo. Si no, borra el almacenamiento de la app en los ajustes de Android. Los datos sincronizados vuelven al iniciar sesión."
   },
   "fin": {
     "flow": {

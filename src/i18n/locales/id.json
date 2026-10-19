@@ -74,6 +74,17 @@
     "errOtpResend": "Tidak dapat mengirim kode baru. Coba sebentar lagi.",
     "errOtpLength": "Kode itu tampak belum lengkap. Salin seluruh kode dari email."
   },
+  "adoption": {
+    "title": "Ditemukan data yang sudah ada",
+    "body": "Ada data yang tersimpan di perangkat ini dari sebelum Anda masuk. Tambahkan ke akun Anda dan sinkronkan ke cloud, atau buang?",
+    "keep": "Simpan & sinkronkan ke cloud",
+    "discard": "Buang data lokal",
+    "working": "Memproses…",
+    "failed": "Pilihan Anda tidak dapat disimpan di perangkat ini. Coba lagi.",
+    "footer": "Anda tidak akan ditanya lagi di akun ini.",
+    "switchBody": "Perangkat ini masih menyimpan data dari akun yang keluar di sini, atau dari penggunaan sebagai tamu. Tambahkan ke akun Anda dan sinkronkan ke cloud, atau hapus dari perangkat ini? Jika Anda keluar, data tetap seperti semula.",
+    "switchFooter": "Data ini tidak ditampilkan atau disinkronkan sampai Anda memilih."
+  },
   "app": {
     "name": "Nexus Command Center",
     "tagline": "Sistem operasi hidupmu"
@@ -411,7 +422,9 @@
     "themeLockedAria": "{{name}} — tema pendukung, terkunci",
     "themeSupporterNote": "Rack adalah tema pendukung. Tema ini terbuka saat Anda mendukung pengembangan di Ko-fi, di bawah.",
     "fdroidCheck": "Periksa pembaruan di F-Droid",
-    "fdroidCheckNote": "Sekali sehari, Nexus Command Center menanyakan versi terbaru ke f-droid.org. Tidak ada data tentang Anda yang dikirim. Jika dimatikan, permintaan ini tidak dikirim sama sekali."
+    "fdroidCheckNote": "Sekali sehari, Nexus Command Center menanyakan versi terbaru ke f-droid.org. Tidak ada data tentang Anda yang dikirim. Jika dimatikan, permintaan ini tidak dikirim sama sekali.",
+    "signOutUnsynced_other": "{{count}} perubahan belum tersinkron. “Simpan data lokal” menyimpannya di perangkat ini dan mengirimnya saat kamu masuk lagi di sini; menghapus akan menghilangkannya. Sampai saat itu, jika data perangkat ini dihapus, perubahan yang belum tersinkron akan hilang.",
+    "signOutFailed": "Gagal keluar: {{msg}}"
   },
   "lock": {
     "secureAccess": "Akses aman",

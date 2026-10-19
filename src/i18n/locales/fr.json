@@ -143,6 +143,17 @@
     "errOtpResend": "Impossible d’envoyer un nouveau code. Réessayez sous peu.",
     "errOtpLength": "Ce code semble incomplet. Copiez le code entier depuis l’e-mail."
   },
+  "adoption": {
+    "title": "Données existantes trouvées",
+    "body": "Des données datant d’avant votre connexion sont enregistrées sur cet appareil. Faut-il les ajouter à votre compte et les synchroniser avec le cloud, ou les supprimer ?",
+    "keep": "Conserver et synchroniser avec le cloud",
+    "discard": "Supprimer les données locales",
+    "working": "Traitement…",
+    "failed": "Impossible d’enregistrer votre choix sur cet appareil. Réessayez.",
+    "footer": "Cette question ne vous sera plus posée sur ce compte.",
+    "switchBody": "Cet appareil contient encore des données d’un compte qui s’y est déconnecté, ou d’une utilisation en invité. Faut-il les ajouter à votre compte et les synchroniser avec le cloud, ou les supprimer de cet appareil ? Si vous vous déconnectez, elles restent telles quelles.",
+    "switchFooter": "Ces données ne sont ni affichées ni synchronisées tant que vous n’avez pas choisi."
+  },
   "onboarding": {
     "welcomeTitle": "Configurons le système de votre vie",
     "welcomeBody": "Nexus réunit vos finances, votre forme, vos études, votre travail et vos habitudes en un seul score — pour voir d’un coup d’œil la tendance de votre vie.",
@@ -350,7 +361,11 @@
     "themeLockedAria": "{{name}} — thème réservé aux soutiens, verrouillé",
     "themeSupporterNote": "Rack est un thème réservé aux soutiens. Il se déverrouille quand vous soutenez le développement sur Ko-fi, plus bas.",
     "fdroidCheck": "Rechercher les mises à jour sur F-Droid",
-    "fdroidCheckNote": "Une fois par jour, Nexus Command Center demande à f-droid.org quelle est la version la plus récente. Rien vous concernant n’est envoyé. Désactivée, la requête n’est plus envoyée du tout."
+    "fdroidCheckNote": "Une fois par jour, Nexus Command Center demande à f-droid.org quelle est la version la plus récente. Rien vous concernant n’est envoyé. Désactivée, la requête n’est plus envoyée du tout.",
+    "signOutUnsynced_one": "{{count}} modification n’est pas encore synchronisée. « Conserver les données locales » la conserve sur cet appareil et l’envoie à votre prochaine connexion ici ; effacer la supprime. D’ici là, si les données de cet appareil sont effacées, les modifications non synchronisées sont perdues.",
+    "signOutUnsynced_many": "{{count}} modifications ne sont pas encore synchronisées. « Conserver les données locales » les conserve sur cet appareil et les envoie à votre prochaine connexion ici ; effacer les supprime. D’ici là, si les données de cet appareil sont effacées, les modifications non synchronisées sont perdues.",
+    "signOutUnsynced_other": "{{count}} modifications ne sont pas encore synchronisées. « Conserver les données locales » les conserve sur cet appareil et les envoie à votre prochaine connexion ici ; effacer les supprime. D’ici là, si les données de cet appareil sont effacées, les modifications non synchronisées sont perdues.",
+    "signOutFailed": "Échec de la déconnexion : {{msg}}"
   },
   "days": {
     "long": {

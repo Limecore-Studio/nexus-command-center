@@ -11,6 +11,7 @@
 import { db } from '../db/database';
 import { supabase } from './supabase';
 import { selectAll } from './selectAll';
+import { exportAllowed } from './adoptionGate';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -132,6 +133,9 @@ async function buildExport(user: { id: string; email?: string } | null): Promise
 
 /** Trigger a download of the export as a .json file. Returns the filename. */
 export async function downloadExport(user: { id: string; email?: string } | null): Promise<string> {
+  // v1.18.1 — account switch: the adoption choice comes first. Until it is
+  // made, the data here may be another account's kept data.
+  if (!exportAllowed(user?.id)) throw new Error('adoption choice pending');
   const payload = await buildExport(user);
   const json = JSON.stringify(payload, null, 2);
   const name = `nexus-export-${new Date().toISOString().slice(0, 10)}.json`;

@@ -28,7 +28,7 @@ import { selectAll } from './selectAll';
 import type { Table } from 'dexie';
 import { recordSeen } from './editStamp';
 import { db, SyncQueueItem } from '../db/database';
-import { listPending } from '../db/syncQueue';
+import { listPending, pushableFor } from '../db/syncQueue';
 import { generateId } from '../utils/uuid';
 import type { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, ManualAsset, WatchlistItem } from '../types/finance';
 import { legacyAssetTypeToAccountType } from '../types/finance';
@@ -129,7 +129,8 @@ export async function pushQueue(userId: string): Promise<PushResult> {
   for (const it of requeue) {
     await db.syncQueue.update(it.id, { syncedAt: undefined, lastError: undefined, requeuedFor: REQUEUE_TAG });
   }
-  const pending = await listPending();
+  // v1.18.1 (limecore#59 §2): only this user's items; see syncQueue.ts.
+  const pending = (await listPending()).filter((q) => pushableFor(q, userId));
   pending.sort((a, b) => {
     const pa = ENTITY_PRIORITY[a.entityType] ?? 99;
     const pb = ENTITY_PRIORITY[b.entityType] ?? 99;
@@ -628,6 +629,7 @@ export async function adoptLocalData(userId: string): Promise<number> {
         operation: 'insert',
         payload: JSON.stringify(row),
         createdAt: now,
+        owner: userId,
       });
       count++;
     }
@@ -674,9 +676,10 @@ export async function adoptLocalData(userId: string): Promise<number> {
   await enqueueAll('portfolio_cash_entry', cashEntries);
   await enqueueAll('work_quality_log', workQualityLogs);
 
-  // Stamp user_id for later use isn't needed since the push handler reads
-  // userId from the current session.
-  void userId;
+  // v1.18.1 (limecore#59 §2): "Keep" is the guest's queued edits' release.
+  // Until now they were held back (see syncQueue.ts pushableFor); from here
+  // they are this user's, like the rows queued above.
+  await db.syncQueue.filter((q) => !q.syncedAt && q.owner === null).modify({ owner: userId });
   return count;
 }
 

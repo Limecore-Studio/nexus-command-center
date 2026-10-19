@@ -63,4 +63,16 @@ describe('clearAllLocalData', () => {
     );
     expect(after.filter(([, c]) => c > 0)).toEqual([]);
   });
+
+  // v1.18.1 — after Discard, the next account must not inherit the previous
+  // person's life profile or onboarded flag (both back-fill into its cloud)
+  // or their manual fitness values. Device settings stay.
+  it('removes the per-person values kept outside Dexie, and keeps device settings', async () => {
+    const personal = ['ncc.lifeProfile', 'ncc.onboarded', 'nexus.referralAsked', 'fitness.manualWeightKg', 'fitness.manualSteps', 'fitness.stepHistory'];
+    const device = ['nexus.theme', 'limecore_lang', 'settings.baseCurrency', 'settings.notif.master'];
+    for (const k of [...personal, ...device]) localStorage.setItem(k, 'x');
+    await clearAllLocalData();
+    for (const k of personal) expect(localStorage.getItem(k), k).toBeNull();
+    for (const k of device) expect(localStorage.getItem(k), k).toBe('x');
+  });
 });

@@ -40,8 +40,9 @@ const loadQuickAdd = () => import('./QuickAddOverlay');
 /** A sheet whose chunk failed to load (web, network gone) renders nothing and
  *  reports it, instead of reaching the app-wide error screen; the parent then
  *  unmounts it and makes a fresh lazy() so the next open tries again (React
- *  caches a rejected lazy import). */
-class SheetBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
+ *  caches a rejected lazy import). v1.18.1 — App.tsx wraps the adoption
+ *  prompt in it the same way. */
+export class SheetBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };

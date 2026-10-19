@@ -143,6 +143,17 @@
     "errOtpResend": "No se pudo enviar un código nuevo. Inténtalo en un momento.",
     "errOtpLength": "Ese código parece incompleto. Copia el código entero del correo."
   },
+  "adoption": {
+    "title": "Se encontraron datos existentes",
+    "body": "Tienes datos guardados en este dispositivo de antes de iniciar sesión. ¿Los añadimos a tu cuenta y los sincronizamos con la nube, o los descartamos?",
+    "keep": "Conservar y sincronizar con la nube",
+    "discard": "Descartar datos locales",
+    "working": "Procesando…",
+    "failed": "No se pudo guardar tu elección en este dispositivo. Inténtalo de nuevo.",
+    "footer": "No te lo volveremos a preguntar en esta cuenta.",
+    "switchBody": "Este dispositivo todavía guarda datos de una cuenta que cerró sesión aquí o del uso como invitado. ¿Los añadimos a tu cuenta y los sincronizamos con la nube, o los borramos de este dispositivo? Si cierras sesión, se quedan como están.",
+    "switchFooter": "Estos datos no se muestran ni se sincronizan hasta que elijas."
+  },
   "onboarding": {
     "welcomeTitle": "Configuremos el sistema de tu vida",
     "welcomeBody": "Nexus reúne tus finanzas, tu forma física, tus estudios, tu trabajo y tus hábitos en una sola puntuación, para que veas de un vistazo hacia dónde va tu vida.",
@@ -350,7 +361,11 @@
     "themeLockedAria": "{{name}} — tema para quienes apoyan, bloqueado",
     "themeSupporterNote": "Rack es un tema para quienes apoyan. Se desbloquea al apoyar el desarrollo en Ko-fi, más abajo.",
     "fdroidCheck": "Buscar actualizaciones en F-Droid",
-    "fdroidCheckNote": "Una vez al día, Nexus Command Center consulta en f-droid.org cuál es la versión más reciente. No se envía nada sobre ti. Si lo desactivas, la consulta no se hace en absoluto."
+    "fdroidCheckNote": "Una vez al día, Nexus Command Center consulta en f-droid.org cuál es la versión más reciente. No se envía nada sobre ti. Si lo desactivas, la consulta no se hace en absoluto.",
+    "signOutUnsynced_one": "{{count}} cambio aún no se ha sincronizado. «Conservar datos locales» lo guarda en este dispositivo y lo envía la próxima vez que inicies sesión aquí; borrar lo elimina. Hasta entonces, si se borran los datos de este dispositivo, los cambios no sincronizados se pierden.",
+    "signOutUnsynced_many": "{{count}} cambios aún no se han sincronizado. «Conservar datos locales» los guarda en este dispositivo y los envía la próxima vez que inicies sesión aquí; borrar los elimina. Hasta entonces, si se borran los datos de este dispositivo, los cambios no sincronizados se pierden.",
+    "signOutUnsynced_other": "{{count}} cambios aún no se han sincronizado. «Conservar datos locales» los guarda en este dispositivo y los envía la próxima vez que inicies sesión aquí; borrar los elimina. Hasta entonces, si se borran los datos de este dispositivo, los cambios no sincronizados se pierden.",
+    "signOutFailed": "No se pudo cerrar sesión: {{msg}}"
   },
   "days": {
     "long": {

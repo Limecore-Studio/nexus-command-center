@@ -74,6 +74,17 @@
     "errOtpResend": "Não foi possível enviar um novo código. Tente daqui a pouco.",
     "errOtpLength": "Esse código parece incompleto. Copie o código completo do e-mail."
   },
+  "adoption": {
+    "title": "Dados existentes encontrados",
+    "body": "Você tem dados salvos neste dispositivo de antes de entrar na conta. Vamos adicioná-los à sua conta e sincronizar com a nuvem, ou descartá-los?",
+    "keep": "Manter e sincronizar com a nuvem",
+    "discard": "Descartar dados locais",
+    "working": "Processando…",
+    "failed": "Não foi possível salvar sua escolha neste dispositivo. Tente de novo.",
+    "footer": "Você não verá esta pergunta de novo nesta conta.",
+    "switchBody": "Este dispositivo ainda guarda dados de uma conta que saiu dele ou do uso como convidado. Vamos adicioná-los à sua conta e sincronizar com a nuvem, ou apagá-los deste dispositivo? Se você sair, eles ficam como estão.",
+    "switchFooter": "Esses dados não são exibidos nem sincronizados até você escolher."
+  },
   "app": {
     "name": "Nexus Command Center",
     "tagline": "O sistema operacional da sua vida"
@@ -411,7 +422,11 @@
     "themeLockedAria": "{{name}} — tema de apoiador, bloqueado",
     "themeSupporterNote": "Rack é um tema de apoiador. Ele é liberado quando você apoia o desenvolvimento no Ko-fi, logo abaixo.",
     "fdroidCheck": "Procurar atualizações no F-Droid",
-    "fdroidCheckNote": "Uma vez por dia, o Nexus Command Center pergunta ao f-droid.org qual é a versão mais recente. Nada sobre você é enviado. Desativado, o pedido deixa de ser feito."
+    "fdroidCheckNote": "Uma vez por dia, o Nexus Command Center pergunta ao f-droid.org qual é a versão mais recente. Nada sobre você é enviado. Desativado, o pedido deixa de ser feito.",
+    "signOutUnsynced_one": "{{count}} alteração ainda não foi sincronizada. “Manter dados locais” a guarda neste dispositivo e a envia na próxima vez que você entrar aqui; apagar a exclui. Até lá, se os dados deste dispositivo forem apagados, as alterações não sincronizadas serão perdidas.",
+    "signOutUnsynced_many": "{{count}} alterações ainda não foram sincronizadas. “Manter dados locais” as guarda neste dispositivo e as envia na próxima vez que você entrar aqui; apagar as exclui. Até lá, se os dados deste dispositivo forem apagados, as alterações não sincronizadas serão perdidas.",
+    "signOutUnsynced_other": "{{count}} alterações ainda não foram sincronizadas. “Manter dados locais” as guarda neste dispositivo e as envia na próxima vez que você entrar aqui; apagar as exclui. Até lá, se os dados deste dispositivo forem apagados, as alterações não sincronizadas serão perdidas.",
+    "signOutFailed": "Não foi possível sair: {{msg}}"
   },
   "lock": {
     "secureAccess": "Acesso seguro",

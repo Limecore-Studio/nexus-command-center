@@ -1,8 +1,10 @@
 import { create, type StoreApi } from 'zustand';
-import { listPending } from '../db/syncQueue';
+import { listOwnPending } from '../db/syncQueue';
 import { fullSync, PushResult, PullResult } from '../lib/cloudSync';
 import { coalesce } from '../lib/coalesce';
+import { reconcileTaskRemindersIfChanged } from '../lib/taskReminders';
 import { useSessionStore } from './useSessionStore';
+import { adoptionClearFor } from '../lib/adoptionGate';
 import { useFinanceStore } from './useFinanceStore';
 import { useStudiesStore } from './useStudiesStore';
 import { useFitnessStore } from './useFitnessStore';
@@ -81,6 +83,12 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     set({ lastError: 'Not signed in.' });
     return;
   }
+  // v1.18.1 — account switch: the adoption choice comes first. Before this
+  // account has answered "Existing data found", a sync would load the device's
+  // rows into the stores and arm task reminders from them. The `online`, 30 s
+  // and window-focus triggers can fire that early; App.tsx starts the first
+  // sync once the answer is in.
+  if (!adoptionClearFor(user.id)) return;
 
   set({ syncing: true, lastError: null });
   try {
@@ -92,8 +100,21 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     // hard — nothing new would be there to surface anyway.
     if (pull.errors.length === 0) {
       await reloadDataStores();
+      // v1.18.1 (NCC#186) — tasks that arrived with this pull get their
+      // reminders. AppShell's mount reconcile runs before the first pull, so
+      // after a sign-in on a wiped device (or a new account's first sync)
+      // they had none until the next app start. A no-op when the tasks are
+      // the ones already armed. Only while this sync's user is still signed
+      // in: a sign-out in the meantime has cancelled every reminder and must
+      // not see them re-armed.
+      const stillSignedIn = () => useSessionStore.getState().user?.id === user.id;
+      if (stillSignedIn()) {
+        void reconcileTaskRemindersIfChanged(useTaskStore.getState().tasks, stillSignedIn).catch((e) =>
+          console.warn('[sync] task reminder reconcile failed:', (e as Error).message),
+        );
+      }
     }
-    const pending = await listPending();
+    const pending = await listOwnPending();
     // Surface up to 5 of the most recent item errors for diagnostics.
     const itemErrors = pending
       .filter((p) => p.lastError)
@@ -190,7 +211,7 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   },
 
   async refreshPending() {
-    const pending = await listPending();
+    const pending = await listOwnPending();
     set({ pendingCount: pending.length });
   },
 

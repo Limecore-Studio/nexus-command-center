@@ -143,6 +143,17 @@
     "errOtpResend": "Uuden koodin lähetys epäonnistui. Yritä hetken kuluttua.",
     "errOtpLength": "Koodi näyttää vajaalta. Kopioi koko koodi sähköpostista."
   },
+  "adoption": {
+    "title": "Laitteelta löytyi tietoja",
+    "body": "Tälle laitteelle on tallennettu tietoja ajalta ennen kirjautumista. Liitetäänkö ne tiliisi ja synkronoidaan pilveen, vai hylätäänkö ne?",
+    "keep": "Säilytä ja synkronoi pilveen",
+    "discard": "Hylkää paikalliset tiedot",
+    "working": "Käsitellään…",
+    "failed": "Valintaasi ei voitu tallentaa tälle laitteelle. Yritä uudelleen.",
+    "footer": "Tällä tilillä tätä ei kysytä uudelleen.",
+    "switchBody": "Tällä laitteella on yhä tietoja tililtä, joka kirjautui täällä ulos, tai vieraskäytöstä. Liitetäänkö ne tiliisi ja synkronoidaan pilveen, vai poistetaanko ne tältä laitteelta? Jos kirjaudut ulos, tiedot jäävät ennalleen.",
+    "switchFooter": "Tietoja ei näytetä eikä synkronoida ennen kuin teet valinnan."
+  },
   "onboarding": {
     "welcomeTitle": "Otetaan elämäsi käyttöjärjestelmä käyttöön",
     "welcomeBody": "Nexus kokoaa taloutesi, kuntosi, opintosi, työsi ja tapasi yhdeksi pisteluvuksi — näet yhdellä silmäyksellä, mihin suuntaan elämäsi kulkee.",
@@ -350,7 +361,10 @@
     "themeLockedAria": "{{name}} — tukijan teema, lukittu",
     "themeSupporterNote": "Rack on tukijoiden teema. Se avautuu, kun tuet kehitystä Ko-fissa (alempana).",
     "fdroidCheck": "Tarkista päivitykset F-Droidista",
-    "fdroidCheckNote": "Nexus Command Center kysyy kerran päivässä f-droid.orgilta uusinta versiota. Sinusta ei lähetetä mitään. Kun tämä on pois päältä, kyselyä ei tehdä lainkaan."
+    "fdroidCheckNote": "Nexus Command Center kysyy kerran päivässä f-droid.orgilta uusinta versiota. Sinusta ei lähetetä mitään. Kun tämä on pois päältä, kyselyä ei tehdä lainkaan.",
+    "signOutUnsynced_one": "{{count}} muutos ei ole vielä synkronoitu. ”Säilytä paikalliset tiedot” pitää sen tällä laitteella ja lähettää sen, kun kirjaudut tänne seuraavan kerran; tyhjennys poistaa sen. Siihen asti synkronoimattomat muutokset katoavat, jos tämän laitteen tiedot tyhjennetään.",
+    "signOutUnsynced_other": "{{count}} muutosta ei ole vielä synkronoitu. ”Säilytä paikalliset tiedot” pitää ne tällä laitteella ja lähettää ne, kun kirjaudut tänne seuraavan kerran; tyhjennys poistaa ne. Siihen asti synkronoimattomat muutokset katoavat, jos tämän laitteen tiedot tyhjennetään.",
+    "signOutFailed": "Uloskirjautuminen epäonnistui: {{msg}}"
   },
   "days": {
     "long": {

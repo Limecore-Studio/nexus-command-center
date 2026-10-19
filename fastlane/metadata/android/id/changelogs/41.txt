@@ -1,0 +1,3 @@
+Di balik layar.
+
+NCC pindah ke Capacitor 8 dan React 19, fondasi modern yang sama dengan StudyDesk dan LimeLog, serta menargetkan Android terbaru. Terjemahan dan ikon memakai pustaka yang lebih baru. Cara pakai aplikasi tidak berubah; rilis ini menyiapkan perbaikan berikutnya.

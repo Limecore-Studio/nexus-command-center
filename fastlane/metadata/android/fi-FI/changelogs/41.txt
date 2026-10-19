@@ -1,0 +1,3 @@
+Konepellin alla.
+
+NCC siirtyy Capacitor 8:aan ja React 19:ään, samalle nykyaikaiselle pohjalle kuin StudyDesk ja LimeLog, ja tähtää uusimpaan Androidiin. Käännökset ja kuvakkeet käyttävät uudempia kirjastoja. Käyttö ei muutu; tämä versio valmistelee seuraavia korjauksia.

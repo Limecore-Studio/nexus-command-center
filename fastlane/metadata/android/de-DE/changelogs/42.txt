@@ -1,0 +1,3 @@
+Korrekturen und Zuverlässigkeit.
+
+Erinnerungen kommen pünktlich, und Fälligkeitszeiten von Aufgaben überstehen den Sync. Aufgabenkategorien, Buchungsnotizen und noch nicht synchronisierte Änderungen bleiben erhalten. NCC startet offline ohne Hänger. Die Abmeldung behält ungesendete Änderungen und entfernt die Erinnerungen des vorherigen Kontos; beim Kontowechsel wird zuerst nach behaltenen Daten gefragt. Dazu Korrekturen an App-Sperre und Datenexport sowie ein schnellerer Start.

@@ -1,0 +1,3 @@
+Fixes and reliability.
+
+Reminders arrive on time, and task due times survive sync. Task categories, transaction notes and edits waiting to sync are kept. NCC starts offline without hanging. Sign-out keeps unsynced changes and clears the previous account's reminders, and switching accounts asks about kept data first. Plus app lock and data export fixes and a faster start.

@@ -1,0 +1,3 @@
+Perbaikan dan keandalan.
+
+Pengingat datang tepat waktu, dan waktu tenggat tugas tetap terjaga saat sinkronisasi. Kategori tugas, catatan transaksi, dan perubahan yang menunggu sinkronisasi tetap tersimpan. NCC dapat dibuka offline tanpa macet. Keluar akun menyimpan perubahan yang belum tersinkron dan menghapus pengingat akun sebelumnya; saat berganti akun, NCC menanyakan data yang disimpan lebih dulu. Juga perbaikan kunci aplikasi dan ekspor data, serta mulai lebih cepat.

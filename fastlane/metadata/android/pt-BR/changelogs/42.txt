@@ -1,0 +1,3 @@
+Correções e confiabilidade.
+
+Os lembretes chegam na hora e o horário de vencimento das tarefas sobrevive à sincronização. Categorias de tarefas, notas de transações e alterações pendentes são mantidas. O NCC inicia offline sem travar. Sair da conta mantém as alterações não sincronizadas e remove os lembretes da conta anterior; ao trocar de conta, ele pergunta primeiro sobre os dados mantidos. Também há correções no bloqueio do app e na exportação, e um início mais rápido.

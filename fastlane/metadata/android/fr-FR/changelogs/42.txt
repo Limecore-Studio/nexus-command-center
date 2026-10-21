@@ -1,0 +1,3 @@
+Corrections et fiabilité.
+
+Les rappels arrivent à l'heure et l'heure d'échéance des tâches survit à la synchronisation. Catégories de tâches, notes de transactions et modifications en attente sont conservées. NCC démarre hors ligne sans bloquer. La déconnexion garde les modifications non synchronisées et supprime les rappels du compte précédent ; changer de compte demande d'abord quoi faire des données conservées. Et des corrections du verrouillage et de l'export, et un démarrage plus rapide.

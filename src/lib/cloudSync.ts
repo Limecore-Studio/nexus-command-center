@@ -28,7 +28,7 @@ import { selectAll } from './selectAll';
 import type { Table } from 'dexie';
 import { recordSeen } from './editStamp';
 import { db, SyncQueueItem } from '../db/database';
-import { listPending } from '../db/syncQueue';
+import { listPending, pushableFor } from '../db/syncQueue';
 import { generateId } from '../utils/uuid';
 import type { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, ManualAsset, WatchlistItem } from '../types/finance';
 import { legacyAssetTypeToAccountType } from '../types/finance';
@@ -36,8 +36,9 @@ import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
 import type { Goal, GoalType } from '../types/goals';
 import { selectRequeue, REQUEUE_TAG } from './requeueDropped';
-import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, removeTombstoned } from './cloudSyncHydrate';
+import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, putFromCloud, removeTombstoned } from './cloudSyncHydrate';
 import { pushHandlers } from './cloudSyncPush';
+import { dueFromServer } from './taskDue';
 export { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydrateStudiesFromCloud, hydrateWorkQualityFromCloud } from './cloudSyncHydrate';
 
 // ============================================================================
@@ -97,6 +98,31 @@ function isPermanentSyncError(e: unknown): boolean {
   return typeof code === 'string' && PERMANENT_PG_CODES.has(code);
 }
 
+/**
+ * v1.18.1 (NCC#147) — the request never reached the server or never came
+ * back: no network, or an aborted or timed-out fetch. supabase-js reports
+ * these as an error object with `code: ''`. Every PostgREST answer carries a
+ * code (a SQLSTATE or PGRSTnnn). A body with no code at all (a gateway or WAF
+ * page) is NOT counted: the server did answer, and such a page can be
+ * specific to one payload, which would then stop every drain at that item.
+ */
+export function isTransportError(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  if (e instanceof Error) {
+    return e.name === 'AbortError' || (e.name === 'TypeError' && /fetch|network|load failed/i.test(e.message));
+  }
+  return (e as { code?: unknown }).code === '';
+}
+
+async function hasLiveSession(): Promise<boolean> {
+  try {
+    const { data } = await supabase.auth.getSession();
+    return !!data.session;
+  } catch {
+    return false;
+  }
+}
+
 export async function pushQueue(userId: string): Promise<PushResult> {
   // NCC#55 — one-time rescue of accounts and transactions dropped by the old
   // manual_assets CHECK. See requeueDropped.ts.
@@ -104,7 +130,8 @@ export async function pushQueue(userId: string): Promise<PushResult> {
   for (const it of requeue) {
     await db.syncQueue.update(it.id, { syncedAt: undefined, lastError: undefined, requeuedFor: REQUEUE_TAG });
   }
-  const pending = await listPending();
+  // v1.18.1 (limecore#59 §2): only this user's items; see syncQueue.ts.
+  const pending = (await listPending()).filter((q) => pushableFor(q, userId));
   pending.sort((a, b) => {
     const pa = ENTITY_PRIORITY[a.entityType] ?? 99;
     const pb = ENTITY_PRIORITY[b.entityType] ?? 99;
@@ -114,6 +141,14 @@ export async function pushQueue(userId: string): Promise<PushResult> {
 
   const result: PushResult = { attempted: 0, succeeded: 0, failed: 0, errors: [] };
   const now = new Date().toISOString();
+  // v1.18.1 (NCC#147): the lowest priority (a parent tier) that failed in this
+  // drain without being dropped. A child's FK violation after that is the
+  // parent not being there YET, not a payload that can never land. This is by
+  // tier, not by the child's own parent: while any parent-tier item keeps
+  // failing, a child whose parent is really gone stays pending too (and its
+  // row is not refreshed by the pull) instead of being dropped. Holding a
+  // row back is the safer side of that trade; losing it is not recoverable.
+  let parentFailedAt = Infinity;
 
   for (const item of pending) {
     result.attempted++;
@@ -128,7 +163,20 @@ export async function pushQueue(userId: string): Promise<PushResult> {
       result.succeeded++;
     } catch (e) {
       const msg = (e as Error).message ?? String(e);
-      if (isPermanentSyncError(e)) {
+      const code = (e as { code?: string } | null)?.code;
+      const priority = ENTITY_PRIORITY[item.entityType] ?? 99;
+      const parentPending = code === '23503' && parentFailedAt < priority;
+      // v1.18.1 (NCC#162): with no session, supabase-js sends the publishable
+      // key and RLS refuses as anon. That is the session ending mid-drain
+      // (refresh refused, signed out elsewhere), not a payload RLS will
+      // always refuse: leave this and everything after it queued.
+      if (code === '42501' && !(await hasLiveSession())) {
+        await db.syncQueue.update(item.id, { lastError: msg });
+        result.errors.push({ entityType: item.entityType, entityId: item.entityId, message: msg });
+        result.failed++;
+        break;
+      }
+      if (isPermanentSyncError(e) && !parentPending) {
         // Non-retryable: the payload itself is invalid (e.g. a lot pointing at a
         // deleted holding → FK violation, or a malformed account → check/not-null
         // violation). Retrying every drain just spams the error banner forever, so
@@ -138,8 +186,13 @@ export async function pushQueue(userId: string): Promise<PushResult> {
       } else {
         await db.syncQueue.update(item.id, { lastError: msg });
         result.errors.push({ entityType: item.entityType, entityId: item.entityId, message: msg });
+        parentFailedAt = Math.min(parentFailedAt, priority);
       }
       result.failed++;
+      // v1.18.1 (NCC#147): no network means every remaining item would fail
+      // the same way (each after its own timeout). Stop; they stay pending
+      // for the next drain, parents still ahead of their children.
+      if (isTransportError(e)) break;
     }
   }
   return result;
@@ -197,6 +250,9 @@ export async function pullAll(_userId: string): Promise<PullResult> {
     braindumpEntries: 0,
     errors,
   };
+
+  // v1.18.1 (NCC#146) — see putFromCloud in cloudSyncHydrate.ts.
+  const putPulled = putFromCloud;
 
   // Helper: pull a Supabase table, filter deleted, map back to local shape, write to Dexie.
   //
@@ -260,7 +316,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       };
     },
     async (rows) => {
-      await db.transactions.bulkPut(rows);
+      await putPulled(db.transactions, rows, ['notes']);
     },
     db.transactions
   );
@@ -277,7 +333,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       ownerId: r.user_id,
     }),
     async (rows) => {
-      await db.budgetCategories.bulkPut(rows);
+      await putPulled(db.budgetCategories, rows, ['linkedManualAssetId']);
     },
     db.budgetCategories
   );
@@ -297,7 +353,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       createdAt: r.created_at,
     }),
     async (rows) => {
-      await db.portfolioHoldings.bulkPut(rows);
+      await putPulled(db.portfolioHoldings, rows);
     }
   );
 
@@ -387,9 +443,9 @@ export async function pullAll(_userId: string): Promise<PullResult> {
     (r) => ({
       id: r.id,
       title: r.title,
-      dueDate: r.due_date ?? undefined,
+      // v1.18.1 (NCC#193) - due_at keeps the time; due_date alone is a day.
+      dueDate: dueFromServer(r),
       priority: (r.priority === 'normal' ? 'medium' : r.priority) as Task['priority'],
-      category: undefined,
       completed: r.status === 'done',
       notes: r.description ?? undefined,
       syncStatus: 'synced',
@@ -398,7 +454,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       ownerId: r.user_id,
     }),
     async (rows) => {
-      await db.tasks.bulkPut(rows);
+      await putPulled(db.tasks, rows, ['category']);
     },
     db.tasks
   );
@@ -435,7 +491,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       } as ManualAsset;
     },
     async (rows) => {
-      await db.manualAssets.bulkPut(rows);
+      await putPulled(db.manualAssets, rows);
     },
     db.manualAssets
   );
@@ -456,7 +512,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       updatedAt: r.updated_at,
     }),
     async (rows) => {
-      await db.watchlistItems.bulkPut(rows);
+      await putPulled(db.watchlistItems, rows);
     },
     db.watchlistItems
   );
@@ -480,7 +536,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       updatedAt: r.updated_at,
     }),
     async (rows) => {
-      await db.goals.bulkPut(rows);
+      await putPulled(db.goals, rows);
     },
     db.goals
   );
@@ -501,7 +557,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       updatedAt: r.updated_at,
     }),
     async (rows) => {
-      await db.portfolioLots.bulkPut(rows);
+      await putPulled(db.portfolioLots, rows);
     },
     db.portfolioLots
   );
@@ -575,6 +631,7 @@ export async function adoptLocalData(userId: string): Promise<number> {
         operation: 'insert',
         payload: JSON.stringify(row),
         createdAt: now,
+        owner: userId,
       });
       count++;
     }
@@ -621,9 +678,10 @@ export async function adoptLocalData(userId: string): Promise<number> {
   await enqueueAll('portfolio_cash_entry', cashEntries);
   await enqueueAll('work_quality_log', workQualityLogs);
 
-  // Stamp user_id for later use isn't needed since the push handler reads
-  // userId from the current session.
-  void userId;
+  // v1.18.1 (limecore#59 §2): "Keep" is the guest's queued edits' release.
+  // Until now they were held back (see syncQueue.ts pushableFor); from here
+  // they are this user's, like the rows queued above.
+  await db.syncQueue.filter((q) => !q.syncedAt && q.owner === null).modify({ owner: userId });
   return count;
 }
 

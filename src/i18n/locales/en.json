@@ -143,6 +143,17 @@
     "errOtpResend": "Could not send a new code. Try again shortly.",
     "errOtpLength": "That code looks incomplete. Copy the whole code from the email."
   },
+  "adoption": {
+    "title": "Existing data found",
+    "body": "You have data stored locally on this device from before signing in. Should we adopt it into your account and sync it to the cloud, or discard it?",
+    "keep": "Keep & sync to cloud",
+    "discard": "Discard local data",
+    "working": "Working…",
+    "failed": "Couldn't save your choice on this device. Try again.",
+    "footer": "You won't be asked again on this account.",
+    "switchBody": "This device holds another account's or a guest's data. Add it to your account and sync it, or delete it here? Signing out leaves it as is.",
+    "switchFooter": "Nothing here is shown or synced until you choose."
+  },
   "onboarding": {
     "welcomeTitle": "Let's set up your life OS",
     "welcomeBody": "Nexus pulls your finances, fitness, studies, work and habits into one score — so you can see how your life is trending at a glance.",
@@ -350,7 +361,10 @@
     "themeLockedAria": "{{name}} — supporter theme, locked",
     "themeSupporterNote": "Rack is a supporter theme. It unlocks when you support development on Ko-fi, below.",
     "fdroidCheck": "Check F-Droid for updates",
-    "fdroidCheckNote": "Once a day, Nexus Command Center asks f-droid.org for its newest version. Nothing about you is sent. Turning this off stops the request entirely."
+    "fdroidCheckNote": "Once a day, Nexus Command Center asks f-droid.org for its newest version. Nothing about you is sent. Turning this off stops the request entirely.",
+    "signOutUnsynced_one": "{{count}} change hasn't synced yet. “Keep local data” keeps it on this device and sends it the next time you sign in here; wiping deletes it. Until then, wiping this device's data also deletes unsynced changes.",
+    "signOutUnsynced_other": "{{count}} changes haven't synced yet. “Keep local data” keeps them on this device and sends them the next time you sign in here; wiping deletes them. Until then, wiping this device's data also deletes unsynced changes.",
+    "signOutFailed": "Sign-out failed: {{msg}}"
   },
   "days": {
     "long": {
@@ -608,7 +622,8 @@
     "bioUnavailable": "Biometric unavailable on this device",
     "setPinFirst": "Set a PIN first — biometric unlocks AFTER initial setup",
     "bio": "Bio",
-    "forgotPin": "Forgot PIN? Reset in Settings → Clear All Data"
+    "forgotPin": "Forgot PIN? Reset in Settings → Clear All Data",
+    "pinUnreadable": "This phone can't read your saved PIN right now. Try restarting the app. If fingerprint unlock is on, you can use it, and Settings → Clear All Data lets you start again with a new PIN. Otherwise clear the app's storage in Android settings. Synced data comes back when you sign in."
   },
   "fin": {
     "flow": {

@@ -190,6 +190,14 @@ async function wrapV3(plaintextV2: string): Promise<string> {
   return `${KEYSTORE_WRAPPER_VERSION}:${iv}:${ciphertext}`;
 }
 
+/** v1.18.1 (limecore#58): wrap, then read it back. Returns the v3 form only
+ *  if it decrypts to the input, otherwise null so the caller keeps v2: a v3
+ *  PIN this device can't read would leave the app locked. */
+async function wrapVerifiedV3(plaintextV2: string): Promise<string | null> {
+  const wrapped = await wrapV3(plaintextV2);
+  return (await unwrapV3(wrapped)) === plaintextV2 ? wrapped : null;
+}
+
 /** Unwrap a stored value back to the v1/v2 form. Returns null on any
  *  decrypt failure (key missing, tampered ciphertext, etc.) so callers
  *  can present a clean "PIN unrecoverable, please re-set" path. */
@@ -218,6 +226,9 @@ interface VerifyResult {
   // Present when verification was refused (or just rejected) due to lockout.
   // `remainingSeconds` is the wall-clock seconds the UI should show.
   locked?: { until: number; remainingSeconds: number; totalAttempts: number };
+  // v1.18.1 (limecore#58): the stored PIN could not be decrypted on this
+  // device, so the entry was never compared. Not counted as a wrong guess.
+  unreadable?: boolean;
 }
 
 interface AuthStore {
@@ -229,6 +240,13 @@ interface AuthStore {
   /** Epoch ms; 0 = not currently locked out. Surface this in UI for countdown. */
   lockedUntil: number;
   failedAttempts: number;
+  /** v1.18.1 (limecore#58): a PIN is stored but this device can't decrypt it
+   *  right now. The app stays locked; LockScreen explains the way out. */
+  pinUnreadable: boolean;
+  /** True once init() has read the stored PIN state. Until then App shows the
+   *  splash rather than LockScreen, which would otherwise start in "set a PIN"
+   *  mode because hasPin is still its default. */
+  ready: boolean;
 
   init: () => Promise<void>;
   setPin: (pin: string) => Promise<void>;
@@ -248,6 +266,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   lastActivity: Date.now(),
   lockedUntil: 0,
   failedAttempts: 0,
+  pinUnreadable: false,
+  ready: false,
 
   async init() {
     const [pin, autoLock, bio, attempts, lastFailAt] = await Promise.all([
@@ -261,24 +281,22 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // v1.4 — opportunistic v2 → v3 migration. If we find a plaintext v2
     // hash AND Keystore is available, encrypt-in-place. One-shot per
     // user. On Keystore failure we leave v2 alone (auth still works,
-    // just without the AKS layer of defense). On v3 read failure
-    // (key revoked / GCM auth failure) we delete the stored hash so the
-    // user is prompted to set a new PIN — better than a permanent lock.
+    // just without the AKS layer of defense).
     if (pin && !isV3Wrapped(pin) && !isLegacyHash(pin) && keystoreAvailable()) {
       try {
-        const wrapped = await wrapV3(pin);
-        await setPref(PIN_KEY, wrapped);
+        const wrapped = await wrapVerifiedV3(pin);
+        if (wrapped) await setPref(PIN_KEY, wrapped);
       } catch (e) {
         console.warn('[auth] PIN v3 migration skipped:', (e as Error).message);
       }
-    } else if (pin && isV3Wrapped(pin)) {
-      // Probe-decrypt to confirm the AKS key is reachable. If not, drop
-      // the stored hash so the user can re-set a PIN instead of being
-      // permanently locked out.
-      const unwrapped = await unwrapV3(pin);
-      if (unwrapped == null) {
-        await removePref(PIN_KEY);
-      }
+    }
+    // v1.18.1 (limecore#58): a v3 PIN that fails to decrypt is kept, and the
+    // app stays locked. A decrypt failure can be transient; when it isn't, the
+    // way out is the forgot-PIN one (clear the app's data), the same as for a
+    // forgotten PIN. Biometric unlock still works meanwhile.
+    let pinUnreadable = false;
+    if (pin && isV3Wrapped(pin)) {
+      pinUnreadable = (await unwrapV3(pin)) == null;
     }
 
     // Coerce legacy "Never auto-lock" (saved as 0) to a 60-minute cap. The
@@ -293,11 +311,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const lockoutSec = getLockoutSecondsForAttempts(failedAttempts);
     const lockedUntilCandidate = lastFail && lockoutSec > 0 ? lastFail + lockoutSec * 1000 : 0;
 
-    // Re-read after potential migration so `hasPin` reflects the
-    // post-migration state (we might have removed an unrecoverable v3).
-    const pinAfterMigration = await getPref(PIN_KEY);
     set({
-      hasPin: !!pinAfterMigration,
+      hasPin: !!pin,
+      pinUnreadable,
+      ready: true,
       autoLockMinutes: autoLockMin,
       biometricEnabled: bio !== '0',
       failedAttempts,
@@ -312,7 +329,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     let toStore = v2;
     if (keystoreAvailable()) {
       try {
-        toStore = await wrapV3(v2);
+        toStore = (await wrapVerifiedV3(v2)) ?? v2;
       } catch (e) {
         console.warn('[auth] PIN encryption skipped, storing v2 plaintext:', (e as Error).message);
       }
@@ -322,7 +339,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // PIN they were guessing before resetting.
     await removePref(PIN_ATTEMPTS_KEY);
     await removePref(PIN_LAST_FAIL_KEY);
-    set({ hasPin: true, failedAttempts: 0, lockedUntil: 0 });
+    set({ hasPin: true, pinUnreadable: false, failedAttempts: 0, lockedUntil: 0 });
   },
 
   async verifyPin(pin) {
@@ -352,11 +369,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (isV3Wrapped(stored)) {
       const unwrapped = await unwrapV3(stored);
       if (unwrapped == null) {
-        // Key revoked / tampered — surface as a regular miss so the
-        // counter-and-lockout flow takes over. init() will have wiped
-        // the stored hash on the next launch.
-        return { ok: false };
+        // Key unreachable or ciphertext tampered. Not a guess, so it doesn't
+        // count toward the lockout; the PIN stays (limecore#58).
+        set({ pinUnreadable: true });
+        return { ok: false, unreadable: true };
       }
+      if (state.pinUnreadable) set({ pinUnreadable: false });
       plaintextHash = unwrapped;
     }
 
@@ -372,7 +390,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const upgradedV2 = await hashPinV2(pin);
         let toStore = upgradedV2;
         if (keystoreAvailable()) {
-          try { toStore = await wrapV3(upgradedV2); } catch { /* fall back */ }
+          try { toStore = (await wrapVerifiedV3(upgradedV2)) ?? upgradedV2; } catch { /* fall back */ }
         }
         await setPref(PIN_KEY, toStore);
       }
@@ -420,7 +438,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   bumpActivity() {
-    set({ lastActivity: Date.now() });
+    // v1.18.1 (limecore#58): activity after the idle limit has passed locks
+    // rather than restarting the idle clock, so the outcome no longer depends
+    // on whether the 30 s tick ran first. `unlocked` is only ever true where
+    // the app lock applies (LockScreen is the only caller of unlock()), so
+    // this is inert on web and desktop.
+    const { unlocked, autoLockMinutes, lastActivity } = get();
+    const now = Date.now();
+    if (unlocked && autoLockMinutes > 0 && now - lastActivity > autoLockMinutes * 60_000) {
+      set({ unlocked: false });
+      return;
+    }
+    set({ lastActivity: now });
   },
 
   async setBiometric(on) {

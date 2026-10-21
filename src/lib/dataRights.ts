@@ -11,6 +11,7 @@
 import { db } from '../db/database';
 import { supabase } from './supabase';
 import { selectAll } from './selectAll';
+import { exportAllowed } from './adoptionGate';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -46,11 +47,22 @@ interface ExportPayload {
  */
 export const SERVER_ONLY_TABLES = ['feedback', 'client_errors'] as const;
 
+// v1.18.1 (NCC#158): the columns a signed-in user may read. `feedback` lost
+// its table-wide SELECT in the v1.17 status-columns migration; only these are
+// granted, so `select('*')` (and a filter on user_id) failed as a whole and
+// the export held "permission denied" instead of the user's feedback. RLS
+// already limits the rows to the user's own, so no user_id filter is needed.
+// `client_errors` still has every column granted, user_id included.
+const FEEDBACK_EXPORT_COLUMNS = 'id, app, app_version, category, rating, message, status, shipped_in, created_at';
+
 export async function serverOnlyData(userId: string): Promise<Record<string, unknown[] | { error: string }>> {
   const out: Record<string, unknown[] | { error: string }> = {};
   for (const table of SERVER_ONLY_TABLES) {
     try {
-      const { data, error } = await selectAll(supabase, table, { filter: (q) => q.eq('user_id', userId) });
+      const { data, error } =
+        table === 'feedback'
+          ? await selectAll(supabase, table, { columns: FEEDBACK_EXPORT_COLUMNS })
+          : await selectAll(supabase, table, { filter: (q) => q.eq('user_id', userId) });
       out[table] = error ? { error: error.message } : (data ?? []);
     } catch (e) {
       out[table] = { error: (e as Error).message };
@@ -121,6 +133,9 @@ async function buildExport(user: { id: string; email?: string } | null): Promise
 
 /** Trigger a download of the export as a .json file. Returns the filename. */
 export async function downloadExport(user: { id: string; email?: string } | null): Promise<string> {
+  // v1.18.1 — account switch: the adoption choice comes first. Until it is
+  // made, the data here may be another account's kept data.
+  if (!exportAllowed(user?.id)) throw new Error('adoption choice pending');
   const payload = await buildExport(user);
   const json = JSON.stringify(payload, null, 2);
   const name = `nexus-export-${new Date().toISOString().slice(0, 10)}.json`;

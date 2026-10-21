@@ -10,7 +10,7 @@ import { useTaskStore, TaskFilter } from '../../store/useTaskStore';
 import { useSessionStore } from '../../store/useSessionStore';
 import { isOverdue, isToday, formatShortDate, localDateKey, formatLocale } from '../../utils/formatters';
 import { Task } from '../../types/tasks';
-import { listTaskShares, shareTaskByEmail, revokeTaskShare } from '../../lib/sharing';
+import { SHARING_ENABLED, listTaskShares, shareTaskByEmail, revokeTaskShare } from '../../lib/sharing';
 import Glyph from '../../components/Glyph';
 
 const filterKeys: { key: TaskFilter; labelKey: string }[] = [
@@ -265,7 +265,7 @@ function TaskItem({
         </span>
       )}
       <RowActions
-        onShare={!sharedFromOther ? () => onShare(task) : undefined}
+        onShare={SHARING_ENABLED && !sharedFromOther ? () => onShare(task) : undefined}
         onEdit={() => onEdit(task.id)}
         onDelete={!sharedFromOther ? () => onDelete(task.id) : undefined}
         confirmMsg={t('tasks.deleteConfirm', { title: task.title })}

@@ -12,6 +12,7 @@ import type { Goal } from '../types/goals';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
+import { dueAtForServer, dueLocalDate } from './taskDue';
 
 // ============================================================================
 // Push mappers — local entity → remote upsert payload
@@ -306,7 +307,11 @@ async function pushTask(item: SyncQueueItem, ctx: PushContext): Promise<void> {
     description: local.notes ?? null,
     status: mapTaskStatus(local.completed),
     priority: mapTaskPriority(local.priority),
-    due_date: local.dueDate ?? null,
+    // v1.18.1 (NCC#193) - the local calendar day, plus the full instant in
+    // due_at. Sending the instant as due_date kept only its UTC day, and the
+    // time was lost on the next pull.
+    due_date: local.dueDate ? dueLocalDate(local.dueDate) : null,
+    due_at: local.dueDate ? dueAtForServer(local.dueDate) : null,
     updated_at: updatedAt,
   };
   const { error } = await supabase.from('tasks').upsert(row);
@@ -574,6 +579,24 @@ async function pushWorkQualityLog(item: SyncQueueItem, ctx: PushContext): Promis
     updated_at: updatedAt,
   };
   const { error } = await supabase.from('work_quality_logs').upsert(row);
+  // v1.18.1 (NCC#154): another device already holds this day under its own
+  // id (the local store makes a random id per device), and UNIQUE (user_id,
+  // log_date) refuses ours. It is the same fact, so write it onto that row,
+  // as pushHabitCompletion does; the server's updated_at trigger keeps the
+  // newer of the two.
+  if (error?.code === '23505') {
+    const { data: hit, error: sameDayErr } = await supabase
+      .from('work_quality_logs')
+      .update({ rating: row.rating, note: row.note, updated_at: row.updated_at })
+      .eq('user_id', ctx.userId)
+      .eq('log_date', row.log_date)
+      .select('id');
+    if (sameDayErr) throw sameDayErr;
+    // The day's row went away between the two calls (deleted elsewhere).
+    // Not a success: stay queued, and the next drain's upsert inserts it.
+    if (!hit || hit.length === 0) throw new Error('work_quality_logs: no row for that day to update; retrying');
+    return;
+  }
   if (error) throw error;
 }
 

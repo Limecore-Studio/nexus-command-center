@@ -1,0 +1,3 @@
+Korjauksia ja luotettavuutta.
+
+Muistutukset tulevat ajallaan, ja tehtävien määräajat säilyvät synkronoinnissa. Tehtävien luokat, tapahtumien muistiinpanot ja synkronointia odottavat muutokset säilyvät. NCC käynnistyy offline-tilassa jumittumatta. Uloskirjautuminen säilyttää synkronoimattomat muutokset ja poistaa edellisen tilin muistutukset, ja tiliä vaihdettaessa kysytään ensin säilytetyistä tiedoista. Lisäksi korjauksia sovelluslukkoon ja tietojen vientiin sekä nopeampi käynnistys.

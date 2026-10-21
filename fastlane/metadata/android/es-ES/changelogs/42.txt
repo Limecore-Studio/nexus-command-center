@@ -1,0 +1,3 @@
+Correcciones y fiabilidad.
+
+Los recordatorios llegan a tiempo y la hora de vencimiento de las tareas se conserva al sincronizar. Se conservan las categorías de tareas, las notas de transacciones y los cambios pendientes. NCC arranca sin conexión sin bloquearse. Cerrar sesión guarda los cambios sin sincronizar y borra los recordatorios de la cuenta anterior; al cambiar de cuenta se pregunta primero por los datos guardados. Además, arreglos en el bloqueo y la exportación, y un inicio más rápido.

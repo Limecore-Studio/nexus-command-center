@@ -7,12 +7,13 @@ import {
   scheduleWeeklyReview,
   cancelWeeklyReview,
 } from '../../lib/weeklyNotification';
-import { cancelCategory, type NotificationCategory } from '../../lib/notifications';
+import { cancelAllReminders, cancelCategory, type NotificationCategory } from '../../lib/notifications';
 import { rearmTaskReminders } from '../../lib/taskReminders';
 import { runPortfolioEodTick } from '../../lib/portfolioEod';
 import { runNewsAlertsTick } from '../../lib/newsAlerts';
 import { runWatchlistAlertsTick } from '../../lib/watchlistAlerts';
 import { Section, Toggle } from './parts';
+import { useHabitsStore } from '../../store/useHabitsStore';
 
 // Settings > Notifications: the master switch and the per-category toggles.
 // Split out of Settings.tsx with its state (limecore#12).
@@ -60,7 +61,7 @@ export default function NotificationsSection() {
           state. Flipping ON triggers the OS permission prompt (same flow
           the first-launch modal uses), so this works as the fallback if
           the modal didn't show. Flipping OFF cancels every pending
-          notification across all 5 categories. Sub-toggles retain their
+          notification across all categories. Sub-toggles retain their
           individual state so the user can toggle the master back on
           without losing prior preferences. */}
       <Toggle
@@ -100,6 +101,12 @@ export default function NotificationsSection() {
               void runNewsAlertsTick();
               void runWatchlistAlertsTick();
             }
+            // v1.18.1 (NCC#186) — master off cancels habit reminders too now
+            // (cancelAllReminders), so master on re-arms them, with the same
+            // call the app makes at sign-in (App.tsx habits hydration).
+            void useHabitsStore.getState().load().catch((e) =>
+              console.warn('[settings] habit re-arm failed:', (e as Error).message),
+            );
             // Background perm check. If it fails (most likely the
             // plugin bridge is wedged), warn the user but leave the
             // toggle on — they may have already granted at the OS
@@ -120,17 +127,12 @@ export default function NotificationsSection() {
             })();
           } else {
             await setNotifMasterEnabled(false);
-            // Wipe every pending alarm across all five categories so
-            // nothing fires after the user has explicitly turned the
-            // master switch off. Sub-toggles keep their bool state.
-            await Promise.all([
-              cancelCategory('weekly-review'),
-              cancelCategory('tasks'),
-              cancelCategory('budgets'),
-              cancelCategory('portfolio-eod'),
-              cancelCategory('news'),
-              cancelCategory('watchlist'),
-            ]);
+            // Wipe every pending alarm across all categories so nothing
+            // fires after the user has explicitly turned the master switch
+            // off. Sub-toggles keep their bool state.
+            // v1.18.1 (NCC#186) — the same helper sign-out uses, so the two
+            // can't drift; the list it replaced had missed habits + insights.
+            await cancelAllReminders();
           }
         }}
       />

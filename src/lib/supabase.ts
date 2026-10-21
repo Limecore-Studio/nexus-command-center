@@ -7,7 +7,7 @@
 //
 // The publishable key is safe to ship in client code (it's gated by RLS — the
 // real authority is the user's signed JWT, not this key).
-import { createClient, type SupportedStorage } from '@supabase/supabase-js';
+import { createClient, type Session, type SupportedStorage } from '@supabase/supabase-js';
 import { Preferences } from '@capacitor/preferences';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -41,10 +41,43 @@ const capacitorStorage: SupportedStorage = {
   },
 };
 
+// v1.19 — NCC#139: no request used to have a time limit. On Wi-Fi with no
+// route (or a captive portal) a request can stay pending forever, and every
+// await behind it — a sync, the "Existing data found" prompt — sat on
+// "Working…" with it; a hung auth request also holds auth-js's lock, which
+// queues every later request behind it. 30 s is far past any healthy
+// response (the slowest call, the delete-account function, answers in a few
+// seconds) and NCC has no storage uploads, so nothing legitimate is cut off.
+// This bounds the HTTP request itself; time spent waiting for auth-js's lock
+// before a request is sent is not covered. A caller's own signal still aborts
+// as before.
+const REQUEST_TIMEOUT_MS = 30_000;
+
+export function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const outer = init.signal;
+  const forward = () => controller.abort(outer?.reason);
+  if (outer) {
+    if (outer.aborted) forward();
+    else outer.addEventListener('abort', forward, { once: true });
+  }
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+    clearTimeout(timer);
+    outer?.removeEventListener('abort', forward);
+  });
+}
+
+const SESSION_STORAGE_KEY = 'nexus-supabase-session';
+
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  global: { fetch: fetchWithTimeout },
   auth: {
     storage: capacitorStorage,
-    storageKey: 'nexus-supabase-session',
+    storageKey: SESSION_STORAGE_KEY,
     autoRefreshToken: true,
     persistSession: true,
     // Native handles the OAuth callback manually via the deep-link listener in
@@ -56,6 +89,34 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     flowType: 'pkce',
   },
 });
+
+/** v1.19 — NCC#135: the persisted session exactly as supabase-js stored it,
+ *  read without any network. getSession() refreshes an expired access token
+ *  before it answers, and offline that refresh retries for ~25 s or more;
+ *  cold start reads this instead so the app can open on the account it
+ *  already has. Null when there is no stored session or it can't be parsed.
+ *  The token inside may be expired — use it for WHO is signed in, never as a
+ *  credential. */
+export async function readStoredSession(): Promise<Session | null> {
+  try {
+    const raw = await capacitorStorage.getItem(SESSION_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Session> | null;
+    if (!parsed || typeof parsed !== 'object' || !parsed.user?.id || !parsed.refresh_token) {
+      return null;
+    }
+    return parsed as Session;
+  } catch {
+    return null;
+  }
+}
+
+/** v1.19 — NCC#141 review: removes the stored session without the network.
+ *  For a sign-out that couldn't reach the server — auth-js only removes the
+ *  session after its logout call succeeds, so offline it would stay. */
+export async function clearStoredSession(): Promise<void> {
+  await capacitorStorage.removeItem(SESSION_STORAGE_KEY);
+}
 
 // ── Mobile session durability (v1.7 — forced-logout bug) ────────────────
 // supabase-js drives its token auto-refresh loop off browser visibility /

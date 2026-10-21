@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
@@ -18,12 +18,13 @@ import { refreshEntitlement } from './lib/entitlement';
 import { useStudiesStore } from './store/useStudiesStore';
 import { useBraindumpStore } from './store/useBraindumpStore';
 import { isGuestMode } from './lib/guestMode';
-import AdoptionPrompt from './components/AdoptionPrompt';
+import { setAdoptionStatus, useAdoptionGate } from './lib/adoptionGate';
+import { evaluateAdoption } from './lib/adoptionChoice';
 import ReferralPrompt from './components/ReferralPrompt';
 import NotificationsExplainerModal from './components/NotificationsExplainerModal';
 import LockScreen from './screens/LockScreen';
 import Login from './screens/auth/Login';
-import AppShell from './components/AppShell';
+import AppShell, { SheetBoundary } from './components/AppShell';
 import Dashboard from './screens/Dashboard';
 import { onNotificationTap, scheduleWeeklyReview } from './lib/weeklyNotification';
 import { onNotificationAction } from './lib/notifications';
@@ -69,10 +70,16 @@ const YearReview = lazy(() => import('./screens/YearReview'));
 const Goals = lazy(() => import('./screens/Goals'));
 const Settings = lazy(() => import('./screens/Settings'));
 const LifeProfileSettings = lazy(() => import('./screens/LifeProfileSettings'));
+// v1.18.1 — shown only when an account has data to answer for, so a chunk of
+// its own too (local assets on native, so it loads offline).
+// A failed load (web, network gone) shows Retry and Sign out on the same
+// plain screen, never the app or the app-wide error screen (SheetBoundary).
+const loadAdoptionPrompt = () => import('./components/AdoptionPrompt');
 
 export default function App() {
   const unlocked = useAuthStore((s) => s.unlocked);
   const initAuth = useAuthStore((s) => s.init);
+  const authReady = useAuthStore((s) => s.ready);
   const initSync = useSyncStore((s) => s.init);
   const session = useSessionStore((s) => s.session);
   const sessionLoading = useSessionStore((s) => s.loading);
@@ -114,6 +121,46 @@ export default function App() {
   }, [session]);
   const lifeProfileLoaded = useLifeProfileStore((s) => s.loaded);
 
+  // v1.18.1 — account switch: the adoption choice comes first. Until the
+  // account on screen has answered "Existing data found" (or has nothing to
+  // answer), the app renders only the prompt and the hydration below does not
+  // start. See lib/adoptionChoice.ts.
+  const sessionUserId = session?.user?.id;
+  const adoptionGate = useAdoptionGate();
+  const adoptionClear =
+    !!sessionUserId && adoptionGate.userId === sessionUserId && adoptionGate.status === 'clear';
+  // Asked again when the device comes back online: a cloud answer that could
+  // not be read offline may now say "ask".
+  const [adoptionRecheck, setAdoptionRecheck] = useState(0);
+  const [AdoptionPrompt, setAdoptionPrompt] = useState(() => lazy(loadAdoptionPrompt));
+  const [promptFailed, setPromptFailed] = useState(false);
+  useEffect(() => {
+    const onOnline = () => setAdoptionRecheck((n) => n + 1);
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
+  useEffect(() => {
+    if (!sessionUserId) return;
+    const uid = sessionUserId;
+    let cancelled = false;
+    if (useAdoptionGate.getState().userId !== uid) setAdoptionStatus(uid, 'checking');
+    const current = () => !cancelled && useAdoptionGate.getState().userId === uid;
+    void evaluateAdoption(uid, () => {
+      if (current() && useAdoptionGate.getState().status === 'checking') setAdoptionStatus(uid, 'clear');
+    })
+      // A check that throws (the database) asks rather than opens.
+      .catch(() => 'ask' as const)
+      .then((status) => {
+        if (!current()) return;
+        // A re-check only ever brings the question up; it never takes it
+        // away from an account that has not answered.
+        if (status === 'ask' || useAdoptionGate.getState().status === 'checking') setAdoptionStatus(uid, status);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUserId, adoptionRecheck]);
+
   useEffect(() => {
     (async () => {
       // Init session first — we need to know auth state before anything else.
@@ -123,6 +170,9 @@ export default function App() {
       // gate logic below; we resolve to a final state once both are known.
       const guest = await isGuestMode();
       setGuestModeState(guest);
+      // v1.18.1 (limecore#58): the PIN state is read before any data work, so
+      // a failure in seeding or a store load can't keep it from being read.
+      await initAuth();
 
       // One-time wipe of prior seeded sample data.
       if (localStorage.getItem('nexus.seeded.v1') && !localStorage.getItem('nexus.wiped.v1')) {
@@ -136,7 +186,6 @@ export default function App() {
       // hydration block below. A guest captures ideas too, and without this
       // their dashboard card would read empty while their entries sat on disk.
       await useBraindumpStore.getState().load();
-      await initAuth();
       initSync();
       // v1.2 — install the Insights rating-history observer. Runs once;
       // subsequent installs replace the same singleton observer. Must be
@@ -162,8 +211,8 @@ export default function App() {
   }, []);
 
   // Auto-sync when a session becomes available (sign-in or app reopen with
-  // valid session). Adoption prompt — if shown — runs its own sync after the
-  // user makes a choice, so this won't double-fire problematically.
+  // valid session) and the adoption question is answered. Keep also starts a
+  // sync of its own; useSyncStore folds the two into one.
   //
   // Critical ordering for StudyDesk hydration:
   //   1. Run an explicit fetch on subjects/grades/study_sessions (StudyDesk
@@ -197,7 +246,11 @@ export default function App() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!session) {
+    // v1.18.1 — nothing is pulled, loaded or armed for this account before it
+    // has answered the adoption question (Keep and Discard work on the
+    // device's data as it was, before any of this account's rows arrive).
+    // Closing again (a re-check that asks) stops the realtime deltas too.
+    if (!session || !adoptionClear) {
       stopRealtime();
       return;
     }
@@ -316,7 +369,7 @@ export default function App() {
       void syncNow();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately narrowed to the user id: the `session` object is recreated on every token refresh, and re-running this hydration+sync chain on that churn (rather than on an actual user change) is the bug this narrowing prevents. syncNow is a stable Zustand action.
-  }, [session?.user?.id]);
+  }, [session?.user?.id, adoptionClear]);
 
   // OAuth deep-link handler: when Supabase redirects back via
   // com.limecore.nexus://login-callback?code=... after Google sign-in,
@@ -371,13 +424,12 @@ export default function App() {
   // guestMode === null means the Preferences read hasn't resolved yet —
   // render the splash same as session-loading to avoid flashing the Login
   // screen for returning guest-mode users on cold start.
-  if (sessionLoading || guestMode === null) {
-    return (
-      <div className="min-h-full bg-bg text-text flex items-center justify-center">
-        <div className="text-text-muted text-xs uppercase tracking-wider">{t('common.loading')}</div>
-      </div>
-    );
-  }
+  // Also the adoption prompt's fallback screen (3.25), hence the column.
+  const screen = (content: ReactNode) => (
+    <div className="min-h-full bg-bg text-text flex flex-col gap-2 p-4 items-center justify-center">{content}</div>
+  );
+  const splash = screen(<div className="text-text-muted text-xs uppercase tracking-wider">{t('common.loading')}</div>);
+  if (sessionLoading || guestMode === null) return splash;
 
   // 2. No Supabase session AND not in guest mode → show auth screens.
   // Guest-mode users skip this gate and land directly in the app; their
@@ -413,7 +465,49 @@ export default function App() {
   // NOT ON WEB EITHER (2026-09-18, owner call): the same reasoning applies to
   // a browser tab. Android is the only build that keeps the lock.
   if (!unlocked && APP_LOCK_APPLIES) {
+    // v1.18.1 (limecore#58): until the stored PIN state is read, hasPin is
+    // its default (false) and LockScreen would open in "set a PIN" mode.
+    if (!authReady) {
+      return (
+        <div className="min-h-full bg-bg text-text flex items-center justify-center">
+          <div className="text-text-muted text-xs uppercase tracking-wider">{t('common.loading')}</div>
+        </div>
+      );
+    }
     return <LockScreen />;
+  }
+
+  // 3.25 v1.18.1 — account switch: the adoption choice comes first. A signed-in
+  // account sees the prompt alone, or the splash while that is being worked
+  // out, until it has answered. No screen, widget or notification bridge is
+  // mounted behind it.
+  if (session && !adoptionClear) {
+    if (adoptionGate.userId !== session.user.id || adoptionGate.status !== 'ask') return splash;
+    if (promptFailed) {
+      return screen(
+        <>
+          <button
+            className="btn"
+            onClick={() => (setAdoptionPrompt(() => lazy(loadAdoptionPrompt)), setPromptFailed(false))}
+          >
+            {t('common.retry')}
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => void useSessionStore.getState().signOut().finally(() => window.location.reload())}
+          >
+            {t('settings.signOut')}
+          </button>
+        </>,
+      );
+    }
+    return (
+      <SheetBoundary onFail={() => setPromptFailed(true)}>
+        <Suspense fallback={splash}>
+          <AdoptionPrompt />
+        </Suspense>
+      </SheetBoundary>
+    );
   }
 
   // 3.5 First-run onboarding. Show the wizard once on a fresh setup — no
@@ -440,7 +534,6 @@ export default function App() {
   // 4. Fully authenticated. Render the app.
   return (
     <>
-      <AdoptionPrompt />
       {/* Item 8 — asks once per account, inside the account-age window only.
           Non-blocking by design; see the component. */}
       <ReferralPrompt />

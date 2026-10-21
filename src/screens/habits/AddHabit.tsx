@@ -159,6 +159,10 @@ export default function AddHabit() {
             placeholder={type === 'binary' ? t('addhabit.phBinary') : t('addhabit.phQuant')}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            // v1.18.1 (NCC#156): the server's habits_title_check allows 80
+            // characters; a longer title was refused there and the habit,
+            // with its completions, never synced.
+            maxLength={80}
             autoFocus
           />
         </label>

@@ -22,7 +22,7 @@
 // app's working set is far below that.
 
 import type { Task } from '../types/tasks';
-import { cancelCategory, cancelNotifications, ID_RANGES, scheduleNotification } from './notifications';
+import { cancelCategory, cancelNotifications, ID_RANGES, reminderEpoch, scheduleNotification } from './notifications';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useTaskStore } from '../store/useTaskStore';
 
@@ -102,18 +102,64 @@ export async function cancelTaskReminder(taskId: string): Promise<void> {
  *  due date.
  *
  *  Called on app start from AppShell, and from the Settings toggle when
- *  the user flips Task Reminders to ON. */
-export async function reconcileTaskReminders(tasks: Task[]): Promise<void> {
+ *  the user flips Task Reminders to ON. v1.18.1 (NCC#186): also after each
+ *  successful pull, through reconcileTaskRemindersIfChanged. */
+export async function reconcileTaskReminders(
+  tasks: Task[],
+  shouldContinue: () => boolean = () => true,
+): Promise<void> {
+  // v1.18.1 (NCC#186) — taken before the first await, so a cancelAllReminders
+  // that runs while this is under way leaves the memo below stale.
+  const epoch = reminderEpoch();
+  const sig = taskReminderSignature(tasks);
   // Always cancel first — if master is off (or category off) we want stale
   // alarms gone regardless. scheduleTaskReminder itself bails on either
   // toggle being off, so the loop below is a no-op in that case.
   await cancelCategory('tasks');
   const settings = useSettingsStore.getState();
-  if (!settings.notifMasterEnabled) return;
-  if (!settings.notifTasksEnabled) return;
-  for (const t of tasks) {
-    await scheduleTaskReminder(t);
+  if (settings.notifMasterEnabled && settings.notifTasksEnabled) {
+    for (const t of tasks) {
+      // v1.18.1 (NCC#186) — a sign-out during the loop stops it here.
+      if (!shouldContinue()) return;
+      await scheduleTaskReminder(t);
+    }
   }
+  armed = { sig, epoch };
+}
+
+// v1.18.1 (NCC#186) — what the last full reconcile armed, so a sync can
+// re-arm only when the tasks changed. `epoch` ties it to reminderEpoch():
+// after a cancelAllReminders (sign-out, wipe, master off) nothing counts as
+// armed any more.
+let armed: { sig: string; epoch: number } | null = null;
+
+/** The fields a reminder is built from, plus the two toggles. Tasks that can
+ *  never get one (done, or no due date) are left out. */
+function taskReminderSignature(tasks: Task[]): string {
+  const s = useSettingsStore.getState();
+  const rows = tasks
+    .filter((t) => !t.completed && t.dueDate)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((t) => [t.id, t.title, t.dueDate, t.priority, t.notes ?? '']);
+  return JSON.stringify([s.notifMasterEnabled, s.notifTasksEnabled, rows]);
+}
+
+/** v1.18.1 (NCC#186) — reconcile, unless the last reconcile already armed
+ *  exactly these tasks and nothing has cancelled everything since. Called
+ *  after each successful pull (useSyncStore): AppShell's mount reconcile runs
+ *  before the first pull, so tasks that arrive with it (sign-in after "Wipe
+ *  local data", a new account's first sync, a device that was offline at
+ *  sign-in) got no reminder until the next app start. */
+export async function reconcileTaskRemindersIfChanged(
+  tasks: Task[],
+  shouldContinue: () => boolean = () => true,
+): Promise<boolean> {
+  if (armed && armed.epoch === reminderEpoch() && armed.sig === taskReminderSignature(tasks)) {
+    return false;
+  }
+  if (!shouldContinue()) return false;
+  await reconcileTaskReminders(tasks, shouldContinue);
+  return true;
 }
 
 /** Convenience: reconcile using the current task store state. Used by the

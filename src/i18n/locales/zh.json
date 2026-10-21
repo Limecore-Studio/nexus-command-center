@@ -143,6 +143,17 @@
     "errOtpResend": "无法发送新验证码。请稍后再试。",
     "errOtpLength": "验证码似乎不完整。请从邮件中复制完整的验证码。"
   },
+  "adoption": {
+    "title": "发现已有数据",
+    "body": "此设备上保存着你登录之前的数据。要将其并入你的账户并同步到云端，还是丢弃？",
+    "keep": "保留并同步到云端",
+    "discard": "丢弃本地数据",
+    "working": "处理中…",
+    "failed": "无法在此设备上保存你的选择。请重试。",
+    "footer": "此账户不会再询问此问题。",
+    "switchBody": "此设备上仍保存着某个已在此退出登录的账户或访客模式留下的数据。要将其并入你的账户并同步到云端，还是从此设备上删除？如果退出登录，这些数据将保持原样。",
+    "switchFooter": "在你做出选择之前，这些数据不会显示，也不会同步。"
+  },
   "onboarding": {
     "welcomeTitle": "来设置你的生活操作系统",
     "welcomeBody": "Nexus 把你的财务、健身、学业、工作和习惯汇成一个评分——让你一眼看清生活的走向。",
@@ -350,7 +361,9 @@
     "themeLockedAria": "{{name}}——支持者主题，已锁定",
     "themeSupporterNote": "Rack 是支持者主题。在下方通过 Ko-fi 支持开发即可解锁。",
     "fdroidCheck": "在 F-Droid 上检查更新",
-    "fdroidCheckNote": "Nexus Command Center 每天向 f-droid.org 查询一次最新版本，不会发送任何关于你的信息。关闭后将不再发送该请求。"
+    "fdroidCheckNote": "Nexus Command Center 每天向 f-droid.org 查询一次最新版本，不会发送任何关于你的信息。关闭后将不再发送该请求。",
+    "signOutUnsynced_other": "有 {{count}} 项更改尚未同步。“保留本地数据”会将其保留在此设备上，并在你下次在此登录时发送；清除则会删除它们。在此之前，如果此设备上的数据被清除，未同步的更改也会丢失。",
+    "signOutFailed": "退出登录失败：{{msg}}"
   },
   "days": {
     "long": {
@@ -608,7 +621,8 @@
     "bioUnavailable": "此设备不支持生物识别",
     "setPinFirst": "请先设置 PIN — 生物识别仅在初次设置后可用",
     "bio": "生物",
-    "forgotPin": "忘记 PIN？在 设置 → 清除所有数据 中重置"
+    "forgotPin": "忘记 PIN？在 设置 → 清除所有数据 中重置",
+    "pinUnreadable": "此手机暂时无法读取你保存的 PIN。请尝试重启应用。如果已开启指纹解锁，可以用它解锁，然后在 设置 → 清除所有数据 中用新 PIN 重新开始。否则请在 Android 设置中清除应用存储。登录后已同步的数据会恢复。"
   },
   "fin": {
     "flow": {

@@ -1,6 +1,7 @@
 -- NCC v1.14 — goal-linked habit tracking without a streak mechanic.
 --
--- ── NOT YET APPLIED ──────────────────────────────────────────────────────
+-- ── APPLIED (as 20260915075246; checked 2026-10-15, limecore#63 §6) ──────
+-- The note below is kept as written at the time.
 -- Written 2026-09-14. Production DDL is a per-migration decision by the
 -- owner, and this has not been authorised. Nothing depends on it yet: the
 -- pacing arithmetic in src/lib/goalPacing.ts is pure and reads no column,

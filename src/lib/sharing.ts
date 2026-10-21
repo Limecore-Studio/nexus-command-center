@@ -12,6 +12,14 @@
 
 import { supabase } from './supabase';
 
+// v1.18.1 (NCC#157): sharing is switched off on the server. share_task,
+// share_budget_category and get_public_profiles are not executable by
+// signed-in users, so every invite failed with
+// "permission denied" behind a share button that still showed. The buttons
+// stay hidden until the server side is re-enabled; turn this back on in the
+// same change that does that.
+export const SHARING_ENABLED = false;
+
 export type SharePermission = 'read' | 'write';
 
 export interface ShareRow {

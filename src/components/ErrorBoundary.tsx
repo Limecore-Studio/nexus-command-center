@@ -3,6 +3,7 @@ import i18n from '../i18n';
 import { buildReport, errorReportsEnabled, sendReport, type ErrorReport, type SendResult } from '../lib/errorReports';
 import { downloadExport } from '../lib/dataRights';
 import { supabase } from '../lib/supabase';
+import { exportAllowed, useAdoptionGate } from '../lib/adoptionGate';
 
 // v1.16 (limecore#16) — no render error is a blank screen any more.
 //
@@ -107,9 +108,13 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
                     : tr('crash.send', 'Send this report')}
               </button>
             )}
-            <button type="button" className="btn-ghost w-full" onClick={this.exportData}>
-              {exported ? tr('crash.exported', 'Export downloaded') : tr('crash.export', 'Export my data')}
-            </button>
+            {/* v1.18.1 — hidden while an account has the adoption choice still
+                to make; downloadExport refuses then too (exportAllowed). */}
+            {exportAllowed(useAdoptionGate.getState().userId) && (
+              <button type="button" className="btn-ghost w-full" onClick={this.exportData}>
+                {exported ? tr('crash.exported', 'Export downloaded') : tr('crash.export', 'Export my data')}
+              </button>
+            )}
           </div>
           {!sent && status !== 'guest' && (
             <p className="text-[0.6875rem] text-text-faint mt-4">

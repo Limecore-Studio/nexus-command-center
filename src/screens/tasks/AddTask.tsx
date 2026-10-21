@@ -9,6 +9,7 @@ import { useTemplatesStore } from '../../store/useTemplatesStore';
 import type { TaskTemplate } from '../../types/templates';
 import { TaskCategory, TaskPriority } from '../../types/tasks';
 import { toDateTimeLocalValue } from '../../utils/formatters';
+import { dueInstant } from '../../lib/taskDue';
 
 // `dot` restores what the labels lost. The three tiers used to be spelled with
 // red/yellow/green emoji circles baked into the translated strings, which meant
@@ -57,7 +58,10 @@ export default function AddTask() {
     // AddTransaction for why this cannot be derived.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTitle(t.title);
-    setDue(t.dueDate ? toDateTimeLocalValue(t.dueDate) : '');
+    // v1.18.1 (NCC#193) - a date-only due value is a local day, not UTC
+    // midnight (which showed as 03:00 in Helsinki).
+    const dueAt = t.dueDate ? dueInstant(t.dueDate) : null;
+    setDue(dueAt ? toDateTimeLocalValue(dueAt.toISOString()) : '');
     setPriority(t.priority);
     setCategory(t.category ?? 'personal');
     setNotes(t.notes ?? '');

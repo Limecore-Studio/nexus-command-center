@@ -15,6 +15,7 @@ import ListRow from '../components/ListRow';
 import ProgressBar from '../components/ProgressBar';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
+import { gpaSuffix as scaleSuffix, meterValue } from '../lib/gradeScale';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useTaskStore } from '../store/useTaskStore';
 import { useBraindumpStore } from '../store/useBraindumpStore';
@@ -33,7 +34,8 @@ export default function Dashboard() {
   const studies = useStudiesStore((s) => s.currentImport);
   const studyCourses = useStudiesStore((s) => s.courses);
   const previousGpa = useStudiesStore((s) => s.previousGpa);
-  const gradeMode = useStudiesStore((s) => s.gradeMode);
+  // v1.18.2 — StudyDesk's scale from the account (or NCC's guess without one).
+  const gradeScale = useStudiesStore((s) => s.gradeScale);
 
   const sessions = useFitnessStore((s) => s.sessions);
 
@@ -130,8 +132,7 @@ export default function Dashboard() {
     [transactions, studyCourses, studySessions, sessions, tasks, studies, holdings],
   );
 
-  const gpaSuffix = gradeMode === 'ib' ? '/7' : gradeMode === 'custom' ? '/20' : '';
-  const gpaDisplay = studies ? studies.calculatedGpa.toFixed(2) + gpaSuffix : '—';
+  const gpaDisplay = studies ? studies.calculatedGpa.toFixed(2) + scaleSuffix(gradeScale) : '—';
 
   return (
     <>
@@ -187,11 +188,12 @@ export default function Dashboard() {
           {rack ? (
             <div className="space-y-2">
               <RackMeterBank
-                gpa={studies ? studies.calculatedGpa : null}
-                // v1.18.1 (NCC#165): an inferred 'custom' scale tops out at
-                // 20 (see inferGradeMode), so a 14/20 does not pin a 0–4 meter.
-                gpaMax={gradeMode === 'ib' ? 7 : gradeMode === 'custom' ? 20 : 4}
-                gpaPrevious={studies ? previousGpa : null}
+                // v1.18.2: the meter runs over the account's scale. On a
+                // lower-is-better scale (German 1–6) it is read the other way
+                // round, so a fuller meter is always the better grade.
+                gpa={studies ? meterValue(studies.calculatedGpa, gradeScale) : null}
+                gpaMax={gradeScale.max}
+                gpaPrevious={studies && previousGpa != null ? meterValue(previousGpa, gradeScale) : null}
                 gpaDisplay={gpaDisplay}
                 workouts={workoutsThisWeek}
                 workoutTarget={4}

@@ -5,6 +5,8 @@ import { Course, Grade, GradeImport, StudySession } from '../types/studies';
 import { calculateGPA, inferGradeMode, GradeMode } from '../utils/gpa';
 import { generateId } from '../utils/uuid';
 import { enqueue } from '../db/syncQueue';
+import { fetchAccountScale, inferredScale, readCachedAccountScale, type GradeScale } from '../lib/gradeScale';
+import { useSessionStore } from './useSessionStore';
 
 const GRADE_MODE_KEY = 'studies.gradeMode';
 
@@ -46,6 +48,9 @@ interface StudiesStore {
   grades: Grade[];
   previousGpa: number | null;
   gradeMode: GradeMode;
+  /** v1.18.2 — the scale the GPA is shown on: StudyDesk's, from the account,
+   *  or NCC's guess when the account has none. `gradeMode` is its mode. */
+  gradeScale: GradeScale;
   loading: boolean;
 
   // v2-B
@@ -53,6 +58,8 @@ interface StudiesStore {
 
   load: () => Promise<void>;
   setGradeMode: (mode: GradeMode) => Promise<void>;
+  /** v1.18.2 — re-read StudyDesk's scale from the account; recompute on change. */
+  refreshGradeScale: () => Promise<void>;
 
   addCourse: (c: Omit<Course, 'id' | 'createdAt' | 'importId'>) => Promise<void>;
   updateCourse: (id: string, patch: Partial<Course>) => Promise<void>;
@@ -97,6 +104,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
   grades: [],
   previousGpa: null,
   gradeMode: 'us',
+  gradeScale: inferredScale('us'),
   loading: false,
   studySessions: [],
 
@@ -122,8 +130,13 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     // blindly to 'us' put IB grades (1–7) through the percentage table, which
     // floors everything under 60 — so synced StudyDesk grades rendered as
     // GPA 0.00. See inferGradeMode.
-    const gradeMode: GradeMode =
+    const fallbackMode: GradeMode =
       stored === 'ib' || stored === 'us' ? stored : inferGradeMode(allGrades);
+    // v1.18.2 — StudyDesk's scale, as last read for this account, wins over
+    // both. The fresh read follows below, without holding up the first paint.
+    const cachedScale = await readCachedAccountScale(useSessionStore.getState().user?.id ?? null);
+    const gradeScale = cachedScale ?? inferredScale(fallbackMode);
+    const gradeMode: GradeMode = gradeScale.mode;
     const allCourses = allCoursesIncludingArchived.filter((c) => !c.archivedAt);
     const archivedCourses = allCoursesIncludingArchived.filter((c) => !!c.archivedAt);
     const previous = imports[1] ?? null;
@@ -147,14 +160,35 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       grades: allGrades,
       previousGpa: previous ? previous.calculatedGpa : null,
       gradeMode,
+      gradeScale,
       studySessions,
       loading: false,
     });
+    void get().refreshGradeScale();
+  },
+
+  async refreshGradeScale() {
+    const userId = useSessionStore.getState().user?.id ?? null;
+    const fetched = await fetchAccountScale(userId);
+    if (fetched === undefined) return;   // offline: keep the cached scale
+    if ((useSessionStore.getState().user?.id ?? null) !== userId) return;   // account changed meanwhile
+    let next = fetched;
+    if (!next) {
+      const stored = await getPref(GRADE_MODE_KEY);
+      next = inferredScale(stored === 'ib' || stored === 'us' ? stored : inferGradeMode(get().grades));
+    }
+    if (JSON.stringify(next) === JSON.stringify(get().gradeScale)) return;
+    set({ gradeScale: next, gradeMode: next.mode });
+    const imp = get().currentImport;
+    if (imp) {
+      const idx = indexGradesBySubject(get().grades);
+      set({ currentImport: { ...imp, calculatedGpa: calculateGPA(get().courses, idx, next.mode) } });
+    }
   },
 
   async setGradeMode(mode) {
     await setPref(GRADE_MODE_KEY, mode);
-    set({ gradeMode: mode });
+    set({ gradeMode: mode, gradeScale: inferredScale(mode) });
     // Recompute the synthetic currentImport's GPA under the new scale. Not
     // persisted — currentImport is derived state.
     const imp = get().currentImport;

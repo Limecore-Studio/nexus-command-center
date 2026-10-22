@@ -1,0 +1,3 @@
+Des rappels fiables.
+
+Les rappels de tâche arrivent à l'heure d'échéance. Les rappels d'habitudes quotidiens ou par jour reviennent, même après un redémarrage sans ouvrir NCC, et chaque habitude garde le sien. « Terminé » depuis une notification n'est plus perdu. La moyenne utilise le barème de StudyDesk. Les virgules décimales fonctionnent, et les mouvements de portefeuille ne réécrivent plus l'historique du compte et du patrimoine.

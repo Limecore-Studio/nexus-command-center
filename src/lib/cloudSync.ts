@@ -354,7 +354,9 @@ export async function pullAll(_userId: string): Promise<PullResult> {
     }),
     async (rows) => {
       await putPulled(db.portfolioHoldings, rows);
-    }
+    },
+    // v1.19 (NCC#92): holdings carry tombstones.
+    db.portfolioHoldings
   );
 
   // Studies: pull subjects → courses (no embedded grade) AND grades → grades

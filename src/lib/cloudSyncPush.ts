@@ -56,6 +56,26 @@ async function softDelete(table: string, entityId: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * v1.19 (NCC#92) — softDelete for the portfolio tables that gained
+ * `deleted_at` in 20261022_portfolio_tombstones.sql. `stamped` is false for
+ * stock_sales and portfolio_cash_entries, which have no `updated_at`. Until
+ * that migration is applied the column is unknown (PostgREST PGRST204,
+ * Postgres 42703), and the delete falls back to the hard delete of old.
+ */
+async function softDeleteOrHard(table: string, entityId: string, stamped: boolean): Promise<void> {
+  const stamp = new Date().toISOString();
+  const id = legacyIdToUuid(entityId);
+  const { error } = await supabase
+    .from(table)
+    .update(stamped ? { deleted_at: stamp, updated_at: stamp } : { deleted_at: stamp })
+    .eq('id', id);
+  if (!error) return;
+  if (error.code !== 'PGRST204' && error.code !== '42703') throw error;
+  const hard = await supabase.from(table).delete().eq('id', id);
+  if (hard.error) throw hard.error;
+}
+
 async function pushTransaction(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
     await softDelete('transactions', item.entityId);
@@ -107,11 +127,9 @@ async function pushBudgetCategory(item: SyncQueueItem, ctx: PushContext): Promis
 
 async function pushPortfolioHolding(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('portfolio_holdings')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    // v1.19 (NCC#92): a tombstone. deleteHolding queues its lots' deletes
+    // too, so nothing relies on the FK cascade any more.
+    await softDeleteOrHard('portfolio_holdings', item.entityId, true);
     return;
   }
   const local: PortfolioHolding = JSON.parse(item.payload);
@@ -153,17 +171,13 @@ async function pushPortfolioLot(item: SyncQueueItem, ctx: PushContext): Promise<
   if (error) throw error;
 }
 
-// v1.3.1 (BUG-23) — realized stock sale. Append-only on the cloud (hard delete
-// on removal — there's no deleted_at column, matching the plan's schema). The
+// v1.3.1 (BUG-23) — realized stock sale. Append-only on the cloud; removal is
+// a tombstone from v1.19 (NCC#92). The
 // per-lot soldShares is NOT pushed (the cloud portfolio_lots table has no such
 // column); it's derived on every device from these sales' lot_allocations.
 async function pushStockSale(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('stock_sales')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    await softDeleteOrHard('stock_sales', item.entityId, false);
     return;
   }
   const local: StockSale = JSON.parse(item.payload);
@@ -185,15 +199,11 @@ async function pushStockSale(item: SyncQueueItem, ctx: PushContext): Promise<voi
   if (error) throw error;
 }
 
-// v1.3.2 — portfolio cash ledger entry. Hard-delete (no deleted_at), same as
-// stock_sales — the table is a personal append-only ledger.
+// v1.3.2 — portfolio cash ledger entry. A tombstone on removal from v1.19
+// (NCC#92), same as stock_sales — the table is a personal append-only ledger.
 async function pushPortfolioCashEntry(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('portfolio_cash_entries')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    await softDeleteOrHard('portfolio_cash_entries', item.entityId, false);
     return;
   }
   const local: PortfolioCashEntry = JSON.parse(item.payload);

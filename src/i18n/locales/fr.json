@@ -1335,5 +1335,20 @@
     "versions": "Mise à jour de {{current}} vers {{latest}}",
     "open": "Obtenir sur F-Droid",
     "later": "Plus tard"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Me rappeler",
+      "lead_0": "À l’échéance",
+      "lead_15": "15 min avant",
+      "lead_60": "1 heure avant",
+      "lead_1440": "1 jour avant",
+      "dueToday": "Échéance aujourd’hui",
+      "dueTomorrow": "Échéance demain",
+      "dueAt": "Échéance à {{time}}",
+      "dueTomorrowAt": "Échéance demain à {{time}}",
+      "highPriority": "Priorité haute",
+      "markDone": "Marquer comme faite"
+    }
   }
 }

@@ -1335,5 +1335,20 @@
     "versions": "Actualizar de {{current}} a {{latest}}",
     "open": "Descargar en F-Droid",
     "later": "Más tarde"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Recordarme",
+      "lead_0": "A la hora límite",
+      "lead_15": "15 min antes",
+      "lead_60": "1 hora antes",
+      "lead_1440": "1 día antes",
+      "dueToday": "Vence hoy",
+      "dueTomorrow": "Vence mañana",
+      "dueAt": "Vence a las {{time}}",
+      "dueTomorrowAt": "Vence mañana a las {{time}}",
+      "highPriority": "Prioridad alta",
+      "markDone": "Marcar como hecha"
+    }
   }
 }

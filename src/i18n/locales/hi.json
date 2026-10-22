@@ -1325,5 +1325,20 @@
     "versions": "{{current}} से {{latest}} पर अपडेट करें",
     "open": "F-Droid से पाएँ",
     "later": "बाद में"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "मुझे याद दिलाएँ",
+      "lead_0": "नियत समय पर",
+      "lead_15": "15 मिनट पहले",
+      "lead_60": "1 घंटा पहले",
+      "lead_1440": "1 दिन पहले",
+      "dueToday": "आज नियत",
+      "dueTomorrow": "कल नियत",
+      "dueAt": "{{time}} बजे नियत",
+      "dueTomorrowAt": "कल {{time}} बजे नियत",
+      "highPriority": "उच्च प्राथमिकता",
+      "markDone": "पूरा चिह्नित करें"
+    }
   }
 }

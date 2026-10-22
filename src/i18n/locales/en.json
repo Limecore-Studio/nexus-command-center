@@ -1325,5 +1325,20 @@
     "versions": "Update from {{current}} to {{latest}}",
     "open": "Get it on F-Droid",
     "later": "Later"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Remind me",
+      "lead_0": "At the due time",
+      "lead_15": "15 min before",
+      "lead_60": "1 hour before",
+      "lead_1440": "1 day before",
+      "dueToday": "Due today",
+      "dueTomorrow": "Due tomorrow",
+      "dueAt": "Due at {{time}}",
+      "dueTomorrowAt": "Due tomorrow at {{time}}",
+      "highPriority": "High priority",
+      "markDone": "Mark done"
+    }
   }
 }

@@ -26,6 +26,8 @@ import type { Task } from '../types/tasks';
 import { cancelCategory, cancelNotifications, ID_RANGES, reminderEpoch, scheduleNotification } from './notifications';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { useTaskStore } from '../store/useTaskStore';
+import i18n from '../i18n';
+import { formatLocale } from '../utils/formatters';
 
 const TASKS_BASE = ID_RANGES.tasks.base;
 const TASKS_SIZE = ID_RANGES.tasks.size;
@@ -34,6 +36,44 @@ function taskNotifId(taskId: string): number {
   let hash = 0;
   for (const ch of taskId) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
   return TASKS_BASE + (Math.abs(hash) % TASKS_SIZE);
+}
+
+/** v1.19 (NCC#170) — the reminder for a task, `leadMin` before it is due.
+ *  A timed task reminds that long before its time; when that moment has
+ *  passed but the due time hasn't, at the due time itself. A date-only task
+ *  reminds at 09:00 on the day, or 09:00 the day before with the one-day
+ *  lead. `dueAt` is the due moment itself (for the copy); null = nothing
+ *  to schedule. */
+export function taskReminderTime(
+  dueDate: string,
+  leadMin: number,
+  now: number = Date.now(),
+): { at: Date; dueAt: Date; timed: boolean } | null {
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dueDate);
+  if (dateOnly) {
+    const dayBefore = leadMin >= 1440 ? 1 : 0;
+    const at = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]) - dayBefore, 9, 0, 0, 0);
+    const dueAt = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]), 9, 0, 0, 0);
+    if (at.getTime() > now) return { at, dueAt, timed: false };
+    // The day-before slot has passed: the day itself, if still ahead.
+    return dueAt.getTime() > now ? { at: dueAt, dueAt, timed: false } : null;
+  }
+  const dueAt = new Date(dueDate);
+  if (Number.isNaN(dueAt.getTime()) || dueAt.getTime() <= now) return null;
+  const early = new Date(dueAt.getTime() - leadMin * 60_000);
+  return { at: early.getTime() > now ? early : dueAt, dueAt, timed: true };
+}
+
+/** v1.19 (NCC#170) — the reminder's wording: when it is due, said from the
+ *  moment the reminder fires ("Due at 14:30", "Due tomorrow at 14:30",
+ *  "Due today" / "Due tomorrow" for a date-only task). */
+export function taskReminderWhen(r: { at: Date; dueAt: Date; timed: boolean }): string {
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const tomorrow = !sameDay(r.at, r.dueAt);
+  if (!r.timed) return i18n.t(tomorrow ? 'notif.task.dueTomorrow' : 'notif.task.dueToday');
+  const time = new Intl.DateTimeFormat(formatLocale(), { hour: '2-digit', minute: '2-digit' }).format(r.dueAt);
+  return i18n.t(tomorrow ? 'notif.task.dueTomorrowAt' : 'notif.task.dueAt', { time });
 }
 
 /** When to remind about a task. A date-only dueDate ("YYYY-MM-DD") fires at
@@ -67,18 +107,20 @@ export async function scheduleTaskReminder(task: Task): Promise<void> {
   if (!settings.notifTasksEnabled) return;
   if (task.completed) return;
   if (!task.dueDate) return;
-  const at = dueAtNotifTime(task.dueDate);
-  if (!at) return;
+  // v1.19 (NCC#170): the user's lead time, and copy that says when.
+  const when = taskReminderTime(task.dueDate, settings.taskReminderLeadMin);
+  if (!when) return;
+  const at = when.at;
   // Build body: priority tag + optional first-line notes preview, trimmed
   // so the system doesn't truncate a long URL or paragraph.
-  const priorityTag = task.priority === 'high' ? 'High priority · ' : '';
+  const priorityTag = task.priority === 'high' ? i18n.t('notif.task.highPriority') + ' · ' : '';
   const notesPreview = task.notes ? ' — ' + task.notes.split('\n')[0].slice(0, 80) : '';
   try {
     await scheduleNotification({
       id: taskNotifId(task.id),
       category: 'tasks',
       title: task.title,
-      body: `${priorityTag}Due today${notesPreview}`,
+      body: `${priorityTag}${taskReminderWhen(when)}${notesPreview}`,
       at,
       extra: { route: '/tasks' },
       // "Mark done" action → handler in App.tsx calls
@@ -87,7 +129,7 @@ export async function scheduleTaskReminder(task: Task): Promise<void> {
       // tripping through the route. Notification auto-dismisses on action
       // tap; no separate cancel call required.
       actions: [
-        { id: 'done', title: 'Mark done', extra: { taskId: task.id } },
+        { id: 'done', title: i18n.t('notif.task.markDone'), extra: { taskId: task.id } },
       ],
     });
   } catch (e) {

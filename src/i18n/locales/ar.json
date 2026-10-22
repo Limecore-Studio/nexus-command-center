@@ -1369,5 +1369,20 @@
     "versions": "التحديث من {{current}} إلى {{latest}}",
     "open": "احصل عليه من F-Droid",
     "later": "لاحقًا"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "ذكّرني",
+      "lead_0": "في موعد الاستحقاق",
+      "lead_15": "قبل 15 دقيقة",
+      "lead_60": "قبل ساعة",
+      "lead_1440": "قبل يوم",
+      "dueToday": "مستحق اليوم",
+      "dueTomorrow": "مستحق غدًا",
+      "dueAt": "مستحق الساعة {{time}}",
+      "dueTomorrowAt": "مستحق غدًا الساعة {{time}}",
+      "highPriority": "أولوية عالية",
+      "markDone": "تحديد كمنجز"
+    }
   }
 }

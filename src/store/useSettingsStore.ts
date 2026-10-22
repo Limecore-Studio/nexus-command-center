@@ -21,6 +21,12 @@ const NOTIF_MASTER_KEY = 'settings.notif.master';
 // master toggle above gates all of them in one switch; the OS permission
 // gates the whole stack from below.
 const NOTIF_TASKS_KEY = 'settings.notif.tasks';
+// v1.19 (NCC#170): how long before a task's due time its reminder fires.
+// Minutes; this device only (like the toggles above).
+const TASK_LEAD_KEY = 'settings.notif.taskLeadMin';
+export const TASK_LEAD_OPTIONS = [0, 15, 60, 1440] as const;
+export type TaskLeadMin = (typeof TASK_LEAD_OPTIONS)[number];
+const DEFAULT_TASK_LEAD: TaskLeadMin = 60;
 const NOTIF_BUDGETS_KEY = 'settings.notif.budgets';
 const NOTIF_PORTFOLIO_EOD_KEY = 'settings.notif.portfolioEod';
 const NOTIF_NEWS_KEY = 'settings.notif.news';
@@ -90,6 +96,8 @@ interface SettingsStore {
   weeklyReminder: boolean;
   notifMasterEnabled: boolean;
   notifTasksEnabled: boolean;
+  /** v1.19 (NCC#170): minutes before the due time a task reminder fires. */
+  taskReminderLeadMin: TaskLeadMin;
   notifBudgetsEnabled: boolean;
   notifPortfolioEodEnabled: boolean;
   notifNewsEnabled: boolean;
@@ -116,6 +124,7 @@ interface SettingsStore {
   setWeeklyReminder: (on: boolean) => Promise<void>;
   setNotifMasterEnabled: (on: boolean) => Promise<void>;
   setNotifTasksEnabled: (on: boolean) => Promise<void>;
+  setTaskReminderLeadMin: (min: TaskLeadMin) => Promise<void>;
   setNotifBudgetsEnabled: (on: boolean) => Promise<void>;
   setNotifPortfolioEodEnabled: (on: boolean) => Promise<void>;
   setNotifNewsEnabled: (on: boolean) => Promise<void>;
@@ -188,6 +197,9 @@ async function readSettings(set: StoreApi<SettingsStore>['setState']): Promise<v
     readBoolPref(AI_ENABLED_KEY),
     readPref(UI_SCALE_KEY),
   ]);
+  // Nothing stored reads as the default: Number(null) is 0, a valid choice.
+  const leadStored = await readPref(TASK_LEAD_KEY);
+  const leadRaw = leadStored ? Number(leadStored) : NaN;
   set({
     baseCurrency:
       currency && (SUPPORTED_CURRENCIES as readonly string[]).includes(currency)
@@ -196,6 +208,7 @@ async function readSettings(set: StoreApi<SettingsStore>['setState']): Promise<v
     weeklyReminder: reminder === '1',
     notifMasterEnabled: notifMaster,
     notifTasksEnabled: notifTasks,
+    taskReminderLeadMin: (TASK_LEAD_OPTIONS as readonly number[]).includes(leadRaw) ? (leadRaw as TaskLeadMin) : DEFAULT_TASK_LEAD,
     notifBudgetsEnabled: notifBudgets,
     notifPortfolioEodEnabled: notifPortfolioEod,
     notifNewsEnabled: notifNews,
@@ -227,6 +240,7 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   // Settings master toggle does the same on demand.
   notifMasterEnabled: false,
   notifTasksEnabled: false,
+  taskReminderLeadMin: DEFAULT_TASK_LEAD,
   notifBudgetsEnabled: false,
   notifPortfolioEodEnabled: false,
   notifNewsEnabled: false,
@@ -268,6 +282,11 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   async setNotifTasksEnabled(on) {
     await writePref(NOTIF_TASKS_KEY, on ? '1' : '0');
     set({ notifTasksEnabled: on });
+  },
+
+  async setTaskReminderLeadMin(min) {
+    await writePref(TASK_LEAD_KEY, String(min));
+    set({ taskReminderLeadMin: min });
   },
 
   async setNotifBudgetsEnabled(on) {

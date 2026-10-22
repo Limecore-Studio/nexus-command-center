@@ -1325,5 +1325,20 @@
     "versions": "Päivitä versiosta {{current}} versioon {{latest}}",
     "open": "Hae F-Droidista",
     "later": "Myöhemmin"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Muistuta",
+      "lead_0": "Eräaikana",
+      "lead_15": "15 min ennen",
+      "lead_60": "1 tunti ennen",
+      "lead_1440": "1 päivä ennen",
+      "dueToday": "Erääntyy tänään",
+      "dueTomorrow": "Erääntyy huomenna",
+      "dueAt": "Erääntyy klo {{time}}",
+      "dueTomorrowAt": "Erääntyy huomenna klo {{time}}",
+      "highPriority": "Korkea prioriteetti",
+      "markDone": "Merkitse tehdyksi"
+    }
   }
 }

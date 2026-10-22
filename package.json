@@ -92,7 +92,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "Limekana",
+        "owner": "Limecore-Studio",
         "repo": "nexus-command-center"
       }
     ]

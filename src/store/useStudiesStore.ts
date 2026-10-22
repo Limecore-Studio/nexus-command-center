@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { Preferences } from '@capacitor/preferences';
 import { db } from '../db/database';
-import { Course, Grade, GradeImport, StudySession } from '../types/studies';
+import { Course, CoursePushPayload, Grade, GradeImport, StudySession } from '../types/studies';
 import { calculateGPA, inferGradeMode, GradeMode } from '../utils/gpa';
 import { generateId } from '../utils/uuid';
 import { enqueue } from '../db/syncQueue';
@@ -58,8 +58,10 @@ interface StudiesStore {
   updateCourse: (id: string, patch: Partial<Course>) => Promise<void>;
   deleteCourse: (id: string) => Promise<void>;
   /** v1.2 — restore an archived course (clear archivedAt). Patches the same
-   *  cloud column StudyDesk uses, so the restore propagates back to
-   *  StudyDesk via LWW (NCC's update is fresher than the archive event). */
+   *  cloud column StudyDesk uses. v1.18.1 (NCC#180): sent as an archive-only
+   *  write stamped with the moment of the restore (archived_edited_at), so it
+   *  wins or loses against StudyDesk's archive on edit time. No UI calls it
+   *  today. */
   restoreCourse: (id: string) => Promise<void>;
 
   // Grades (per-subject assessments) — added v1.0.3
@@ -88,6 +90,25 @@ async function ensureManualImport(): Promise<GradeImport> {
   };
   await db.gradeImports.add(imp);
   return imp;
+}
+
+// v1.18.1 (NCC#180) — queue a course edit. The push sends `archived_at` only
+// for an item marked as an archive change (`archiveEditedAt`); a plain edit no
+// longer carries it, so a copy that has not seen StudyDesk's latest archive or
+// restore cannot put the stale state back. One queue item per edit; the push
+// writes its content and its archive change separately (see pushCourse).
+async function enqueueCourseEdit(existing: Course, updated: Course): Promise<void> {
+  if ((existing.archivedAt ?? null) === (updated.archivedAt ?? null)) {
+    await enqueue('course', updated.id, 'update', updated);
+    return;
+  }
+  const contentOf = (c: Course) => JSON.stringify({ ...c, archivedAt: undefined });
+  const payload: CoursePushPayload = {
+    ...updated,
+    archiveEditedAt: new Date().toISOString(),
+    archiveOnly: contentOf(existing) === contentOf(updated),
+  };
+  await enqueue('course', updated.id, 'update', payload);
 }
 
 export const useStudiesStore = create<StudiesStore>((set, get) => ({
@@ -191,7 +212,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     if (!existing) return;
     const updated = { ...existing, ...patch, id };
     await db.courses.put(updated);
-    await enqueue('course', id, 'update', updated);
+    await enqueueCourseEdit(existing, updated);
     const nextCourses = get().courses.map((c) => (c.id === id ? updated : c));
     const idx = indexGradesBySubject(get().grades);
     const cur = get().currentImport;
@@ -232,8 +253,9 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
   },
 
   // v1.2 — restore an archived course. Clears archivedAt locally + enqueues
-  // an update so the LWW sync sends the change to Supabase, which StudyDesk
-  // then sees via its realtime subscription and surfaces in the active list.
+  // an archive change (v1.18.1, NCC#180: see enqueueCourseEdit) so the sync
+  // sends it to Supabase, which StudyDesk then sees via its realtime
+  // subscription and surfaces in the active list.
   // Course moves from `archivedCourses` back to `courses` in local state; GPA
   // recomputes to include it again.
   async restoreCourse(id) {
@@ -241,7 +263,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     if (!existing || !existing.archivedAt) return;
     const updated: Course = { ...existing, archivedAt: undefined };
     await db.courses.put(updated);
-    await enqueue('course', id, 'update', updated);
+    await enqueueCourseEdit(existing, updated);
     const nextActive = [...get().courses, updated];
     const nextArchived = get().archivedCourses.filter((c) => c.id !== id);
     const idx = indexGradesBySubject(get().grades);

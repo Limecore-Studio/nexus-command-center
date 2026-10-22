@@ -12,7 +12,9 @@
 -- as it is; they show generated rows as ordinary rows.
 -- P2: RLS and the policy are in this same migration.
 --
--- NOT YET APPLIED. Owner applies (P1 sign-off).
+-- Tested against Postgres 17: supabase/tests/recurring_rules.test.sql.
+-- APPLIED to production 2026-10-22 (owner-approved in session) as
+-- `v119_recurring_rules`, version 20261022114651.
 
 -- ── Guard: only extend the purge function we have actually read ─────────────
 -- Live body after 20261022_portfolio_tombstones.sql (read 2026-10-22).

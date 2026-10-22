@@ -11,6 +11,7 @@ import { useMemo } from 'react';
 import type { PortfolioHolding } from '../types/finance';
 import type { DividendEvent } from '../api/stockDetail';
 import { convertSync } from '../api/fxRates';
+import { localDateKey } from '@/utils/formatters';
 
 interface Props {
   holdings: PortfolioHolding[];
@@ -43,7 +44,7 @@ function buildRow(
   const cutoff = new Date();
   cutoff.setFullYear(cutoff.getFullYear() - 1);
   const cutoffKey = cutoff.toISOString().slice(0, 10);
-  const past = events.filter((e) => e.date <= new Date().toISOString().slice(0, 10) && e.date >= cutoffKey);
+  const past = events.filter((e) => e.date <= localDateKey(new Date()) && e.date >= cutoffKey);
   if (past.length === 0) return null;
   // All dividends for one ticker share a currency in practice, so use the
   // first event's currency as the basis. Sum amounts straight (per-share).
@@ -53,7 +54,7 @@ function buildRow(
   const projectedAnnualBase =
     convertSync(trailingTotalNative, currency, baseCurrency, fxRates) ?? 0;
   // Next ex-div = earliest future date in the events list.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
   const futureEvents = events.filter((e) => e.date > today).sort((a, b) => a.date.localeCompare(b.date));
   return {
     ticker: h.ticker.toUpperCase(),
@@ -90,7 +91,7 @@ export default function DividendTracker({
   const totalProjected = rows.reduce((acc, r) => acc + r.projectedAnnualBase, 0);
 
   // Imminent ex-div (within 30 days)
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDateKey(new Date());
   const soon = rows
     .filter((r) => r.nextExDiv && r.nextExDiv >= today)
     .sort((a, b) => (a.nextExDiv ?? '').localeCompare(b.nextExDiv ?? ''))[0];

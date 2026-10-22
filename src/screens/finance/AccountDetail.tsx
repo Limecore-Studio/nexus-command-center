@@ -13,7 +13,11 @@
 //
 // The running balance is computed by walking the transactions oldest-first
 // applying signed deltas to `account.startingBalance`, then we reverse for
-// display so newest sits on top with the final balance.
+// display so newest sits on top. Rows dated before a move to or from the
+// portfolio add that move back (lib/accountStatement, NCC#164), so each row is
+// the balance on its date; when a move came after the newest transaction, the
+// top row differs from the header balance by that move. A move in another
+// currency is added back at today's rate, as the net-worth trend does.
 
 import { useMemo } from 'react';
 import { formatMoney } from '../../lib/currencies';
@@ -25,6 +29,7 @@ import { Pill } from '../../components/ui/Pill';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { computeAccountBalance } from '../../lib/accountBalance';
+import { statementRunningBalances } from '../../lib/accountStatement';
 import { convertSync } from '../../api/fxRates';
 import type { Transaction } from '../../types/finance';
 import { LIABILITY_TYPES } from '../../types/finance';
@@ -58,6 +63,7 @@ export default function AccountDetail() {
   const allTransactions = useFinanceStore((s) => s.transactions);
   const categories = useFinanceStore((s) => s.budgetCategories);
   const fxRates = useFinanceStore((s) => s.fxRates);
+  const cashEntries = useFinanceStore((s) => s.portfolioCashEntries);
 
   const account = useMemo(
     () => accounts.find((a) => a.id === id) ?? null,
@@ -125,9 +131,15 @@ export default function AccountDetail() {
       return a.txn.createdAt.localeCompare(b.txn.createdAt);
     });
 
-    let running = account.startingBalance;
-    const built: RowEntry[] = matched.map((m) => {
-      running += m.delta;
+    // v1.18.1 (NCC#164): a row dated before a Deposit / Withdraw / Invest
+    // adds the move back, since the move shifted the undated opening balance.
+    const balances = statementRunningBalances(
+      account,
+      matched.map((m) => ({ date: m.txn.date, createdAt: m.txn.createdAt, delta: m.delta })),
+      cashEntries,
+      fxRates,
+    );
+    const built: RowEntry[] = matched.map((m, i) => {
       const cat = m.txn.categoryId
         ? categories.find((c) => c.id === m.txn.categoryId)
         : null;
@@ -144,7 +156,7 @@ export default function AccountDetail() {
       return {
         txn: m.txn,
         delta: m.delta,
-        runningBalance: running,
+        runningBalance: balances[i],
         counterparty,
         kind: m.kind,
       };
@@ -152,7 +164,7 @@ export default function AccountDetail() {
 
     // Reverse — newest sits on top of the list (canonical statement view).
     return built.reverse();
-  }, [account, allTransactions, categories, accounts, fxRates, baseCurrency, t]);
+  }, [account, allTransactions, cashEntries, categories, accounts, fxRates, baseCurrency, t]);
 
   if (!account) {
     return (

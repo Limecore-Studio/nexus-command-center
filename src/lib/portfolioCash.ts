@@ -24,3 +24,30 @@ export function portfolioCashBalance(
   }
   return total;
 }
+
+// v1.18.1 (NCC#149, NCC#164) — moving money between an account and the
+// portfolio (Deposit, Withdraw, Savings "Invest") changes the account's
+// OPENING balance, which is undated, while the cash entry is dated when it
+// happened. Read as-is, any balance as of a date before a move is short by
+// the move: the net-worth trend lost it for past months (#149) and the
+// account statement for every row dated before it (#164). This is what to add
+// back to such a balance: the moves for `accountId` that `isLater` picks, in
+// `currency` (a deposit adds back what it took out; a withdrawal, stored
+// negative, takes back off what it put in). An entry with no FX rate is
+// skipped. Converted at today's rates, like every other past balance here.
+export function laterPortfolioMoves(
+  entries: PortfolioCashEntry[],
+  accountId: string,
+  currency: string,
+  fxRates: Record<string, number> | null,
+  isLater: (e: PortfolioCashEntry) => boolean,
+): number {
+  let sum = 0;
+  for (const e of entries) {
+    if (e.accountId !== accountId || (e.type !== 'deposit' && e.type !== 'withdrawal')) continue;
+    if (!isLater(e)) continue;
+    const v = e.currency === currency ? e.amount : convertSync(e.amount, e.currency, currency, fxRates);
+    if (v != null) sum += v;
+  }
+  return sum;
+}

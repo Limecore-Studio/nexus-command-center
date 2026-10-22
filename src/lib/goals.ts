@@ -5,7 +5,7 @@
 // instantly reflects in the goal's progress bar.
 
 import type { Goal, GoalType } from '../types/goals';
-import { formatLocale } from '../utils/formatters';
+import { formatLocale, parseDateLocal } from '../utils/formatters';
 import { isCumulativeGoal } from '../types/goals';
 import type { Transaction, PortfolioHolding, ManualAsset } from '../types/finance';
 import { LIABILITY_TYPES } from '../types/finance';
@@ -73,7 +73,7 @@ function netWorthBase(d: DataSources): number {
 }
 
 function currentValueFor(goal: Goal, d: DataSources): number {
-  const start = new Date(goal.startDate).getTime();
+  const start = parseDateLocal(goal.startDate).getTime();
   switch (goal.goalType) {
     case 'net_worth':
       return netWorthBase(d);
@@ -84,7 +84,7 @@ function currentValueFor(goal: Goal, d: DataSources): number {
       ).length;
 
     case 'workout_count':
-      return d.workouts.filter((w) => new Date(w.date).getTime() >= start).length;
+      return d.workouts.filter((w) => parseDateLocal(w.date).getTime() >= start).length;
 
     case 'study_hours': {
       const minutes = d.studySessions
@@ -127,12 +127,12 @@ export function computeGoalProgress(goal: Goal, d: DataSources): GoalProgress {
   if (goal.targetDate) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const target = new Date(goal.targetDate);
+    const target = parseDateLocal(goal.targetDate);
     target.setHours(0, 0, 0, 0);
     daysRemaining = Math.max(0, Math.ceil((target.getTime() - today.getTime()) / 86400000));
 
     if (isCumulativeGoal(goal.goalType)) {
-      const start = new Date(goal.startDate);
+      const start = parseDateLocal(goal.startDate);
       start.setHours(0, 0, 0, 0);
       const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / 86400000));
       const elapsedDays = Math.max(0, Math.ceil((today.getTime() - start.getTime()) / 86400000));

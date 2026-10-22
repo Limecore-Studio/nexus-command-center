@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { formatMoney } from '../lib/currencies';
-import { formatLocale } from '../utils/formatters';
+import { formatLocale, localDateKey } from '../utils/formatters';
 import { isComplete, parseQuickEntry, rankMatches } from '../lib/quickEntry';
 import Glyph from './Glyph';
 import { compositionTracking, isComposing } from '../lib/imeSubmit';
@@ -44,7 +44,7 @@ export default function QuickAddOverlay({ open, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState<string | null>(null);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => localDateKey(new Date()), []);
   const draft = useMemo(() => parseQuickEntry(text, today, caret), [text, today, caret]);
 
   const liveAccounts = useMemo(() => accounts.filter((a) => !a.archivedAt), [accounts]);

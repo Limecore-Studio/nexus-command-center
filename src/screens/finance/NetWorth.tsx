@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from 'react';
 import { currencyOptions, formatMoney } from '../../lib/currencies';
-import { formatLocale } from '../../utils/formatters';
+import { formatLocale, localDateKey } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
@@ -34,6 +34,8 @@ import { buildNetWorthTrend } from '../../lib/netWorthTrend';
 import NetWorthTrendChart, { NetWorthBreakdown } from '../../components/NetWorthTrendChart';
 import { useShellTier } from '../../lib/useShell';
 import Glyph from '../../components/Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 
 
@@ -169,7 +171,7 @@ export default function NetWorth() {
         fxRates,
         baseCurrency,
         months: trendMonths,
-        today: new Date().toISOString().slice(0, 10),
+        today: localDateKey(new Date()),
       }),
     [manualAssets, transactions, snapshots, cashEntries, fxRates, baseCurrency, trendMonths],
   );
@@ -279,7 +281,7 @@ export default function NetWorth() {
   };
 
   const save = async () => {
-    const n = parseFloat(value);
+    const n = numberInput(value);
     if (!name.trim() || isNaN(n)) return;
     if (editing) {
       // v1.2 follow-up — Account refactor UX fix. `n` is the desired CURRENT

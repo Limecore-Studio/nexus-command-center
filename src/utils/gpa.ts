@@ -1,6 +1,12 @@
 import { Course, Grade } from '../types/studies';
 
-export type GradeMode = 'us' | 'ib';
+// v1.18.1 (NCC#165): 'custom' is a points scale that is neither 1–7/0–10 nor
+// a percentage — in practice 0–20 (France, Belgium, Portugal …). StudyDesk has
+// a Custom mode with user-set bounds, but keeps the mode and the scale in the
+// device's localStorage, not in the synced tables, so NCC cannot read them and
+// only ever infers this one (see inferGradeMode). Scored like 'ib': a straight
+// weighted mean, as StudyDesk scores a custom scale (StudyDesk#147).
+export type GradeMode = 'us' | 'ib' | 'custom';
 
 // ─── Per-subject score ──────────────────────────────────────────────────
 // Weighted average of a subject's grades, using each grade's `weight`
@@ -29,7 +35,7 @@ function subjectScore(grades: Grade[]): number | null {
 //   - For 'us' mode, each subject score is converted to a 4.0 GPA point via
 //     `gradeToPoints(...)` before being weighted
 //   - For 'ib' mode, the score is already on the 1–7 scale; we weight it
-//     directly
+//     directly. 'custom' (e.g. 0–20) is weighted directly too
 //
 // Returns 0 when no subject has any grades — that's the displayed "blank
 // state" GPA (UI also has a separate "no courses yet" empty state).
@@ -38,18 +44,32 @@ export function calculateGPA(
   gradesBySubject: Map<string, Grade[]>,
   mode: GradeMode = 'us',
 ): number {
-  let totalCredits = 0;
-  let weightedSum = 0;
+  // v1.18.1 (NCC#160): matches StudyDesk (StudyDesk#147). A course set to 0
+  // credits (pass/fail) counts for nothing; `c.credits || 1` counted it as 1,
+  // so the two apps showed different averages for the same synced data. A
+  // course with no credits set still counts as 1, and when every graded
+  // course is 0 credits the plain mean is shown rather than 0.
+  const scored: { points: number; credits: number }[] = [];
   for (const c of courses) {
     const grades = gradesBySubject.get(c.id) ?? [];
     const score = subjectScore(grades);
     if (score == null) continue;
-    const credits = c.credits || 1;
-    totalCredits += credits;
-    weightedSum += (mode === 'us' ? gradeToPoints(score) : score) * credits;
+    scored.push({ points: mode === 'us' ? gradeToPoints(score) : score, credits: gpaCredits(c.credits) });
   }
-  if (totalCredits === 0) return 0;
+  if (scored.length === 0) return 0;
+  let totalCredits = scored.reduce((sum, x) => sum + x.credits, 0);
+  if (totalCredits === 0) {
+    for (const x of scored) x.credits = 1;
+    totalCredits = scored.length;
+  }
+  const weightedSum = scored.reduce((sum, x) => sum + x.points * x.credits, 0);
   return Math.round((weightedSum / totalCredits) * 100) / 100;
+}
+
+function gpaCredits(credits: unknown): number {
+  if (credits == null || credits === '') return 1;
+  const n = Number(credits);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
 }
 
 // ─── Scale inference ────────────────────────────────────────────────────
@@ -64,11 +84,19 @@ export function calculateGPA(
  *  Percentage grades do not sit at or below 10 in practice (a 7% subject
  *  average is not a grade anyone is carrying), so the maximum observed value
  *  is a safe discriminator. An explicit user choice always wins over this —
- *  see `load()` in useStudiesStore. */
+ *  see `load()` in useStudiesStore.
+ *
+ *  v1.18.1 (NCC#165): the same is true of a 0–20 scale. A French 14/20 is not
+ *  14%, but above 10 it was read as a percentage, every subject under 60
+ *  scored 0 and the average showed 0.00. A maximum of 20 or less is not a
+ *  percentage scale either (nobody carries a 20% subject average), so it is
+ *  'custom', the straight weighted mean. Anything above 20 stays 'us'. */
 export function inferGradeMode(grades: Grade[]): GradeMode {
   const values = grades.map((g) => g.grade).filter((v) => Number.isFinite(v));
   if (values.length === 0) return 'us';
-  return Math.max(...values) <= 10 ? 'ib' : 'us';
+  const max = Math.max(...values);
+  if (max <= 10) return 'ib';
+  return max <= 20 ? 'custom' : 'us';
 }
 
 function gradeToPoints(grade: number): number {

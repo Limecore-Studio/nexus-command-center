@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { formatMoney } from '../../lib/currencies';
-import { formatLocale } from '../../utils/formatters';
+import { formatLocale, parseDateLocal } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
@@ -14,6 +14,8 @@ import { computeAvailableCash, isLiquidAccount, liquidBalance } from '../../lib/
 import { convertSync } from '../../api/fxRates';
 import type { SavingsGoal, ManualAsset } from '../../types/finance';
 import Glyph from '../../components/Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 /**
  * v1.2 — Savings Goals.
@@ -61,7 +63,7 @@ export default function SavingsGoals() {
 
   const manualAssets = useFinanceStore((s) => s.manualAssets);
   const transactions = useFinanceStore((s) => s.transactions);
-  const updateManualAsset = useFinanceStore((s) => s.updateManualAsset);
+  const depositToPortfolio = useFinanceStore((s) => s.depositToPortfolio);
   const fxRates = useFinanceStore((s) => s.fxRates);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   // v1.2 follow-up — BUG-5. The legacy `settings.savingsBufferAmount` is
@@ -164,31 +166,30 @@ export default function SavingsGoals() {
   };
 
   const submitInvest = async () => {
-    const amount = parseFloat(investAmount);
+    const amount = numberInput(investAmount);
     if (!isFinite(amount) || amount <= 0) return;
     const source = liquidAssets.find((a) => a.id === investSourceId);
     if (!source) return;
-    // Decrement amount in the source asset's native currency. If the user
-    // typed in baseCurrency but the asset is denominated in something else,
-    // convert. Falls through to "no conversion possible" → flash a warning
-    // and bail rather than silently subtract the wrong number.
-    const amountInSourceCurrency = source.currency === baseCurrency
-      ? amount
-      : convertSync(amount, baseCurrency, source.currency, fxRates);
-    if (amountInSourceCurrency == null) {
-      setFlashMessage(t('fin.sg.fxConvertFail', { from: baseCurrency, to: source.currency }));
+    // v1.18.1 (NCC#149): the same move as Portfolio → Deposit, so it is
+    // recorded: the source account is debited AND portfolio cash is credited
+    // with a dated entry. This used to only lower the account's opening
+    // balance, which left no record of when, rewrote every past month of the
+    // net-worth trend, and put nothing in portfolio cash for the purchase
+    // the user goes on to make. depositToPortfolio converts the amount into
+    // the account's currency and refuses when there is no FX rate.
+    try {
+      await depositToPortfolio({ amount, currency: baseCurrency, accountId: source.id });
+    } catch (e) {
+      // The FX check runs before anything is written, so only that failure
+      // is safe to present as "nothing happened, try again". Anything else
+      // may have failed after the account was debited.
+      const msg = (e as Error).message ?? '';
+      setFlashMessage(/convert/i.test(msg)
+        ? t('fin.sg.fxConvertFail', { from: baseCurrency, to: source.currency })
+        : msg);
       window.setTimeout(() => setFlashMessage(null), 4000);
       return;
     }
-    // v1.15 fix — debit the OPENING balance, exactly as the portfolio
-    // deposit does (useFinanceStore.depositToPortfolio): the derived balance
-    // is opening + transactions, so lowering the opening by the amount lowers
-    // the balance by the amount. The old `Math.max(0, value - amount)` treated
-    // the opening as the balance and clamped it at zero — on an account whose
-    // opening is legitimately negative that clamp ADDED money.
-    const opening = source.startingBalance ?? source.value ?? 0;
-    const nextOpening = opening - amountInSourceCurrency;
-    await updateManualAsset(source.id, { startingBalance: nextOpening, value: nextOpening });
     setInvestOpen(false);
     setFlashMessage(t('fin.sg.movedToInvest', { amount: fmtCompact(amount, baseCurrency), name: source.name }));
     window.setTimeout(() => setFlashMessage(null), 5000);
@@ -198,9 +199,9 @@ export default function SavingsGoals() {
   };
 
   const submitEditor = async () => {
-    const targetNum = parseFloat(target);
+    const targetNum = numberInput(target);
     if (!title.trim() || !isFinite(targetNum) || targetNum <= 0) return;
-    const allocatedNum = Math.max(0, parseFloat(allocated) || 0);
+    const allocatedNum = Math.max(0, numberInput(allocated) || 0);
     if (editing) {
       await updateGoal(editing.id, {
         title: title.trim(),
@@ -480,7 +481,7 @@ export default function SavingsGoals() {
             <button
               className="btn flex-1"
               onClick={submitInvest}
-              disabled={!investAmount || !investSourceId || parseFloat(investAmount) <= 0}
+              disabled={!investAmount || !investSourceId || numberInput(investAmount) <= 0}
             >
               {t('fin.sg.move')}
             </button>
@@ -537,7 +538,7 @@ function GoalRow({ goal, onAllocate, onSet, onEdit, onDelete }: GoalRowProps) {
   const pacingTone: 'success' | 'warning' | 'neutral' = (() => {
     if (!goal.deadline || completed) return 'neutral';
     const created = new Date(goal.createdAt).getTime();
-    const due = new Date(goal.deadline).getTime();
+    const due = parseDateLocal(goal.deadline).getTime();
     // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
     if (due <= created) return 'neutral'; // malformed; don't second-guess
@@ -564,7 +565,7 @@ function GoalRow({ goal, onAllocate, onSet, onEdit, onDelete }: GoalRowProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [customAmount, setCustomAmount] = useState('');
   const submitCustom = (mode: 'add' | 'set') => {
-    const n = parseFloat(customAmount);
+    const n = numberInput(customAmount);
     if (!isFinite(n)) {
       setCustomOpen(false);
       return;

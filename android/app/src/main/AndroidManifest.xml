@@ -104,6 +104,18 @@
             android:name=".NotificationActionReceiver"
             android:exported="false" />
 
+        <!-- v1.18.1 (NCC#168) — re-arms the stored reminders after a reboot.
+             Not exported: BOOT_COMPLETED comes from the system, which reaches
+             non-exported receivers (WorkManager's RescheduleReceiver is
+             declared the same way). onReceive ignores any other action. -->
+        <receiver
+            android:name=".AlarmRearmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
         <!-- v1.1 cross-app SSO publisher. Exposes the current Supabase
              session via a read-only ContentProvider. Access control lives
              inside SessionContentProvider.query() via a getCallingPackage()
@@ -145,11 +157,11 @@
     <uses-permission
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32" />
-    <!-- RECEIVE_BOOT_COMPLETED would let us re-arm pending alarms after a
-         device reboot. We intentionally DON'T request it for v1.0.x — the
-         app does a full reconcile at next launch anyway, and avoiding this
-         permission keeps the privacy profile cleaner. Future: add if users
-         need notifications across reboots without opening the app. -->
+    <!-- v1.18.1 (NCC#168) — owner's call: reminders survive a reboot without
+         NCC being opened. Android drops every alarm on restart; with this,
+         AlarmRearmReceiver re-arms them from the specs the plugin stores.
+         Before, they stayed gone until the next launch's reconcile. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
 
     <!-- Health Connect permissions removed in v1.9: the Fitness view that used

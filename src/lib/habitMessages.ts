@@ -4,8 +4,13 @@
 // The variant rotates by day-of-year so the copy changes day to day but is
 // deterministic (we re-pick on every app open, so it stays fresh). `{h}` is
 // the habit title, `{n}` the current streak length.
+//
+// v1.18.1 (NCC#138): text is fixed when an alarm is scheduled. A daily habit's
+// primary reminder now repeats natively and shows that same text every day
+// until the app is next opened, so it uses the 'repeating' pool: no streak
+// count, nothing that is only true on the day it was written.
 
-type HabitMsgKind = 'primary' | 'evening' | 'morning' | 'milestone';
+type HabitMsgKind = 'primary' | 'repeating' | 'evening' | 'morning' | 'milestone';
 
 interface Msg {
   title: string;
@@ -35,6 +40,14 @@ const PRIMARY_FRESH: [string, string][] = [
   ['Quick win available', '{h}. Two minutes of effort, all-day pride.'],
   ['Your move', '{h} is waiting. Make today count.'],
 ];
+// v1.18.1 (NCC#138): for a reminder that repeats. True on any day whatever the
+// streak: PRIMARY_STREAK states a count, and PRIMARY_FRESH's "Start a streak
+// today" would be wrong once one is running.
+const PRIMARY_REPEATING: [string, string][] = [
+  ['Time for {h}', 'Small step now, big momentum later.'],
+  ['Quick win available', '{h}. Two minutes of effort, all-day pride.'],
+  ['Your move', '{h} is waiting. Make today count.'],
+];
 const EVENING_STREAK: [string, string][] = [
   ['Streak at risk', "Your {n}-day run on {h} isn't logged yet — still time."],
   ["Don't lose {n} days", '{h} before bed keeps the streak alive.'],
@@ -51,6 +64,9 @@ export function habitMessage(kind: HabitMsgKind, habit: string, streak: number, 
   switch (kind) {
     case 'primary':
       pool = streak > 0 ? PRIMARY_STREAK : PRIMARY_FRESH;
+      break;
+    case 'repeating':
+      pool = PRIMARY_REPEATING;
       break;
     case 'evening':
       pool = EVENING_STREAK;

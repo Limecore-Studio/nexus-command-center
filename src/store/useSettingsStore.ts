@@ -1,7 +1,7 @@
 // User preferences. Currently base currency for the portfolio + the Sunday
 // Weekly Review reminder toggle + per-category notification toggles.
 // Persisted via Capacitor Preferences (with localStorage fallback for web dev).
-import { create } from 'zustand';
+import { create, type StoreApi } from 'zustand';
 import { Preferences } from '@capacitor/preferences';
 
 // Re-exported so existing importers keep working; the list itself lives in
@@ -154,6 +154,70 @@ async function readBoolPref(key: string, fallback = false): Promise<boolean> {
   return raw === '1';
 }
 
+let loadInFlight: Promise<void> | null = null;
+
+async function readSettings(set: StoreApi<SettingsStore>['setState']): Promise<void> {
+  const [
+    currency,
+    reminder,
+    notifMaster,
+    notifTasks,
+    notifBudgets,
+    notifPortfolioEod,
+    notifNews,
+    notifWatchlist,
+    notifMacroKeywords,
+    notifIntroSeen,
+    savingsBuffer,
+    insightsTab,
+    aiEnabled,
+    uiScale,
+  ] = await Promise.all([
+    readPref(CURRENCY_KEY),
+    readPref(REMINDER_KEY),
+    readBoolPref(NOTIF_MASTER_KEY),
+    readBoolPref(NOTIF_TASKS_KEY),
+    readBoolPref(NOTIF_BUDGETS_KEY),
+    readBoolPref(NOTIF_PORTFOLIO_EOD_KEY),
+    readBoolPref(NOTIF_NEWS_KEY),
+    readBoolPref(NOTIF_WATCHLIST_KEY),
+    readBoolPref(NOTIF_MACRO_KEYS_KEY),
+    readBoolPref(NOTIF_INTRO_SEEN_KEY),
+    readPref(SAVINGS_BUFFER_KEY),
+    readPref(INSIGHTS_TAB_KEY),
+    readBoolPref(AI_ENABLED_KEY),
+    readPref(UI_SCALE_KEY),
+  ]);
+  set({
+    baseCurrency:
+      currency && (SUPPORTED_CURRENCIES as readonly string[]).includes(currency)
+        ? (currency as BaseCurrency)
+        : 'EUR',
+    weeklyReminder: reminder === '1',
+    notifMasterEnabled: notifMaster,
+    notifTasksEnabled: notifTasks,
+    notifBudgetsEnabled: notifBudgets,
+    notifPortfolioEodEnabled: notifPortfolioEod,
+    notifNewsEnabled: notifNews,
+    notifWatchlistEnabled: notifWatchlist,
+    notifMacroKeywordsEnabled: notifMacroKeywords,
+    notifIntroSeen,
+    savingsBufferAmount: savingsBuffer ? Math.max(0, parseFloat(savingsBuffer) || 0) : 0,
+    insightsTab: insightsTab === 'fundamental' ? 'fundamental' : 'technical',
+    // An unrecognised stored value (hand-edited, or written by a future
+    // version) falls back to auto rather than being applied verbatim to a
+    // CSS property that would silently break every size in the app.
+    uiScale: (UI_SCALES as readonly string[]).includes(uiScale ?? '')
+      ? (uiScale as UiScale)
+      : 'auto',
+    aiEnabled,
+    loaded: true,
+  });
+  applyUiScale(
+    (UI_SCALES as readonly string[]).includes(uiScale ?? '') ? (uiScale as UiScale) : 'auto',
+  );
+}
+
 export const useSettingsStore = create<SettingsStore>((set) => ({
   baseCurrency: 'EUR',
   weeklyReminder: false,
@@ -175,66 +239,15 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
   aiEnabled: false,
   loaded: false,
 
-  async load() {
-    const [
-      currency,
-      reminder,
-      notifMaster,
-      notifTasks,
-      notifBudgets,
-      notifPortfolioEod,
-      notifNews,
-      notifWatchlist,
-      notifMacroKeywords,
-      notifIntroSeen,
-      savingsBuffer,
-      insightsTab,
-      aiEnabled,
-      uiScale,
-    ] = await Promise.all([
-      readPref(CURRENCY_KEY),
-      readPref(REMINDER_KEY),
-      readBoolPref(NOTIF_MASTER_KEY),
-      readBoolPref(NOTIF_TASKS_KEY),
-      readBoolPref(NOTIF_BUDGETS_KEY),
-      readBoolPref(NOTIF_PORTFOLIO_EOD_KEY),
-      readBoolPref(NOTIF_NEWS_KEY),
-      readBoolPref(NOTIF_WATCHLIST_KEY),
-      readBoolPref(NOTIF_MACRO_KEYS_KEY),
-      readBoolPref(NOTIF_INTRO_SEEN_KEY),
-      readPref(SAVINGS_BUFFER_KEY),
-      readPref(INSIGHTS_TAB_KEY),
-      readBoolPref(AI_ENABLED_KEY),
-      readPref(UI_SCALE_KEY),
-    ]);
-    set({
-      baseCurrency:
-        currency && (SUPPORTED_CURRENCIES as readonly string[]).includes(currency)
-          ? (currency as BaseCurrency)
-          : 'EUR',
-      weeklyReminder: reminder === '1',
-      notifMasterEnabled: notifMaster,
-      notifTasksEnabled: notifTasks,
-      notifBudgetsEnabled: notifBudgets,
-      notifPortfolioEodEnabled: notifPortfolioEod,
-      notifNewsEnabled: notifNews,
-      notifWatchlistEnabled: notifWatchlist,
-      notifMacroKeywordsEnabled: notifMacroKeywords,
-      notifIntroSeen,
-      savingsBufferAmount: savingsBuffer ? Math.max(0, parseFloat(savingsBuffer) || 0) : 0,
-      insightsTab: insightsTab === 'fundamental' ? 'fundamental' : 'technical',
-      // An unrecognised stored value (hand-edited, or written by a future
-      // version) falls back to auto rather than being applied verbatim to a
-      // CSS property that would silently break every size in the app.
-      uiScale: (UI_SCALES as readonly string[]).includes(uiScale ?? '')
-        ? (uiScale as UiScale)
-        : 'auto',
-      aiEnabled,
-      loaded: true,
+  // v1.18.1 (NCC#151): callers that ask while a read is in flight share it.
+  // AppShell and NotificationBridge both load on mount, and scheduleNotification
+  // now loads too when settings are not loaded yet, once per alarm, so a cold
+  // start with a few habits would otherwise start a dozen identical reads.
+  load() {
+    loadInFlight ??= readSettings(set).finally(() => {
+      loadInFlight = null;
     });
-    applyUiScale(
-      (UI_SCALES as readonly string[]).includes(uiScale ?? '') ? (uiScale as UiScale) : 'auto',
-    );
+    return loadInFlight;
   },
 
   async setBaseCurrency(c) {

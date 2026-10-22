@@ -38,12 +38,13 @@ public class MainActivity extends BridgeActivity {
         // Find the live plugin instance through the bridge and deliver. The
         // bridge may not yet have a handle on first cold-start before
         // super.onCreate finishes, so be defensive: deliverTap handles a
-        // null instance by buffering until the JS side subscribes.
+        // null instance by queueing until the JS side subscribes (the queue
+        // is persisted since v1.18.1, NCC#169, so it needs a Context).
         PluginHandle handle = getBridge().getPlugin("NexusNotifications");
         NexusNotificationsPlugin plugin = handle != null
             ? (NexusNotificationsPlugin) handle.getInstance()
             : null;
-        NexusNotificationsPlugin.deliverTap(plugin, route);
+        NexusNotificationsPlugin.deliverTap(this, plugin, route);
         // Clear the extra so a config change (rotation, etc.) doesn't replay it.
         intent.removeExtra(NotificationAlarmReceiver.EXTRA_TAP_ROUTE);
     }

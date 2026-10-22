@@ -15,6 +15,10 @@ interface TaskStore {
   addTask: (t: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'completed'>) => Promise<void>;
   updateTask: (id: string, patch: Partial<Omit<Task, 'id' | 'createdAt'>>) => Promise<void>;
   toggleComplete: (id: string) => Promise<void>;
+  /** v1.18.1 (NCC#143) — set, not flip: a no-op when the task is already in
+   *  that state. For the notification's "Mark done", which can arrive twice
+   *  (live, then again from the native buffer) and must not undo itself. */
+  setComplete: (id: string, completed: boolean) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 }
 
@@ -79,9 +83,15 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
   async toggleComplete(id) {
     const task = await db.tasks.get(id);
     if (!task) return;
+    await get().setComplete(id, !task.completed);
+  },
+
+  async setComplete(id, completed) {
+    const task = await db.tasks.get(id);
+    if (!task || task.completed === completed) return;
     const updated: Task = {
       ...task,
-      completed: !task.completed,
+      completed,
       updatedAt: new Date().toISOString(),
       syncStatus: 'pending',
     };

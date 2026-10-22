@@ -151,8 +151,11 @@
     "working": "Verarbeite…",
     "failed": "Deine Auswahl konnte auf diesem Gerät nicht gespeichert werden. Versuch es noch einmal.",
     "footer": "Für dieses Konto fragen wir nicht noch einmal.",
-    "switchBody": "Auf diesem Gerät sind noch Daten eines Kontos gespeichert, das sich hier abgemeldet hat, oder aus der Nutzung als Gast. Sollen wir sie in dein Konto übernehmen und mit der Cloud synchronisieren oder von diesem Gerät löschen? Wenn du dich abmeldest, bleiben sie, wie sie sind.",
-    "switchFooter": "Bis du dich entscheidest, werden diese Daten weder angezeigt noch synchronisiert."
+    "switchBody": "Auf diesem Gerät liegen Daten eines anderen Kontos oder eines Gasts. Die nicht synchronisierten Einträge zu deinem Konto hinzufügen oder hier löschen? Bereits mit dem anderen Konto synchronisierte Einträge werden vom Gerät entfernt; sie bleiben in seiner Cloud. Abmelden lässt alles unverändert.",
+    "switchFooter": "Bis du dich entscheidest, werden diese Daten weder angezeigt noch synchronisiert.",
+    "guestBody": "Auf diesem Gerät liegen Daten eines abgemeldeten Kontos. Die nicht synchronisierten Einträge als Gastdaten behalten oder hier löschen? Bereits mit diesem Konto synchronisierte Einträge werden in jedem Fall vom Gerät entfernt; sie bleiben in seiner Cloud.",
+    "guestKeep": "Als Gast behalten",
+    "backToSignIn": "Zurück zur Anmeldung"
   },
   "onboarding": {
     "welcomeTitle": "Richten wir dein Lebens-OS ein",

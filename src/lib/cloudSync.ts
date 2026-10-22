@@ -685,6 +685,19 @@ export async function adoptLocalData(userId: string): Promise<number> {
   return count;
 }
 
+/** v1.19 (NCC#189): "Keep" on an account switch adopts only unsynced rows.
+ *  The previous account's synced rows are already in its own cloud, could
+ *  never reach the adopting account's (RLS), and an edit to one was dropped
+ *  silently, so they leave the device. Tables without a per-row syncStatus
+ *  (budgets, holdings, courses — adopted in full — and derived caches) keep
+ *  their rows. */
+export async function dropSyncedRows(): Promise<void> {
+  const tables = db.tables.filter((t) => t.name !== 'apiCache' && t.name !== 'syncQueue');
+  for (const t of tables) {
+    await t.filter((r: { syncStatus?: string }) => r.syncStatus === 'synced').delete();
+  }
+}
+
 // ============================================================================
 // Full sync: push then pull. Returns combined stats.
 // ============================================================================

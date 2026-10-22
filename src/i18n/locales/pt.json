@@ -82,8 +82,11 @@
     "working": "Processando…",
     "failed": "Não foi possível salvar sua escolha neste dispositivo. Tente de novo.",
     "footer": "Você não verá esta pergunta de novo nesta conta.",
-    "switchBody": "Este dispositivo ainda guarda dados de uma conta que saiu dele ou do uso como convidado. Vamos adicioná-los à sua conta e sincronizar com a nuvem, ou apagá-los deste dispositivo? Se você sair, eles ficam como estão.",
-    "switchFooter": "Esses dados não são exibidos nem sincronizados até você escolher."
+    "switchBody": "Este dispositivo guarda dados de outra conta ou de um convidado. Adicionar os itens não sincronizados à sua conta ou apagá-los aqui? Os itens já sincronizados com a outra conta saem deste dispositivo; continuam na nuvem dela. Sair deixa tudo como está.",
+    "switchFooter": "Esses dados não são exibidos nem sincronizados até você escolher.",
+    "guestBody": "Este dispositivo guarda dados de uma conta que saiu. Manter os itens não sincronizados como dados de convidado ou apagá-los aqui? Os itens já sincronizados com essa conta saem deste dispositivo de qualquer forma; continuam na nuvem dela.",
+    "guestKeep": "Manter como convidado",
+    "backToSignIn": "Voltar ao início de sessão"
   },
   "app": {
     "name": "Nexus Command Center",

@@ -14,6 +14,7 @@ import { db } from '../db/database';
 import { hasGuestEdits } from '../db/syncQueue';
 import { hasLocalData } from './cloudSync';
 import { getDismissedFromCloud, readDecided, recordDecision, writeDecided } from './adoptionFlag';
+import { GUEST_ID } from './adoptionGate';
 
 // v1.2.1 — the last account that answered (or had nothing to answer) on this
 // device. Its own per-account flags cannot tell B that A's data is here, so a
@@ -109,6 +110,29 @@ export async function evaluateAdoption(userId: string, onOwnData?: () => void): 
     return open();
   }
   return unanswered() && !readDecided(userId) ? 'ask' : 'clear';
+}
+
+export { GUEST_ID };
+
+/** v1.19 (limecore#66) — must a guest answer "Existing data found" first?
+ *  Only when an account's kept data is on the device. All local, no network. */
+export async function evaluateGuestAdoption(): Promise<'ask' | 'clear'> {
+  if (answered.has(GUEST_ID)) return 'clear';
+  const previousUserId = readLastUserId();
+  if (previousUserId !== null && previousUserId !== GUEST_ID && (await hasAnyLocalData())) {
+    return answered.has(GUEST_ID) ? 'clear' : 'ask';
+  }
+  // An earlier device with no last account keeps its guest data unprompted,
+  // as before; marked now so a later sign-in over it asks.
+  if (previousUserId === null && (await hasAnyLocalData())) writeLastUserId(GUEST_ID);
+  return 'clear';
+}
+
+/** v1.19 (limecore#66) — a guest's answer: for this launch and on the device.
+ *  No cloud flag (there is no account). */
+export function rememberGuest(): void {
+  answered.add(GUEST_ID);
+  writeLastUserId(GUEST_ID);
 }
 
 /** Records an answer (Keep or Discard) for `userId`: for this launch, on the

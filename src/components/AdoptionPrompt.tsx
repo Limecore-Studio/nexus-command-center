@@ -4,7 +4,8 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { useConfirm } from './ConfirmDialog';
 import { readLastUserId } from '../lib/adoptionChoice';
-import { discardLocalData, keepLocalData } from '../lib/adoptionAnswer';
+import { discardAsGuest, discardLocalData, keepAsGuest, keepLocalData } from '../lib/adoptionAnswer';
+import { setGuestMode } from '../lib/guestMode';
 import { useSessionStore } from '../store/useSessionStore';
 import { useSyncStore } from '../store/useSyncStore';
 
@@ -46,12 +47,18 @@ export default function AdoptionPrompt() {
     };
   }, []);
 
-  if (!user) return null;
+  // v1.19 (limecore#66): no account on screen means a guest over an
+  // account's kept data (App.tsx renders this only then).
+  const guest = !user;
 
   const onKeep = async () => {
     setBusy(true);
     setFailed(false);
     try {
+      if (!user) {
+        await keepAsGuest();
+        return;
+      }
       await keepLocalData(user.id);
       // The sync's `online` and 30 s triggers only fire when they see queued
       // rows, and offline nothing refreshes that count — so without this,
@@ -73,7 +80,7 @@ export default function AdoptionPrompt() {
     setBusy(true);
     setFailed(false);
     try {
-      await discardLocalData(user.id);
+      await (user ? discardLocalData(user.id) : discardAsGuest());
       // Reload so all stores re-init with the empty DB.
       window.location.reload();
     } catch (e) {
@@ -87,6 +94,12 @@ export default function AdoptionPrompt() {
     setBusy(true);
     setFailed(false);
     try {
+      if (!user) {
+        // A guest goes back to the Login screen; the data stays as it is.
+        await setGuestMode(false);
+        window.dispatchEvent(new CustomEvent('nexus:guest-mode-changed'));
+        return;
+      }
       await signOut();
       // Same as Settings' sign-out: every store starts again from the device.
       window.location.reload();
@@ -106,16 +119,18 @@ export default function AdoptionPrompt() {
     >
       <div className="card-elevated max-w-sm w-full">
         <h2 id="adoption-title" className="font-heading font-bold text-lg mb-2">{t('adoption.title')}</h2>
-        <p className="text-sm text-text-muted mb-4">{t(isSwitch ? 'adoption.switchBody' : 'adoption.body')}</p>
+        <p className="text-sm text-text-muted mb-4">
+          {t(guest ? 'adoption.guestBody' : isSwitch ? 'adoption.switchBody' : 'adoption.body')}
+        </p>
         <div className="space-y-2">
           <button onClick={onKeep} disabled={busy} className="btn w-full">
-            {busy ? t('adoption.working') : t('adoption.keep')}
+            {busy ? t('adoption.working') : t(guest ? 'adoption.guestKeep' : 'adoption.keep')}
           </button>
           <button onClick={onDiscard} disabled={busy} className="btn-ghost w-full text-danger border-danger/40">
             {t('adoption.discard')}
           </button>
           <button onClick={onSignOut} disabled={busy} className="btn-ghost w-full">
-            {t('settings.signOut')}
+            {t(guest ? 'adoption.backToSignIn' : 'settings.signOut')}
           </button>
         </div>
         {failed && (

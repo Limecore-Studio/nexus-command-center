@@ -82,8 +82,11 @@
     "working": "Memproses…",
     "failed": "Pilihan Anda tidak dapat disimpan di perangkat ini. Coba lagi.",
     "footer": "Anda tidak akan ditanya lagi di akun ini.",
-    "switchBody": "Perangkat ini masih menyimpan data dari akun yang keluar di sini, atau dari penggunaan sebagai tamu. Tambahkan ke akun Anda dan sinkronkan ke cloud, atau hapus dari perangkat ini? Jika Anda keluar, data tetap seperti semula.",
-    "switchFooter": "Data ini tidak ditampilkan atau disinkronkan sampai Anda memilih."
+    "switchBody": "Perangkat ini menyimpan data akun lain atau tamu. Tambahkan item yang belum disinkronkan ke akun Anda, atau hapus di sini? Item yang sudah disinkronkan ke akun lain dihapus dari perangkat ini; item tersebut tetap ada di cloud-nya. Keluar membiarkan semuanya apa adanya.",
+    "switchFooter": "Data ini tidak ditampilkan atau disinkronkan sampai Anda memilih.",
+    "guestBody": "Perangkat ini menyimpan data dari akun yang telah keluar. Simpan item yang belum disinkronkan sebagai data tamu, atau hapus di sini? Item yang sudah disinkronkan ke akun itu tetap dihapus dari perangkat ini; item tersebut tetap ada di cloud-nya.",
+    "guestKeep": "Simpan sebagai tamu",
+    "backToSignIn": "Kembali ke masuk"
   },
   "app": {
     "name": "Nexus Command Center",

@@ -18,8 +18,8 @@ import { refreshEntitlement } from './lib/entitlement';
 import { useStudiesStore } from './store/useStudiesStore';
 import { useBraindumpStore } from './store/useBraindumpStore';
 import { isGuestMode } from './lib/guestMode';
-import { setAdoptionStatus, useAdoptionGate } from './lib/adoptionGate';
-import { evaluateAdoption } from './lib/adoptionChoice';
+import { GUEST_ID, setAdoptionStatus, useAdoptionGate } from './lib/adoptionGate';
+import { evaluateAdoption, evaluateGuestAdoption } from './lib/adoptionChoice';
 import ReferralPrompt from './components/ReferralPrompt';
 import NotificationsExplainerModal from './components/NotificationsExplainerModal';
 import LockScreen from './screens/LockScreen';
@@ -160,6 +160,24 @@ export default function App() {
       cancelled = true;
     };
   }, [sessionUserId, adoptionRecheck]);
+
+  // v1.19 (limecore#66): a guest over an account's kept data answers the same
+  // question first (Keep as guest / Discard / back to sign-in). All local.
+  const guestActive = !session && guestMode === true;
+  const guestGateClear = adoptionGate.userId === GUEST_ID && adoptionGate.status === 'clear';
+  useEffect(() => {
+    if (!guestActive) return;
+    let cancelled = false;
+    if (useAdoptionGate.getState().userId !== GUEST_ID) setAdoptionStatus(GUEST_ID, 'checking');
+    void evaluateGuestAdoption()
+      .catch(() => 'ask' as const)
+      .then((status) => {
+        if (!cancelled && useAdoptionGate.getState().userId === GUEST_ID) setAdoptionStatus(GUEST_ID, status);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [guestActive]);
 
   useEffect(() => {
     (async () => {
@@ -481,8 +499,9 @@ export default function App() {
   // account sees the prompt alone, or the splash while that is being worked
   // out, until it has answered. No screen, widget or notification bridge is
   // mounted behind it.
-  if (session && !adoptionClear) {
-    if (adoptionGate.userId !== session.user.id || adoptionGate.status !== 'ask') return splash;
+  if ((session && !adoptionClear) || (guestActive && !guestGateClear)) {
+    const gateId = session ? session.user.id : GUEST_ID;
+    if (adoptionGate.userId !== gateId || adoptionGate.status !== 'ask') return splash;
     if (promptFailed) {
       return screen(
         <>

@@ -151,8 +151,11 @@
     "working": "Käsitellään…",
     "failed": "Valintaasi ei voitu tallentaa tälle laitteelle. Yritä uudelleen.",
     "footer": "Tällä tilillä tätä ei kysytä uudelleen.",
-    "switchBody": "Tällä laitteella on yhä tietoja tililtä, joka kirjautui täällä ulos, tai vieraskäytöstä. Liitetäänkö ne tiliisi ja synkronoidaan pilveen, vai poistetaanko ne tältä laitteelta? Jos kirjaudut ulos, tiedot jäävät ennalleen.",
-    "switchFooter": "Tietoja ei näytetä eikä synkronoida ennen kuin teet valinnan."
+    "switchBody": "Tällä laitteella on toisen tilin tai vieraan tietoja. Lisätäänkö synkronoimattomat kohteet tilillesi vai poistetaanko ne täältä? Toiselle tilille jo synkronoidut kohteet poistuvat laitteelta; ne säilyvät sen pilvessä. Uloskirjautuminen jättää kaiken ennalleen.",
+    "switchFooter": "Tietoja ei näytetä eikä synkronoida ennen kuin teet valinnan.",
+    "guestBody": "Tällä laitteella on uloskirjautuneen tilin säilytettyjä tietoja. Pidetäänkö synkronoimattomat kohteet vierastietoina vai poistetaanko ne täältä? Tilille jo synkronoidut kohteet poistuvat laitteelta joka tapauksessa; ne säilyvät tilin pilvessä.",
+    "guestKeep": "Pidä vieraana",
+    "backToSignIn": "Takaisin kirjautumiseen"
   },
   "onboarding": {
     "welcomeTitle": "Otetaan elämäsi käyttöjärjestelmä käyttöön",

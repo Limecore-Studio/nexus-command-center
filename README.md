@@ -1,6 +1,6 @@
 # Limecore Nexus OS
 
-A three-app personal life-OS suite by [Limecore](https://github.com/Limekana). Independent
+A three-app personal life-OS suite by [Limecore](https://github.com/Limecore-Studio). Independent
 apps that share one Supabase backend, so data flows between them without leaving
 your account.
 
@@ -16,8 +16,8 @@ everything and surfaces what matters.
 | App | Role | Status | Repo |
 |---|---|---|---|
 | **Nexus Command Center** | Cross-domain dashboard. Aggregates the other apps, runs Weekly + Year Reviews, owns Goals, hosts Finance and Tasks. | Active | _This repo_ |
-| **StudyDesk** | Focused study companion. Course / grade tracking, study-time timer, reading library. | Active | [Limekana/StudyDesk](https://github.com/Limekana/StudyDesk) |
-| **Limelog** | Workout & fitness logger. Sessions, sets, reps, RPE; live-pushes into the shared backend. | Active | [Limekana/limelog](https://github.com/Limekana/limelog) |
+| **StudyDesk** | Focused study companion. Course / grade tracking, study-time timer, reading library. | Active | [Limecore-Studio/StudyDesk](https://github.com/Limecore-Studio/StudyDesk) |
+| **Limelog** | Workout & fitness logger. Sessions, sets, reps, RPE; live-pushes into the shared backend. | Active | [Limecore-Studio/limelog](https://github.com/Limecore-Studio/limelog) |
 
 ---
 
@@ -192,7 +192,7 @@ scripts/         Build / tooling scripts (icons, secret detection)
 
 Released and in active development. All three apps ship together on a shared
 suite version, so a milestone lands across the suite rather than app by app.
-See [Releases](https://github.com/Limekana/nexus-command-center/releases) for
+See [Releases](https://github.com/Limecore-Studio/nexus-command-center/releases) for
 the current version and changelog — Android APKs and the Electron desktop
 build are attached there.
 
@@ -213,5 +213,5 @@ before reusing.
 
 ---
 
-_Part of the Limecore Nexus OS suite. See [Limelog](https://github.com/Limekana/limelog)
-and [StudyDesk](https://github.com/Limekana/StudyDesk) for the companion apps._
+_Part of the Limecore Nexus OS suite. See [Limelog](https://github.com/Limecore-Studio/limelog)
+and [StudyDesk](https://github.com/Limecore-Studio/StudyDesk) for the companion apps._

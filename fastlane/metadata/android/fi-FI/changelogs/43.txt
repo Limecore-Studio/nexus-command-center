@@ -1,0 +1,3 @@
+Muistutuksia, joihin voi luottaa.
+
+Tehtävämuistutukset tulevat tehtävän määräaikaan. Päivittäiset ja viikonpäiväkohtaiset tapamuistutukset toistuvat ja palaavat uudelleenkäynnistyksen jälkeen avaamatta NCC:tä, ja jokaisella tavalla on oma muistutuksensa. Ilmoituksen "Valmis" ei enää katoa. Keskiarvo käyttää StudyDeskin arvosana-asteikkoa. Desimaalipilkku toimii summissa, eivätkä salkkusiirrot enää muuta tilin ja varallisuuden historiaa.

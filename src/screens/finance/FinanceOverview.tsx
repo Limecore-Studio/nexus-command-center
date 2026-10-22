@@ -12,7 +12,7 @@ import MarketsSegment from '../../components/MarketsSegment';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { convertSync, normalizeCurrency } from '../../api/fxRates';
-import { formatCurrency, formatShortDate, localDateKey, formatLocale } from '../../utils/formatters';
+import { formatCurrency, formatShortDate, localDateKey, formatLocale, parseDateLocal } from '../../utils/formatters';
 import { computeAccountBalance } from '../../lib/accountBalance';
 import CashFlowDiagram from '../../components/CashFlowDiagram';
 import BudgetTrendTable from '../../components/BudgetTrendTable';
@@ -183,7 +183,7 @@ export default function FinanceOverview() {
         categories: budgetCategories,
         accounts: manualAssets,
         months: budgetMonths,
-        today: new Date().toISOString().slice(0, 10),
+        today: localDateKey(new Date()),
         labels: flowLabels,
       }),
     [transactions, budgetCategories, manualAssets, budgetMonths, flowLabels],
@@ -209,7 +209,7 @@ export default function FinanceOverview() {
     const now = new Date();
     let inc = 0, exp = 0;
     for (const t of transactions) {
-      const d = new Date(t.date);
+      const d = parseDateLocal(t.date);
       if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) continue;
       if (t.type === 'income') inc += t.amount;
       else if (t.type === 'expense') exp += t.amount;
@@ -225,7 +225,7 @@ export default function FinanceOverview() {
     const map = new Map<string, number>();
     for (const t of transactions) {
       if (t.type !== 'expense') continue;
-      const key = localDateKey(new Date(t.date));
+      const key = localDateKey(parseDateLocal(t.date));
       // Transactions are already in user's base currency in this store.
       map.set(key, (map.get(key) ?? 0) + t.amount);
     }
@@ -237,7 +237,7 @@ export default function FinanceOverview() {
     const now = new Date();
     for (const t of transactions) {
       if (t.type !== 'expense' || !t.categoryId) continue;
-      const d = new Date(t.date);
+      const d = parseDateLocal(t.date);
       if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) continue;
       map.set(t.categoryId, (map.get(t.categoryId) ?? 0) + t.amount);
     }

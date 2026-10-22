@@ -14,6 +14,8 @@ import { Pill } from '../../components/ui/Pill';
 import { useHabitsStore } from '../../store/useHabitsStore';
 import type { HabitType, HabitFrequencyKind } from '../../types/habits';
 import { CATEGORICAL } from '../../lib/themeColors';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 const TYPES: { key: HabitType; labelKey: string; hintKey: string }[] = [
   { key: 'binary', labelKey: 'addhabit.binary', hintKey: 'addhabit.binaryHint' },
@@ -86,7 +88,7 @@ export default function AddHabit() {
     if (type === 'quantified' && !targetAmount) return;
     if (frequencyKind === 'specific_days' && daysOfWeek.length === 0) return;
     setSaving(true);
-    const target = type === 'quantified' ? parseFloat(targetAmount) : undefined;
+    const target = type === 'quantified' ? numberInput(targetAmount) : undefined;
     const payload = {
       title: title.trim(),
       type,

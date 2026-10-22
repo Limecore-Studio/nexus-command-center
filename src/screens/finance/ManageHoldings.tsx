@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { formatLocale } from '../../utils/formatters';
+import { formatLocale, localDateKey } from '../../utils/formatters';
 import { currencyOptions } from '../../lib/currencies';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,8 @@ import { validateTicker } from '../../lib/tickerValidation';
 import { isHoldingClosed } from '../../lib/positionStatus';
 import type { PortfolioHolding, AssetType } from '../../types/finance';
 import Glyph from '../../components/Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 
 
@@ -44,7 +46,7 @@ export default function ManageHoldings() {
   const [firstQty, setFirstQty] = useState('');
   const [firstPrice, setFirstPrice] = useState('');
   const [firstCurrency, setFirstCurrency] = useState('EUR');
-  const [firstDate, setFirstDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [firstDate, setFirstDate] = useState(() => localDateKey(new Date()));
 
   const lotsByHolding = (id: string) => portfolioLots.filter((l) => l.holdingId === id);
 
@@ -65,7 +67,7 @@ export default function ManageHoldings() {
     setFirstQty('');
     setFirstPrice('');
     setFirstCurrency('EUR');
-    setFirstDate(new Date().toISOString().slice(0, 10));
+    setFirstDate(localDateKey(new Date()));
   };
 
   const startEdit = (h: PortfolioHolding) => {
@@ -109,8 +111,8 @@ export default function ManageHoldings() {
       // Add flow — must have at least quantity + price for the first lot
       // (otherwise creating an empty holding with no purchase history is
       // worse than telling the user up-front).
-      const qty = parseFloat(firstQty);
-      const price = parseFloat(firstPrice);
+      const qty = numberInput(firstQty);
+      const price = numberInput(firstPrice);
       if (!qty || qty <= 0 || isNaN(price) || price < 0) return;
       const holdingId = await addHolding({
         ticker: normalisedTicker,

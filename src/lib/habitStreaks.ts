@@ -105,7 +105,13 @@ export function computeStreak(
   today: Date = new Date(),
 ): StreakResult {
   const byDate = indexByDate(completions);
-  const createdAt = parseDateKey(habit.createdAt.slice(0, 10));
+  // v1.18.1 (NCC#145): the LOCAL day the habit was created. Slicing the ISO
+  // timestamp gave the UTC day: west of UTC an evening habit started
+  // "tomorrow" (current streak 0 after doing it), east of UTC it gained a
+  // phantom missed day that used up the grace day.
+  const createdAt = parseDateKey(
+    /^\d{4}-\d{2}-\d{2}$/.test(habit.createdAt) ? habit.createdAt : dateKey(new Date(habit.createdAt)),
+  );
   const todayKey = dateKey(today);
 
   // ─── Current streak ────────────────────────────────────────────────────

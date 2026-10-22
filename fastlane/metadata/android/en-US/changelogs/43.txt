@@ -1,0 +1,3 @@
+Reminders you can rely on.
+
+Task reminders arrive at the task's due time. Daily and weekday habit reminders repeat and come back after a reboot without opening NCC, and each habit keeps its own reminder. "Mark done" from a notification is no longer lost or replayed. The GPA uses StudyDesk's grade scale. Decimal commas work in amounts, and portfolio moves no longer rewrite your account and net-worth history.

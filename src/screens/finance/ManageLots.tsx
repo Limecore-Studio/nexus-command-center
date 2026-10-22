@@ -6,7 +6,7 @@
 
 import { useMemo, useState } from 'react';
 import { currencyOptions } from '../../lib/currencies';
-import { formatLocale } from '../../utils/formatters';
+import { formatLocale, localDateKey } from '../../utils/formatters';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
@@ -16,6 +16,8 @@ import { computeSale, totalRemainingShares, saleCostBasisInCurrency } from '../.
 import { convertSync } from '../../api/fxRates';
 import type { PortfolioLot } from '../../types/finance';
 import Glyph from '../../components/Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 
 
@@ -74,7 +76,7 @@ export default function ManageLots() {
   const [qty, setQty] = useState('');
   const [price, setPrice] = useState('');
   const [currency, setCurrency] = useState('EUR');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localDateKey(new Date()));
   const [notes, setNotes] = useState('');
 
   // v1.3.1 (BUG-23) — Record Sale form state.
@@ -82,7 +84,7 @@ export default function ManageLots() {
   const [sellShares, setSellShares] = useState('');
   const [sellPrice, setSellPrice] = useState('');
   const [sellCurrency, setSellCurrency] = useState('EUR');
-  const [sellDate, setSellDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [sellDate, setSellDate] = useState(() => localDateKey(new Date()));
 
   if (!holding) {
     return (
@@ -103,7 +105,7 @@ export default function ManageLots() {
     setPrice('');
     // Default currency = last-used on this holding, falling back to EUR.
     setCurrency(lots[0]?.costCurrency ?? 'EUR');
-    setDate(new Date().toISOString().slice(0, 10));
+    setDate(localDateKey(new Date()));
     setNotes('');
   };
 
@@ -114,7 +116,7 @@ export default function ManageLots() {
     setQty(String(lot.quantity));
     setPrice(String(lot.costPerUnit));
     setCurrency(lot.costCurrency);
-    setDate(lot.purchaseDate ?? new Date().toISOString().slice(0, 10));
+    setDate(lot.purchaseDate ?? localDateKey(new Date()));
     setNotes(lot.notes ?? '');
   };
 
@@ -125,8 +127,8 @@ export default function ManageLots() {
   };
 
   const save = async () => {
-    const q = parseFloat(qty);
-    const p = parseFloat(price);
+    const q = numberInput(qty);
+    const p = numberInput(price);
     if (!q || q <= 0 || isNaN(p) || p < 0) return;
     if (editingId) {
       await updateLot(editingId, {
@@ -162,12 +164,12 @@ export default function ManageLots() {
     setSellShares('');
     setSellPrice('');
     setSellCurrency(lots[0]?.costCurrency ?? 'EUR');
-    setSellDate(new Date().toISOString().slice(0, 10));
+    setSellDate(localDateKey(new Date()));
   };
 
   const submitSale = async () => {
-    const shares = parseFloat(sellShares);
-    const price = parseFloat(sellPrice);
+    const shares = numberInput(sellShares);
+    const price = numberInput(sellPrice);
     if (!shares || shares <= 0 || isNaN(price) || price < 0) return;
     try {
       await addStockSale({
@@ -191,13 +193,13 @@ export default function ManageLots() {
   // v1.3.1 (BUG-23) — live FIFO preview for the sale form. Plain compute (not
   // a hook) so it sits naturally after the early return; computeSale is cheap.
   const remainingShares = totalRemainingShares(lots);
-  const sellSharesNum = parseFloat(sellShares);
+  const sellSharesNum = numberInput(sellShares);
   let salePreview: { costBasisPerShare: number; realizedGainLoss: number } | null = null;
   let saleError: string | null = null;
   if (selling && sellSharesNum > 0) {
     try {
       const c = computeSale(holding.ticker, sellSharesNum, lots);
-      const priceNum = parseFloat(sellPrice);
+      const priceNum = numberInput(sellPrice);
       // Cost basis converted into the sale currency so the realized figure
       // isn't a cross-currency subtraction (matches the store's commit math).
       const costTotal = saleCostBasisInCurrency(

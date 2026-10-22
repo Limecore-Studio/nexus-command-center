@@ -12,6 +12,7 @@
 // base-currency code is carried through only for display labelling.
 
 import type { Transaction } from '../types/finance';
+import { parseDateLocal } from '@/utils/formatters';
 
 const DAY_MS = 86_400_000;
 
@@ -78,7 +79,7 @@ export function detectRecurring(
 
   for (const t of transactions) {
     if (t.type === 'transfer') continue;
-    const dateMs = new Date(t.date).getTime();
+    const dateMs = parseDateLocal(t.date).getTime();
     if (!isFinite(dateMs) || dateMs < windowStart || dateMs > now) continue;
     if (!(t.amount > 0)) continue;
 
@@ -142,8 +143,9 @@ export function detectRecurring(
 
 /**
  * Project recurring items forward over the forecast window. Each item
- * contributes one occurrence per intervalDays starting at `nextExpected`,
- * up to and including `now + forecastDays`. Totals are in base currency.
+ * contributes one occurrence per intervalDays from its first expected date
+ * after `now`, up to and including `now + forecastDays`; an item more than
+ * one interval overdue is treated as ended. Totals are in base currency.
  */
 export function projectCashFlow(
   recurring: RecurringItem[],
@@ -154,10 +156,20 @@ export function projectCashFlow(
   const windowEnd = now + forecastDays * DAY_MS;
   let projectedIncome = 0;
   let projectedExpenses = 0;
+  const active: RecurringItem[] = [];
 
   for (const r of recurring) {
-    let occ = new Date(r.nextExpected).getTime();
+    let occ = parseDateLocal(r.nextExpected).getTime();
     if (!isFinite(occ)) continue;
+    // v1.18.1 (NCC#150): an item more than a whole interval overdue has most
+    // likely ended (a cancelled subscription, a moved-out rent): it is no
+    // longer projected or listed. One that is only late is projected from
+    // its next occurrence AFTER now; projecting the missed one as well
+    // counted rent paid on the 8th twice in a 30-day window seen on the 12th.
+    if (occ < now - r.intervalDays * DAY_MS) continue;
+    while (occ < now) occ += r.intervalDays * DAY_MS;
+    // The list shows the date the projection actually counts from.
+    active.push({ ...r, nextExpected: new Date(occ).toISOString() });
     let count = 0;
     // Cap the loop defensively — forecastDays/intervalDays is tiny, but never
     // trust derived dates to terminate a while-loop unguarded.
@@ -175,7 +187,7 @@ export function projectCashFlow(
     projectedExpenses,
     netCashFlow: projectedIncome - projectedExpenses,
     currency: baseCurrency,
-    recurringItems: recurring,
+    recurringItems: active,
     forecastDays,
     generatedAt: new Date(now).toISOString(),
   };

@@ -1,0 +1,3 @@
+Lembretes confiáveis.
+
+Lembretes de tarefas chegam no horário de vencimento. Lembretes de hábitos diários ou por dia da semana se repetem e voltam após reiniciar sem abrir o NCC, e cada hábito tem o seu. "Concluir" pela notificação não se perde mais. A média usa a escala do StudyDesk. A vírgula decimal funciona nos valores, e movimentos da carteira não reescrevem mais o histórico da conta e do patrimônio.

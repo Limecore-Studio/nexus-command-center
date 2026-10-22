@@ -13,6 +13,7 @@ import { useGoalsStore } from './useGoalsStore';
 import { useBodyMetricsStore } from './useBodyMetricsStore';
 import { useWorkQualityStore } from './useWorkQualityStore';
 import { useBraindumpStore } from './useBraindumpStore';
+import { useHabitsStore } from './useHabitsStore';
 
 // Reload every cloud-synced data store from Dexie. Called after each pull so
 // that rows newly merged into Dexie (from other devices, Realtime triggers,
@@ -42,6 +43,12 @@ async function reloadDataStores(): Promise<void> {
       // v1.12 Item 10 - Braindump. Refresh after a pull so an idea captured on
       // another device appears without a navigation, same as the two above.
       useBraindumpStore.getState().load(),
+      // v1.18.1 (NCC#138): habits. pullAll has re-hydrated them into Dexie on
+      // every sync since v1.3, but the store was only reloaded at launch, so a
+      // habit archived or cleared of its reminder on another device kept its
+      // daily alarm until the next cold start. load() cancels that alarm and
+      // re-arms the rest from the synced completions.
+      useHabitsStore.getState().load(),
     ]);
   } catch (e) {
     // Reload failures shouldn't surface as sync errors — the data IS in Dexie,

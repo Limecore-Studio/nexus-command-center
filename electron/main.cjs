@@ -377,7 +377,7 @@ ipcMain.handle('auth:begin', (_event, url) => {
 // v1.15 (Item 12) — find, download and install updates (electron-updater),
 // with a notice-only fallback. See updater.cjs.
 setupUpdates({
-  repo: 'Limekana/nexus-command-center',
+  repo: 'Limecore-Studio/nexus-command-center',
   installerPrefix: 'NexusCommandCenter-Desktop-Setup-',
   log,
   getWindow: () => mainWindow,

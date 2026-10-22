@@ -900,7 +900,9 @@
       "fromName": "{{name}} से",
       "fromOther": "किसी दूसरे खाते से",
       "toName": "{{name}} को",
-      "toOther": "किसी दूसरे खाते को"
+      "toOther": "किसी दूसरे खाते को",
+      "toPortfolio": "पोर्टफ़ोलियो में भेजा गया",
+      "fromPortfolio": "पोर्टफ़ोलियो से वापस लाया गया"
     },
     "assetClass": {
       "stock": "शेयर",

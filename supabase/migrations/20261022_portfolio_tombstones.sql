@@ -19,8 +19,10 @@
 -- LWW trigger: they are append-only ledgers whose upserts never send
 -- `deleted_at`, so nothing un-deletes them either.
 --
--- NOT YET APPLIED. Owner applies (P1 sign-off), before NCC v1.19 ships:
--- until then a v1.19 delete on these tables falls back to the hard delete.
+-- Tested against Postgres 17: supabase/tests/portfolio_tombstones.test.sql.
+-- APPLIED to production 2026-10-22 (owner-approved in session) as
+-- `v119_portfolio_tombstones`, version 20261022111346. Before this, a v1.19
+-- delete on these tables fell back to the hard delete.
 
 -- ── Guard: only extend the purge function we have actually read ─────────────
 -- Live body read 2026-10-22 (20260926_client_errors.sql plus the later

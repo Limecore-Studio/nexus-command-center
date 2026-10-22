@@ -14,11 +14,11 @@ import type { Transaction, BudgetCategory, ManualAsset, PortfolioHolding } from 
 import type { Course, StudySession } from '../types/studies';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
-import { localDateKey } from '../utils/formatters';
+import { localDateKey, parseDateLocal } from '../utils/formatters';
 
 function inRange(iso: string | undefined, start: Date, end: Date): boolean {
   if (!iso) return false;
-  const t = new Date(iso).getTime();
+  const t = parseDateLocal(iso).getTime();
   return t >= start.getTime() && t <= end.getTime();
 }
 
@@ -110,7 +110,7 @@ export function buildYearReview(args: {
       if (t.categoryId) {
         categorySpend.set(t.categoryId, (categorySpend.get(t.categoryId) ?? 0) + t.amount);
       }
-      const key = localDateKey(new Date(t.date));
+      const key = localDateKey(parseDateLocal(t.date));
       spendByDay.set(key, (spendByDay.get(key) ?? 0) + t.amount);
     } else if (t.type === 'income') {
       totalIncome += t.amount;
@@ -143,7 +143,7 @@ export function buildYearReview(args: {
   for (const w of args.workouts) {
     if (!inRange(w.date, rangeStart, rangeEnd)) continue;
     workoutCount++;
-    const key = localDateKey(new Date(w.date));
+    const key = localDateKey(parseDateLocal(w.date));
     workoutsByDay.set(key, (workoutsByDay.get(key) ?? 0) + 1);
     for (const set of w.sets) {
       totalSets++;

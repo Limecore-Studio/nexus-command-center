@@ -28,6 +28,7 @@ import type { Transaction, BudgetCategory } from '../types/finance';
 import type { Habit, HabitCompletion } from '../types/habits';
 import { isEligibleOn, dateKey } from './habitStreaks';
 import { type LifeProfile, type DomainKey, weeklyTargetFor } from './lifeProfile';
+import { parseDateLocal } from '@/utils/formatters';
 
 // ─── Week bucketing ─────────────────────────────────────────────────────
 
@@ -109,7 +110,7 @@ function bucketFitnessByWeek(
   weeks: Date[],
 ): WeeklyFitness[] {
   return weeks.map((w) => {
-    const inThisWeek = sessions.filter((s) => inWeek(new Date(s.date), w));
+    const inThisWeek = sessions.filter((s) => inWeek(parseDateLocal(s.date), w));
     const trainingDays = new Set(inThisWeek.map((s) => s.date.slice(0, 10)));
     return {
       weekStart: dateKey(w),
@@ -177,7 +178,7 @@ function bucketFinanceByWeek(
   const expenses = txns.filter((t) => t.type === 'expense');
   return weeks.map((w) => {
     const expenseTotal = expenses
-      .filter((t) => inWeek(new Date(t.date), w))
+      .filter((t) => inWeek(parseDateLocal(t.date), w))
       .reduce((sum, t) => sum + t.amount, 0);
 
     // The month the scored week ENDS in, so a week straddling a month
@@ -190,7 +191,7 @@ function bucketFinanceByWeek(
 
     const monthToDate = expenses
       .filter((t) => {
-        const d = new Date(t.date);
+        const d = parseDateLocal(t.date);
         return d >= monthStart && d <= weekEnd;
       })
       .reduce((sum, t) => sum + t.amount, 0);

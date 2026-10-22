@@ -32,6 +32,9 @@ import {
   type GoalType,
 } from '../types/goals';
 import Glyph from '../components/Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
+import { localDateKey } from '@/utils/formatters';
 
 export default function Goals() {
   const { t } = useTranslation();
@@ -313,7 +316,7 @@ function GoalForm({
   );
   const [targetDate, setTargetDate] = useState<string>(initial?.targetDate ?? '');
   const [startDate, setStartDate] = useState<string>(
-    initial?.startDate ?? new Date().toISOString().slice(0, 10),
+    initial?.startDate ?? localDateKey(new Date()),
   );
   const [exerciseName, setExerciseName] = useState<string>(initial?.exerciseName ?? '');
 
@@ -331,7 +334,7 @@ function GoalForm({
   const isCumulative = isCumulativeGoal(goalType);
 
   const save = async () => {
-    const targetNum = parseFloat(targetValue);
+    const targetNum = numberInput(targetValue);
     if (!title.trim() || !Number.isFinite(targetNum) || targetNum <= 0) return;
     if (needsExercise && !exerciseName.trim()) return;
     await onSave({

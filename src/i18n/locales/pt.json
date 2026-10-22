@@ -903,7 +903,9 @@
       "fromName": "de {{name}}",
       "fromOther": "de outra conta",
       "toName": "para {{name}}",
-      "toOther": "para outra conta"
+      "toOther": "para outra conta",
+      "toPortfolio": "Movido para a carteira",
+      "fromPortfolio": "Movido da carteira"
     },
     "assetClass": {
       "stock": "Ação",

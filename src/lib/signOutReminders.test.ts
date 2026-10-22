@@ -33,7 +33,8 @@ vi.mock('./nexusNotificationsPlugin', () => ({
 vi.mock('./supabase', () => ({ supabase: {} }));
 vi.mock('./entitlement', () => ({ clearEntitlement: () => {} }));
 vi.mock('../store/useSettingsStore', () => ({
-  useSettingsStore: { getState: () => ({ notifMasterEnabled: true, notifTasksEnabled: true }) },
+  // v1.18.2 merge: `loaded` too, for scheduleNotification's master-switch gate (NCC#151).
+  useSettingsStore: { getState: () => ({ loaded: true, notifMasterEnabled: true, notifTasksEnabled: true }) },
 }));
 
 const { db, clearAllLocalData } = await import('../db/database');

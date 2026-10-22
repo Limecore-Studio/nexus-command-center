@@ -16,6 +16,8 @@ import {
   revokeBudgetCategoryShare,
 } from '../../lib/sharing';
 import Glyph, { CATEGORY_ICON_KEYS } from '../../components/Glyph';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 // The picker's whole set, defined once in components/Glyph.tsx alongside the
 // icon each identifier renders as. Twelve presets plus a free-text field became
@@ -73,7 +75,7 @@ export default function ManageBudgets() {
   };
 
   const save = async () => {
-    const n = parseFloat(limit);
+    const n = numberInput(limit);
     // Reject <= 0: a negative limit makes the ProgressBar force 0% (max not > 0),
     // silently hiding overspending instead of surfacing it.
     if (!name.trim() || !n || n <= 0) return;

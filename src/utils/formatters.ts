@@ -40,6 +40,19 @@ export function formatCurrency(amount: number, currency = 'EUR'): string {
   }).format(amount);
 }
 
+/** v1.18.1 (NCC#145) — a stored date as a Date in LOCAL time. A date-only
+ *  "YYYY-MM-DD" is local midnight; `new Date("YYYY-MM-DD")` is UTC midnight,
+ *  which west of UTC is the previous evening, so this week's Monday expense
+ *  counted as last week and "days left" came out one short. A full timestamp
+ *  is parsed as before. A date that does not exist ("2026-02-31") is an
+ *  Invalid Date, as `new Date` makes it, rather than rolling into March. */
+export function parseDateLocal(s: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  if (!m) return new Date(s);
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.getMonth() === Number(m[2]) - 1 ? d : new Date(NaN);
+}
+
 /**
  * Local-time YYYY-MM-DD bucket key for a Date. Used as the grouping key
  * across modules so a transaction logged at 23:59 in Europe/Helsinki goes
@@ -51,6 +64,17 @@ export function localDateKey(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+/** v1.18.1 (NCC#176) — the LOCAL day (`YYYY-MM-DD`) of a stored timestamp
+ *  (or date). `iso.slice(0, 10)` is the UTC day, which put a move near
+ *  midnight on a different day, and so maybe a different month, in the
+ *  net-worth trend than in the account statement. Empty for an empty value;
+ *  the UTC prefix for one that does not parse. */
+export function localDayOf(iso: string): string {
+  if (!iso) return '';
+  const d = parseDateLocal(iso);
+  return Number.isNaN(d.getTime()) ? iso.slice(0, 10) : localDateKey(d);
 }
 
 /** Short date — "26 Jul", "26 heinäk.", "२६ जुल".
@@ -68,7 +92,7 @@ export function localDateKey(d: Date): string {
  *  reintroduced the whole defect. */
 export function formatShortDate(iso: string): string {
   return new Intl.DateTimeFormat(formatLocale(), { day: '2-digit', month: 'short' })
-    .format(new Date(iso));
+    .format(parseDateLocal(iso));
 }
 
 export function formatCacheAge(minutes: number): string {
@@ -80,13 +104,13 @@ export function formatCacheAge(minutes: number): string {
 }
 
 export function isToday(iso: string): boolean {
-  const d = new Date(iso);
+  const d = parseDateLocal(iso);
   const t = new Date();
   return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
 }
 
 export function isOverdue(iso: string): boolean {
-  return new Date(iso) < new Date() && !isToday(iso);
+  return parseDateLocal(iso) < new Date() && !isToday(iso);
 }
 
 /**

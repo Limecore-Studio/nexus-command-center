@@ -10,19 +10,20 @@ import { getCryptoPrices, CryptoResult } from '../api/coingecko';
 import { ensureFxRates, convertSync } from '../api/fxRates';
 import { clearProviderErrors, lastProviderErrors, getYahooSparkline, type ProviderError } from '../api/yahoo';
 import { getCompanyProfiles, type CompanyProfile } from '../api/companyProfile';
-import {
-  getStockMetric,
-  getRecommendations,
-  getCompanyNews,
-  getEarningsCalendar,
-  getDividendsAll,
-  type StockMetric,
-  type Recommendation,
-  type NewsItem,
-  type EarningsEvent,
-  type DividendEvent,
+import type {
+  StockMetric,
+  Recommendation,
+  NewsItem,
+  EarningsEvent,
+  DividendEvent,
 } from '../api/stockDetail';
-import { getMarketNews } from '../api/marketNews';
+// v1.18.2 — the portfolio detail providers (earnings, dividends, company and
+// market news, metrics, recommendations) load on first use instead of with the
+// app. They only ever run after a refresh tap, the cold-start refresh or a
+// holding's detail sheet, never on the first paint, and with yahooFundamentals
+// they were ~15 KiB of the startup chunk.
+const stockDetail = () => import('../api/stockDetail');
+const marketNewsApi = () => import('../api/marketNews');
 import { computeDividendCredits, guestDividendKey } from '../lib/dividendRealize';
 import { useSettingsStore } from './useSettingsStore';
 import { useSessionStore } from './useSessionStore';
@@ -566,7 +567,12 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const newOpening = base - amtInAccount;
     await get().updateManualAsset(accountId, { startingBalance: newOpening, value: newOpening });
     // Credit portfolio cash (+) — stored in the amount's currency.
-    await addCashEntry(set, get, { type: 'deposit', amount, currency, accountId, note });
+    // v1.18.1 (NCC#176) — also record what the account was debited, so the
+    // history views add back that, not a re-conversion at a later rate.
+    await addCashEntry(set, get, {
+      type: 'deposit', amount, currency, accountId, note,
+      accountAmount: amtInAccount, accountCurrency: account.currency,
+    });
   },
 
   async withdrawFromPortfolio({ amount, currency, accountId, note }) {
@@ -584,7 +590,11 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     const newOpening = base + amtInAccount;
     await get().updateManualAsset(accountId, { startingBalance: newOpening, value: newOpening });
     // Debit portfolio cash (−).
-    await addCashEntry(set, get, { type: 'withdrawal', amount: -amount, currency, accountId, note });
+    // v1.18.1 (NCC#176) — record what the account was credited (see deposit).
+    await addCashEntry(set, get, {
+      type: 'withdrawal', amount: -amount, currency, accountId, note,
+      accountAmount: -amtInAccount, accountCurrency: account.currency,
+    });
   },
 
   async addManualAsset(a) {
@@ -799,6 +809,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // refresh — they're effectively a "once a day" workload that piggybacks
     // on the user's existing refresh tap. Also pull market news here so the
     // Finance Overview's news card stays fresh.
+    const [{ getEarningsCalendar, getDividendsAll }, { getMarketNews }] = await Promise.all([stockDetail(), marketNewsApi()]);
     const [earnings, dividendsMap, marketNews] = await Promise.all([
       equityTickers.length ? getEarningsCalendar(equityTickers) : Promise.resolve([]),
       equityTickers.length ? getDividendsAll(equityTickers) : Promise.resolve(new Map()),
@@ -916,6 +927,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // Fan out per-ticker fetches in parallel. getCompanyNews is cache-gated
     // (6h TTL) and rate-limit-gated at the api/cache layer, so this is safe
     // to call on every refresh — most tickers hit cache.
+    const { getCompanyNews } = await stockDetail();
     const results = await Promise.all(
       tickers.map(async (t) => ({ ticker: t, news: await getCompanyNews(t) })),
     );
@@ -932,6 +944,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     if (get().detailLoading[key]) return; // already in-flight
     set({ detailLoading: { ...get().detailLoading, [key]: true } });
     try {
+      const { getStockMetric, getRecommendations, getCompanyNews } = await stockDetail();
       const [metric, recommendations, news] = await Promise.all([
         getStockMetric(ticker),
         getRecommendations(ticker),
@@ -1021,6 +1034,8 @@ async function addCashEntry(
     accountId?: string;
     relatedId?: string;
     note?: string;
+    accountAmount?: number;
+    accountCurrency?: string;
     /** Explicit deterministic PK (dividend auto-realize). Defaults to a fresh
      *  random UUID for the buy/sell/deposit/withdrawal paths. */
     id?: string;
@@ -1034,6 +1049,10 @@ async function addCashEntry(
     accountId: input.accountId,
     relatedId: input.relatedId,
     note: input.note,
+    // v1.18.1 (NCC#176) — local-only, see PortfolioCashEntry.accountAmount.
+    ...(input.accountAmount != null && input.accountCurrency
+      ? { accountAmount: input.accountAmount, accountCurrency: input.accountCurrency }
+      : {}),
     createdAt: new Date().toISOString(),
     syncStatus: 'pending',
   };

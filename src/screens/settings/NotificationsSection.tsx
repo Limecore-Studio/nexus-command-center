@@ -63,7 +63,8 @@ export default function NotificationsSection() {
           the modal didn't show. Flipping OFF cancels every pending
           notification across all categories. Sub-toggles retain their
           individual state so the user can toggle the master back on
-          without losing prior preferences. */}
+          without losing prior preferences. Habit reminders are re-armed
+          when it goes back on (rearmHabitsWhenNotificationsOn, v1.18.1). */}
       <Toggle
         label={t('settings.notifMaster')}
         sub={

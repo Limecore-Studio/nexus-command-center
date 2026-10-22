@@ -28,30 +28,9 @@ import {
   type SignalResult,
 } from './insightSignals';
 
-export type InsightTier =
-  | 'strong_buy'
-  | 'buy'
-  | 'hold'
-  | 'sell'
-  | 'strong_sell';
-
-export const TIER_LABEL: Record<InsightTier, string> = {
-  strong_buy:  'Strong Buy',
-  buy:         'Buy',
-  hold:        'Hold',
-  sell:        'Sell',
-  strong_sell: 'Strong Sell',
-};
-
-/** Tier-step distance — used by the tier-change notification to gate on
- *  ≥1 step jumps. Strong tiers are 2 steps from neutral. */
-export const TIER_STEP: Record<InsightTier, number> = {
-  strong_sell: -2,
-  sell:        -1,
-  hold:         0,
-  buy:          1,
-  strong_buy:   2,
-};
+// v1.18.2 — moved to insightTiers.ts (kept off the startup chunk); re-exported.
+import type { InsightTier } from './insightTiers';
+export { TIER_LABEL, TIER_STEP, type InsightTier } from './insightTiers';
 
 export interface CompositeBreakdown {
   rsi: SignalResult;

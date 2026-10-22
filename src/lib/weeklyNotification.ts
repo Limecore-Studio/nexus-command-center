@@ -26,6 +26,7 @@ import { useStudiesStore } from '../store/useStudiesStore';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useTaskStore } from '../store/useTaskStore';
 import type { WorkoutSession } from '../types/fitness';
+import { localDateKey } from '@/utils/formatters';
 
 // First slot in the weekly-review ID range. Re-scheduling with the same ID
 // overwrites the prior one so we don't accumulate orphan alarms across
@@ -81,8 +82,9 @@ function buildWeeklySummaryBody(): string {
   const now = new Date();
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
-  const weekAgoIso = weekAgo.toISOString().slice(0, 10);
-  const todayIso = now.toISOString().slice(0, 10);
+  // v1.18.1 (NCC#145): local calendar dates, as the stored dates are.
+  const weekAgoIso = localDateKey(weekAgo);
+  const todayIso = localDateKey(now);
   const parts: string[] = [];
 
   // ── Finance: 7-day net (income − expenses) ────────────────────────

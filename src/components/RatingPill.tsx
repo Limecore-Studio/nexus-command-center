@@ -1,6 +1,6 @@
 import { useInsightsStore } from '../store/useInsightsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { TIER_LABEL, type InsightTier } from '../lib/insightsScore';
+import { TIER_LABEL, type InsightTier } from '../lib/insightTiers';
 
 /**
  * v1.2 — small inline pill showing the current Insights tier for a ticker.

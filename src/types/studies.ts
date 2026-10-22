@@ -21,10 +21,18 @@ export interface Course {
   /** v1.2 — set by StudyDesk's semester-archive UI. ISO timestamp when
    *  the course was archived; absent/undefined means active. Filtered out
    *  of the active studies UI and GPA computation; surfaced under an
-   *  "Archived" toggle. Sync-mirrored via subjects.archived_at column. */
+   *  "Archived" toggle. Sync-mirrored via subjects.archived_at column
+   *  (pulled always; pushed only for an archive change made in NCC, NCC#180). */
   archivedAt?: string;
   createdAt: string;
 }
+
+/** v1.18.1 (NCC#180) — a queued course write. `archiveEditedAt` is set only
+ *  when the user changed the archive state in NCC (the moment they did); its
+ *  presence is what makes the push send `archived_at` (with it as
+ *  `subjects.archived_edited_at`). `archiveOnly`: nothing else changed, so
+ *  the push writes the archive alone. Sync queue payload only, never Dexie. */
+export type CoursePushPayload = Course & { archiveEditedAt?: string; archiveOnly?: boolean };
 
 // A single grade entry for a subject. StudyDesk's `grades` table maps 1:1.
 // Many grades per subject; each carries its own weight (assessment weight

@@ -1,5 +1,6 @@
 import BottomSheet from './BottomSheet';
-import { TIER_LABEL, type CompositeRating, type CompositeBreakdown } from '../lib/insightsScore';
+import { TIER_LABEL } from '../lib/insightTiers';
+import type { CompositeRating, CompositeBreakdown } from '../lib/insightsScore';
 import type { FundamentalRating, FundamentalBreakdown } from '../lib/fundamentalsScore';
 import type { SignalResult } from '../lib/insightSignals';
 

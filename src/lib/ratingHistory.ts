@@ -20,7 +20,8 @@
 import { db } from '../db/database';
 import { installRatingObserver } from '../store/useInsightsStore';
 import { scheduleNotification, ID_RANGES } from './notifications';
-import { TIER_LABEL, TIER_STEP, type CompositeRating } from './insightsScore';
+import { TIER_LABEL, TIER_STEP } from './insightTiers';
+import type { CompositeRating } from './insightsScore';
 
 const COOLDOWN_MS = 48 * 60 * 60 * 1000;
 

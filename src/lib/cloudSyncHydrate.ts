@@ -575,7 +575,10 @@ export async function hydratePortfolioCashFromCloud(
         createdAt: r.created_at,
         syncStatus: 'synced' as const,
       }));
-      await putFromCloud(db.portfolioCashEntries, rows);
+      // v1.18.1 (NCC#176) — accountAmount/accountCurrency are local-only (no
+      // server column); putFromCloud keeps them, and skips rows with a change
+      // still queued (NCC#146).
+      await putFromCloud(db.portfolioCashEntries, rows, ['accountAmount', 'accountCurrency']);
       count = rows.length;
     }
   } catch (e) {

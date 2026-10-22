@@ -795,6 +795,8 @@
       "fromOther": "d’un autre compte",
       "toName": "vers {{name}}",
       "toOther": "vers un autre compte",
+      "toPortfolio": "Transféré vers le portefeuille",
+      "fromPortfolio": "Transféré depuis le portefeuille",
       "unconvertable_many": "{{count}} transactions n’ont pas pu être converties en {{cur}} ; le solde peut être sous-estimé."
     },
     "assetClass": {

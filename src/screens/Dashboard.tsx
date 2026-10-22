@@ -15,6 +15,7 @@ import ListRow from '../components/ListRow';
 import ProgressBar from '../components/ProgressBar';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
+import { gpaSuffix as scaleSuffix, meterValue } from '../lib/gradeScale';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useTaskStore } from '../store/useTaskStore';
 import { useBraindumpStore } from '../store/useBraindumpStore';
@@ -22,7 +23,7 @@ import { useGoalsStore } from '../store/useGoalsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { computeGoalProgress } from '../lib/goals';
 import { buildWeeklyReview } from '../lib/weeklyReview';
-import { formatCurrency, isOverdue, isToday } from '../utils/formatters';
+import { formatCurrency, isOverdue, isToday, localDateKey, parseDateLocal } from '../utils/formatters';
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -33,7 +34,8 @@ export default function Dashboard() {
   const studies = useStudiesStore((s) => s.currentImport);
   const studyCourses = useStudiesStore((s) => s.courses);
   const previousGpa = useStudiesStore((s) => s.previousGpa);
-  const gradeMode = useStudiesStore((s) => s.gradeMode);
+  // v1.18.2 — StudyDesk's scale from the account (or NCC's guess without one).
+  const gradeScale = useStudiesStore((s) => s.gradeScale);
 
   const sessions = useFitnessStore((s) => s.sessions);
 
@@ -60,9 +62,11 @@ export default function Dashboard() {
   // Dashboard can still see live state — but no longer trigger a refresh here.
 
   const monthExpenses = useMemo(() => {
-    const now = new Date();
+    // v1.18.1 (NCC#148): this month of THIS year. Comparing getMonth() alone
+    // counted every past October against this October's budget.
+    const month = localDateKey(new Date()).slice(0, 7);
     return transactions
-      .filter((t) => t.type === 'expense' && new Date(t.date).getMonth() === now.getMonth())
+      .filter((t) => t.type === 'expense' && localDateKey(parseDateLocal(t.date)).slice(0, 7) === month)
       .reduce((s, t) => s + t.amount, 0);
   }, [transactions]);
 
@@ -80,7 +84,7 @@ export default function Dashboard() {
     return transactions
       .filter((t) => {
         if (t.type !== 'expense') return false;
-        const d = new Date(t.date);
+        const d = parseDateLocal(t.date);
         return d.getFullYear() === prev.getFullYear() && d.getMonth() === prev.getMonth();
       })
       .reduce((s, t) => s + t.amount, 0);
@@ -101,7 +105,7 @@ export default function Dashboard() {
   // ticking clock in state for a number that changes once a day.
   // eslint-disable-next-line react-hooks/purity
   const weekAgo = Date.now() - 7 * 86400000;
-  const workoutsThisWeek = sessions.filter((s) => new Date(s.date).getTime() > weekAgo).length;
+  const workoutsThisWeek = sessions.filter((s) => parseDateLocal(s.date).getTime() > weekAgo).length;
 
   const gpaDelta = studies && previousGpa != null
     ? `${studies.calculatedGpa - previousGpa >= 0 ? '↑' : '↓'} ${Math.abs(studies.calculatedGpa - previousGpa).toFixed(2)} ${t('dash.pts')}`
@@ -128,8 +132,7 @@ export default function Dashboard() {
     [transactions, studyCourses, studySessions, sessions, tasks, studies, holdings],
   );
 
-  const gpaSuffix = gradeMode === 'ib' ? '/7' : '';
-  const gpaDisplay = studies ? studies.calculatedGpa.toFixed(2) + gpaSuffix : '—';
+  const gpaDisplay = studies ? studies.calculatedGpa.toFixed(2) + scaleSuffix(gradeScale) : '—';
 
   return (
     <>
@@ -185,9 +188,12 @@ export default function Dashboard() {
           {rack ? (
             <div className="space-y-2">
               <RackMeterBank
-                gpa={studies ? studies.calculatedGpa : null}
-                gpaMax={gradeMode === 'ib' ? 7 : 4}
-                gpaPrevious={studies ? previousGpa : null}
+                // v1.18.2: the meter runs over the account's scale. On a
+                // lower-is-better scale (German 1–6) it is read the other way
+                // round, so a fuller meter is always the better grade.
+                gpa={studies ? meterValue(studies.calculatedGpa, gradeScale) : null}
+                gpaMax={gradeScale.max}
+                gpaPrevious={studies && previousGpa != null ? meterValue(previousGpa, gradeScale) : null}
                 gpaDisplay={gpaDisplay}
                 workouts={workoutsThisWeek}
                 workoutTarget={4}

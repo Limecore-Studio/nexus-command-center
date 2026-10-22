@@ -23,6 +23,8 @@ import { resolveWatchPrice, targetHit } from '../../lib/watchlistAlerts';
 import { validateTicker } from '../../lib/tickerValidation';
 import { useShellTier } from '../../lib/useShell';
 import type { WatchlistItem, PortfolioHolding } from '../../types/finance';
+// v1.18.1 (NCC#144): typed amounts accept a decimal comma.
+import { numberInput } from '@/lib/numberInput';
 
 function fmt(amount: number, currency: string): string {
   return formatMoney(amount, currency, { locale: formatLocale() });
@@ -98,8 +100,8 @@ export default function Watchlist() {
       return;
     }
     setTickerError(null);
-    const above = targetAbove.trim() ? parseFloat(targetAbove) : undefined;
-    const below = targetBelow.trim() ? parseFloat(targetBelow) : undefined;
+    const above = targetAbove.trim() ? numberInput(targetAbove) : undefined;
+    const below = targetBelow.trim() ? numberInput(targetBelow) : undefined;
     if (editing) {
       await updateItem(editing.id, {
         ticker: v.normalised,

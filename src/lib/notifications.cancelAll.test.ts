@@ -16,6 +16,10 @@ vi.mock('@capacitor/core', async (orig) => ({
   ...(await orig<typeof import('@capacitor/core')>()),
   Capacitor: { isNativePlatform: () => true, getPlatform: () => 'android' },
 }));
+// v1.18.2 merge: scheduleNotification also checks the master switch (NCC#151).
+vi.mock('../store/useSettingsStore', () => ({
+  useSettingsStore: { getState: () => ({ loaded: true, notifMasterEnabled: true }) },
+}));
 vi.mock('./nexusNotificationsPlugin', () => ({
   NexusNotifications: {
     getPending: () => (plugin.getPending ? plugin.getPending() : Promise.resolve({ ids: [...plugin.pending] })),

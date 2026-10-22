@@ -56,6 +56,8 @@ describe('portfolio move amount in the account currency (NCC#176)', () => {
   it('the pull keeps the local-only amount', async () => {
     await useFinanceStore.getState().depositToPortfolio({ amount: 1000, currency: 'USD', accountId: ACCOUNT.id });
     const [local] = await db.portfolioCashEntries.toArray();
+    // v1.18.2 merge: the push has landed (NCC#146 skips rows still queued).
+    await db.syncQueue.clear();
     holder.client = fakeClient({
       portfolio_cash_entries: [{
         id: local.id, user_id: 'u', type: 'deposit', amount: 1000, currency: 'USD',

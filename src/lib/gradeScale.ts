@@ -13,7 +13,6 @@
 // scale also shows offline.
 
 import { Preferences } from '@capacitor/preferences';
-import { supabase } from './supabase';
 import type { GradeMode } from '../utils/gpa';
 
 export type ScaleDirection = 'up' | 'down';
@@ -141,6 +140,9 @@ export async function readCachedAccountScale(userId: string | null): Promise<Gra
 export async function fetchAccountScale(userId: string | null): Promise<GradeScale | null | undefined> {
   if (!userId) return null;
   try {
+    // Imported here, not at the top: the studies store loads this module, and
+    // lib/supabase reads `window` when it is imported (plain-Node tests).
+    const { supabase } = await import('./supabase');
     const { data, error } = await supabase
       .from('user_preferences')
       .select('grade_scale')

@@ -15,7 +15,9 @@
 -- treat it as anything else it could value).
 -- P2: no new table; the existing RLS policies cover the new columns.
 --
--- NOT YET APPLIED. Owner applies (P1 sign-off).
+-- Tested against Postgres 17: supabase/tests/bond_custom_holdings.test.sql.
+-- APPLIED to production 2026-10-22 (owner-approved in session) as
+-- `v119_bond_custom_holdings`, version 20261022171709.
 
 -- ── Holding types ────────────────────────────────────────────────────────────
 alter table public.portfolio_holdings drop constraint if exists portfolio_holdings_asset_type_check;

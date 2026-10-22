@@ -263,7 +263,7 @@ export default function ManageLots() {
               </div>
               <div className="font-heading font-semibold text-sm">
                 <Glyph
-                  name={holding.assetType === 'crypto' ? 'crypto' : holding.assetType === 'etf' ? 'etf' : 'stock'}
+                  name={holding.assetType === 'crypto' ? 'crypto' : holding.assetType === 'etf' ? 'etf' : holding.assetType === 'bond' || holding.assetType === 'custom' ? 'investment' : 'stock'}
                   size={13}
                   className="text-text-muted"
                 />{' '}{holding.ticker.toUpperCase()}

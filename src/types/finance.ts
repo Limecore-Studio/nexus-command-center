@@ -59,7 +59,26 @@ export interface BudgetCategory {
   linkedManualAssetId?: string;
 }
 
-export type AssetType = 'stock' | 'crypto' | 'etf';
+// v1.19 (NCC#204): 'bond' and 'custom' are priced without any quote feed
+// (lib/manualValuation.ts); every quote, dividend and news path skips them.
+export type AssetType = 'stock' | 'crypto' | 'etf' | 'bond' | 'custom';
+
+/** v1.19 (NCC#204) — a bond's terms. Prices and face value are per unit, in
+ *  `currency`. couponFrequency 0 is a zero-coupon bond. */
+export interface BondTerms {
+  faceValue: number;
+  currency: string;
+  /** Percent per year, e.g. 3.25. */
+  couponRate: number;
+  couponFrequency: 0 | 1 | 2 | 4;
+  /** YYYY-MM-DD. */
+  maturity: string;
+  /** A label only; nothing is looked up by it. */
+  isin?: string;
+}
+
+/** v1.19 (NCC#204): a type valued from what the user entered, not a feed. */
+export const isManuallyPriced = (t: AssetType): t is 'bond' | 'custom' => t === 'bond' || t === 'custom';
 
 export interface PortfolioHolding {
   id: string;
@@ -85,6 +104,15 @@ export interface PortfolioHolding {
   // /stock/profile2 (which is blank for ETFs and most international tickers).
   // When set, the allocation donut's Sector view uses this verbatim.
   sectorOverride?: string;
+  /** v1.19 (NCC#204): a price per unit the user entered: the price of a
+   *  'custom' holding, or a market price that overrides a bond's book value
+   *  until cleared. With its currency and when it was set (the "updated N
+   *  days ago" age). */
+  manualPrice?: number;
+  manualPriceCurrency?: string;
+  manualPriceAt?: string;
+  /** v1.19 (NCC#204): set on 'bond' holdings. */
+  bond?: BondTerms;
 }
 
 // One purchase. Multiple lots → same holding stack so the user can record

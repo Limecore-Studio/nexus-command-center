@@ -799,12 +799,16 @@
     "assetClass": {
       "stock": "Stock",
       "etf": "ETF",
-      "crypto": "₿ Crypto"
+      "crypto": "₿ Crypto",
+      "bond": "Bond",
+      "custom": "Custom"
     },
     "assetAbbr": {
       "stock": "STOCK",
       "etf": "ETF",
-      "crypto": "CRYPTO"
+      "crypto": "CRYPTO",
+      "bond": "BOND",
+      "custom": "CUSTOM"
     },
     "wl": {
       "add": "+ Watch",
@@ -1400,5 +1404,31 @@
     "entryTitle": "Recurring",
     "entrySub": "Rent, salary, deposits and savings plans",
     "addRecurring": "Add recurring…"
+  },
+  "bonds": {
+    "section": "Bonds & other",
+    "noFeed": "No price feed",
+    "bond": "Bond",
+    "basisBook": "Book value",
+    "basisManual": "Your price",
+    "basisManualAge_one": "Your price · {{count}} day old",
+    "basisManualAge_other": "Your price · {{count}} days old",
+    "labelPh": "Short label (e.g. DE-2034)",
+    "terms": "Bond terms",
+    "faceValue": "Face value per unit",
+    "currency": "Currency",
+    "couponRate": "Coupon % per year",
+    "frequency": "Paid",
+    "freq_1": "Yearly",
+    "freq_2": "Twice a year",
+    "freq_4": "Quarterly",
+    "maturity": "Maturity",
+    "isinOptional": "ISIN (optional)",
+    "bookHint": "Valued at book: the price you paid moving to face value by maturity, plus interest accrued. Coupons go to portfolio cash on their dates; at maturity the bond is redeemed at face value.",
+    "marketPriceOptional": "Market price per unit (optional)",
+    "pricePerUnit": "Current price per unit",
+    "useBookValue": "Use book value again",
+    "bondHint": "No price feed: valued at book unless you enter a market price.",
+    "customHint": "Priced by you: update the price whenever it changes."
   }
 }

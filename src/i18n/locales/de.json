@@ -799,12 +799,16 @@
     "assetClass": {
       "stock": "Aktie",
       "etf": "ETF",
-      "crypto": "₿ Krypto"
+      "crypto": "₿ Krypto",
+      "bond": "Anleihe",
+      "custom": "Eigene"
     },
     "assetAbbr": {
       "stock": "AKTIE",
       "etf": "ETF",
-      "crypto": "KRYPTO"
+      "crypto": "KRYPTO",
+      "bond": "ANLEIHE",
+      "custom": "EIGENE"
     },
     "wl": {
       "add": "+ Beobachten",
@@ -1400,5 +1404,31 @@
     "entryTitle": "Wiederkehrend",
     "entrySub": "Miete, Gehalt, Einzahlungen und Sparpläne",
     "addRecurring": "Wiederkehrend anlegen…"
+  },
+  "bonds": {
+    "section": "Anleihen & Sonstiges",
+    "noFeed": "Kein Kursfeed",
+    "bond": "Anleihe",
+    "basisBook": "Buchwert",
+    "basisManual": "Dein Kurs",
+    "basisManualAge_one": "Dein Kurs · {{count}} Tag alt",
+    "basisManualAge_other": "Dein Kurs · {{count}} Tage alt",
+    "labelPh": "Kurzname (z. B. DE-2034)",
+    "terms": "Anleihebedingungen",
+    "faceValue": "Nennwert pro Stück",
+    "currency": "Währung",
+    "couponRate": "Kupon % p. a.",
+    "frequency": "Zahlung",
+    "freq_1": "Jährlich",
+    "freq_2": "Halbjährlich",
+    "freq_4": "Vierteljährlich",
+    "maturity": "Fälligkeit",
+    "isinOptional": "ISIN (optional)",
+    "bookHint": "Bewertet zum Buchwert: der gezahlte Kurs bewegt sich bis zur Fälligkeit zum Nennwert, plus Stückzinsen. Kupons fließen an ihren Terminen ins Portfolio-Guthaben; bei Fälligkeit wird zum Nennwert zurückgezahlt.",
+    "marketPriceOptional": "Marktkurs pro Stück (optional)",
+    "pricePerUnit": "Aktueller Preis pro Stück",
+    "useBookValue": "Wieder Buchwert verwenden",
+    "bondHint": "Kein Kursfeed: Bewertung zum Buchwert, außer du gibst einen Marktkurs ein.",
+    "customHint": "Von dir bepreist: aktualisiere den Preis, wenn er sich ändert."
   }
 }

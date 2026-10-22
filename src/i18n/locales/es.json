@@ -802,12 +802,16 @@
     "assetClass": {
       "stock": "Acción",
       "etf": "ETF",
-      "crypto": "₿ Cripto"
+      "crypto": "₿ Cripto",
+      "bond": "Bono",
+      "custom": "Personalizado"
     },
     "assetAbbr": {
       "stock": "ACCIÓN",
       "etf": "ETF",
-      "crypto": "CRIPTO"
+      "crypto": "CRIPTO",
+      "bond": "BONO",
+      "custom": "PERSON."
     },
     "wl": {
       "add": "+ Seguir",
@@ -1419,5 +1423,32 @@
     "entryTitle": "Recurrentes",
     "entrySub": "Alquiler, sueldo, depósitos y planes de ahorro",
     "addRecurring": "Añadir recurrente…"
+  },
+  "bonds": {
+    "section": "Bonos y otros",
+    "noFeed": "Sin cotización",
+    "bond": "Bono",
+    "basisBook": "Valor contable",
+    "basisManual": "Tu precio",
+    "basisManualAge_one": "Tu precio · hace {{count}} día",
+    "basisManualAge_many": "Tu precio · hace {{count}} días",
+    "basisManualAge_other": "Tu precio · hace {{count}} días",
+    "labelPh": "Nombre corto (p. ej. DE-2034)",
+    "terms": "Condiciones del bono",
+    "faceValue": "Valor nominal por unidad",
+    "currency": "Moneda",
+    "couponRate": "Cupón % anual",
+    "frequency": "Pago",
+    "freq_1": "Anual",
+    "freq_2": "Semestral",
+    "freq_4": "Trimestral",
+    "maturity": "Vencimiento",
+    "isinOptional": "ISIN (opcional)",
+    "bookHint": "Valorado a valor contable: el precio pagado avanza hacia el nominal hasta el vencimiento, más el interés devengado. Los cupones van al efectivo de la cartera en sus fechas; al vencer se amortiza al nominal.",
+    "marketPriceOptional": "Precio de mercado por unidad (opcional)",
+    "pricePerUnit": "Precio actual por unidad",
+    "useBookValue": "Volver al valor contable",
+    "bondHint": "Sin cotización: valorado a valor contable salvo que indiques un precio de mercado.",
+    "customHint": "Precio puesto por ti: actualízalo cuando cambie."
   }
 }

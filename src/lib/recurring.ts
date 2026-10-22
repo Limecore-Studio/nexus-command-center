@@ -91,6 +91,6 @@ export async function uuidv5(name: string, namespace = NAMESPACE): Promise<strin
 
 /** The id of one generated row: `part` tells apart the rows one occurrence
  *  writes (a buy writes a lot and a cash entry). */
-export function occurrenceId(ruleId: string, date: string, part: 'tx' | 'cash' | 'lot'): Promise<string> {
+export function occurrenceId(ruleId: string, date: string, part: 'tx' | 'cash' | 'lot' | 'sale' | 'redeem'): Promise<string> {
   return uuidv5(`${ruleId}:${date}:${part}`);
 }

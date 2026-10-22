@@ -6,6 +6,7 @@ import { stampOf } from './editStamp';
 import { db, SyncQueueItem } from '../db/database';
 import { legacyIdToUuid } from '../utils/uuid';
 import type { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry } from '../types/finance';
+import { isManuallyPriced } from '../types/finance';
 import type { CoursePushPayload, Grade } from '../types/studies';
 import type { Task, TaskPriority } from '../types/tasks';
 import type { Goal } from '../types/goals';
@@ -170,6 +171,16 @@ async function pushPortfolioHolding(item: SyncQueueItem, ctx: PushContext): Prom
     cost_currency: local.costCurrency ?? null,
     sector_override: local.sectorOverride ?? null,
     updated_at: stampOf(item),
+    // v1.19 (NCC#204): the price and terms of a bond / custom holding. Sent
+    // for those types only, so every other holding's push stays the same.
+    ...(isManuallyPriced(local.assetType)
+      ? {
+          manual_price: local.manualPrice ?? null,
+          manual_price_currency: local.manualPriceCurrency ?? null,
+          manual_price_at: local.manualPriceAt ?? null,
+          bond_terms: local.assetType === 'bond' ? local.bond ?? null : null,
+        }
+      : {}),
   };
   const { error } = await supabase.from('portfolio_holdings').upsert(row);
   if (error) throw error;

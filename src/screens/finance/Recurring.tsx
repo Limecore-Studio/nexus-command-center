@@ -20,7 +20,7 @@ import type { TransactionType } from '../../types/finance';
 // Opened with ?new=transaction|cash_deposit|buy (and &holding=<id>) from Add
 // Transaction, the portfolio cash card and a holding's lots screen.
 
-const KINDS: RecurringKind[] = ['transaction', 'cash_deposit', 'buy'];
+const KINDS: Exclude<RecurringKind, 'coupon'>[] = ['transaction', 'cash_deposit', 'buy'];
 const UNITS: RecurringUnit[] = ['day', 'week', 'month'];
 const TX_TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
@@ -53,7 +53,12 @@ function emptyDraft(kind: RecurringKind, baseCurrency: string, holdingId = ''): 
   };
 }
 
-function draftOf(r: RecurringRule, baseCurrency: string): Draft {
+/** v1.19 (NCC#204): coupon rules belong to their bond (bondCoupons.ts) and
+ *  are not listed or edited here. */
+type EditableRule = Exclude<RecurringRule, { kind: 'coupon' }>;
+const isEditable = (r: RecurringRule): r is EditableRule => r.kind !== 'coupon';
+
+function draftOf(r: EditableRule, baseCurrency: string): Draft {
   const d = emptyDraft(r.kind, baseCurrency);
   Object.assign(d, { every: String(r.every), unit: r.unit, startDate: r.startDate, endDate: r.endDate ?? '' });
   if (r.kind === 'transaction') {
@@ -160,7 +165,7 @@ export default function Recurring() {
 
   // Deep link from another screen: open the editor on that kind, once.
   useEffect(() => {
-    const kind = params.get('new') as RecurringKind | null;
+    const kind = params.get('new') as (typeof KINDS)[number] | null;
     if (!kind || !KINDS.includes(kind)) return;
     const holding = params.get('holding') ?? '';
     const h = holdings.find((x) => x.id === holding);
@@ -197,7 +202,7 @@ export default function Recurring() {
 
   const rows = useMemo(
     () =>
-      rules.map((r) => {
+      rules.filter(isEditable).map((r) => {
         const next = r.pausedAt ? undefined : nextOccurrence(r, r.lastMaterializedDate);
         let title: string;
         let amount: string;

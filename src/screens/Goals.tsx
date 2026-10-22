@@ -47,6 +47,7 @@ export default function Goals() {
   // Pull live data from every relevant module so progress refreshes
   // automatically when any underlying source changes.
   const holdings = useFinanceStore((s) => s.holdings);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
@@ -62,6 +63,7 @@ export default function Goals() {
     () => ({
       transactions,
       holdings,
+      portfolioLots,
       manualAssets,
       stockQuotes,
       cryptoPrices,
@@ -75,6 +77,7 @@ export default function Goals() {
     [
       transactions,
       holdings,
+      portfolioLots,
       manualAssets,
       stockQuotes,
       cryptoPrices,

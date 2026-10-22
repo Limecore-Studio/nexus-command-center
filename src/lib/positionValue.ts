@@ -22,7 +22,9 @@
 //     are different facts and callers rely on telling them apart.
 
 import { convertSync, normalizeCurrency } from '../api/fxRates';
-import type { PortfolioHolding } from '../types/finance';
+import type { PortfolioHolding, PortfolioLot } from '../types/finance';
+import { isManuallyPriced } from '../types/finance';
+import { manualHoldingValueBase } from './manualValuation';
 import type { QuoteResult } from '../api/finnhub';
 import type { CryptoResult } from '../api/coingecko';
 
@@ -34,7 +36,11 @@ export function holdingValueBase(
   cryptoPrices: CryptoResult | null,
   rates: Record<string, number> | null,
   baseCurrency: string,
+  /** v1.19 (NCC#204): a bond's book value is per lot. */
+  lots: PortfolioLot[] = [],
 ): number | null {
+  // v1.19 (NCC#204): bonds and custom holdings, no quote feed.
+  if (isManuallyPriced(h.assetType)) return manualHoldingValueBase(h, lots, rates, baseCurrency);
   if (h.assetType === 'stock' || h.assetType === 'etf') {
     const q = stockQuotes.find((s) => s.ticker === h.ticker);
     if (!q) return null;
@@ -55,6 +61,10 @@ export function holdingUnitPrice(
   stockQuotes: QuoteResult[],
   cryptoPrices: CryptoResult | null,
 ): { price: number; currency: string } | null {
+  // v1.19 (NCC#204): the price the user entered, if any.
+  if (isManuallyPriced(h.assetType)) {
+    return h.manualPrice != null && h.manualPriceCurrency ? { price: h.manualPrice, currency: h.manualPriceCurrency } : null;
+  }
   if (h.assetType === 'stock' || h.assetType === 'etf') {
     const q = stockQuotes.find((s) => s.ticker === h.ticker);
     if (!q || !(q.quote.c > 0)) return null;

@@ -132,7 +132,7 @@ export function computeDividendCredits(
   const seen = new Set<string>(); // guard against duplicate events in one pass
 
   for (const h of holdings) {
-    if (h.assetType === 'crypto') continue;
+    if (h.assetType !== 'stock' && h.assetType !== 'etf') continue;
     if (!(h.quantity > 0)) continue;
     const ticker = h.ticker.toUpperCase();
     const events = dividends[ticker];

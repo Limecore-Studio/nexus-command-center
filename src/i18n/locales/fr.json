@@ -802,12 +802,16 @@
     "assetClass": {
       "stock": "Action",
       "etf": "ETF",
-      "crypto": "₿ Crypto"
+      "crypto": "₿ Crypto",
+      "bond": "Obligation",
+      "custom": "Personnalisé"
     },
     "assetAbbr": {
       "stock": "ACTION",
       "etf": "ETF",
-      "crypto": "CRYPTO"
+      "crypto": "CRYPTO",
+      "bond": "OBLIG.",
+      "custom": "PERSO"
     },
     "wl": {
       "add": "+ Suivre",
@@ -1419,5 +1423,32 @@
     "entryTitle": "Récurrents",
     "entrySub": "Loyer, salaire, versements et plans d’épargne",
     "addRecurring": "Ajouter une récurrence…"
+  },
+  "bonds": {
+    "section": "Obligations et autres",
+    "noFeed": "Sans cotation",
+    "bond": "Obligation",
+    "basisBook": "Valeur comptable",
+    "basisManual": "Votre prix",
+    "basisManualAge_one": "Votre prix · il y a {{count}} jour",
+    "basisManualAge_many": "Votre prix · il y a {{count}} jours",
+    "basisManualAge_other": "Votre prix · il y a {{count}} jours",
+    "labelPh": "Nom court (ex. DE-2034)",
+    "terms": "Conditions de l’obligation",
+    "faceValue": "Valeur nominale par unité",
+    "currency": "Devise",
+    "couponRate": "Coupon % par an",
+    "frequency": "Versé",
+    "freq_1": "Annuel",
+    "freq_2": "Semestriel",
+    "freq_4": "Trimestriel",
+    "maturity": "Échéance",
+    "isinOptional": "ISIN (facultatif)",
+    "bookHint": "Valorisée au coût amorti : le prix payé évolue vers le nominal jusqu’à l’échéance, plus les intérêts courus. Les coupons vont aux liquidités du portefeuille à leurs dates ; à l’échéance, l’obligation est remboursée au nominal.",
+    "marketPriceOptional": "Cours par unité (facultatif)",
+    "pricePerUnit": "Prix actuel par unité",
+    "useBookValue": "Revenir à la valeur comptable",
+    "bondHint": "Sans cotation : valorisée au coût amorti, sauf si vous saisissez un cours.",
+    "customHint": "Prix fixé par vous : mettez-le à jour quand il change."
   }
 }

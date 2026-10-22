@@ -799,12 +799,16 @@
     "assetClass": {
       "stock": "Osake",
       "etf": "ETF",
-      "crypto": "₿ Krypto"
+      "crypto": "₿ Krypto",
+      "bond": "Joukkovelkakirja",
+      "custom": "Oma"
     },
     "assetAbbr": {
       "stock": "OSAKE",
       "etf": "ETF",
-      "crypto": "KRYPTO"
+      "crypto": "KRYPTO",
+      "bond": "JVK",
+      "custom": "OMA"
     },
     "wl": {
       "add": "+ Seuraa",
@@ -1400,5 +1404,31 @@
     "entryTitle": "Toistuvat",
     "entrySub": "Vuokra, palkka, talletukset ja säästösuunnitelmat",
     "addRecurring": "Lisää toistuva…"
+  },
+  "bonds": {
+    "section": "Joukkovelkakirjat ja muut",
+    "noFeed": "Ei hintasyötettä",
+    "bond": "Joukkovelkakirja",
+    "basisBook": "Kirja-arvo",
+    "basisManual": "Oma hintasi",
+    "basisManualAge_one": "Oma hintasi · {{count}} päivää vanha",
+    "basisManualAge_other": "Oma hintasi · {{count}} päivää vanha",
+    "labelPh": "Lyhyt nimi (esim. DE-2034)",
+    "terms": "Lainan ehdot",
+    "faceValue": "Nimellisarvo / kpl",
+    "currency": "Valuutta",
+    "couponRate": "Kuponki % vuodessa",
+    "frequency": "Maksu",
+    "freq_1": "Kerran vuodessa",
+    "freq_2": "Kahdesti vuodessa",
+    "freq_4": "Neljännesvuosittain",
+    "maturity": "Erääntyy",
+    "isinOptional": "ISIN (valinnainen)",
+    "bookHint": "Arvostetaan kirja-arvoon: maksamasi hinta lähestyy nimellisarvoa eräpäivään mennessä, lisäksi kertynyt korko. Kupongit menevät salkun käteiseen maksupäivinä; eräpäivänä laina lunastetaan nimellisarvoon.",
+    "marketPriceOptional": "Markkinahinta / kpl (valinnainen)",
+    "pricePerUnit": "Nykyinen hinta / kpl",
+    "useBookValue": "Käytä taas kirja-arvoa",
+    "bondHint": "Ei hintasyötettä: arvostetaan kirja-arvoon, ellet syötä markkinahintaa.",
+    "customHint": "Itse hinnoiteltu: päivitä hinta, kun se muuttuu."
   }
 }

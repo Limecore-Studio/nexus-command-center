@@ -24,6 +24,8 @@ import { formatCacheAge, formatLocale } from '../../utils/formatters';
 import { convertSync, normalizeCurrency } from '../../api/fxRates';
 import { holdingValueBase } from '../../lib/positionValue';
 import type { PortfolioHolding, PortfolioLot } from '../../types/finance';
+import { isManuallyPriced } from '../../types/finance';
+import { manualHoldingValue, manualPriceAgeDays } from '../../lib/manualValuation';
 import type { QuoteResult } from '../../api/finnhub';
 import type { CryptoResult } from '../../api/coingecko';
 import type { CompanyProfile } from '../../api/companyProfile';
@@ -59,6 +61,9 @@ interface PositionMetrics {
   currency: string; // quote/native currency for the row badge
   sector: string;   // for sector allocation; "Other" when unknown
   sparkKey: string; // map key for sparklines[]
+  /** v1.19 (NCC#204): bonds and custom holdings: which price the value rests
+   *  on, and how old a price the user entered is. No day change for them. */
+  manual?: { basis: 'book' | 'manual'; ageDays: number | null };
 }
 
 // Cost basis from lots — sum each lot's (qty × pricePerUnit) converted to
@@ -115,6 +120,29 @@ function metricsFor(
     if (h.assetType === 'crypto') return 'Crypto';
     return 'Other';
   };
+
+  // v1.19 (NCC#204): bonds and custom holdings, valued from what the user
+  // entered (lib/manualValuation.ts); no quote, no day change, no sparkline.
+  if (isManuallyPriced(h.assetType)) {
+    const mv = manualHoldingValue(h, lots, undefined, rates);
+    const valueBase = holdingValueBase(h, stockQuotes, cryptoPrices, rates, baseCurrency, lots);
+    const costBase = costBasisFromLots(h, lots, rates, baseCurrency);
+    const plBase = valueBase != null && costBase != null ? valueBase - costBase : null;
+    const plPct = costBase != null && costBase > 0 && plBase != null ? (plBase / costBase) * 100 : null;
+    return {
+      holding: h,
+      valueBase,
+      dayChangeBase: null,
+      dayChangePct: 0,
+      costBase,
+      plBase,
+      plPct,
+      currency: mv?.currency ?? h.bond?.currency ?? h.manualPriceCurrency ?? baseCurrency,
+      sector: resolveSector(h.assetType === 'bond' ? 'Bonds' : undefined),
+      sparkKey: '',
+      manual: { basis: mv?.basis ?? 'book', ageDays: h.manualPrice != null ? manualPriceAgeDays(h) : null },
+    };
+  }
 
   if (h.assetType === 'stock' || h.assetType === 'etf') {
     const q = stockQuotes.find((s) => s.ticker === h.ticker);
@@ -319,7 +347,11 @@ export default function Portfolio() {
           ? 'Stocks'
           : p.holding.assetType === 'etf'
             ? 'ETFs'
-            : 'Crypto';
+            : p.holding.assetType === 'bond'
+              ? 'Bonds'
+              : p.holding.assetType === 'custom'
+                ? 'Other'
+                : 'Crypto';
       } else if (allocationView === 'sector') {
         key = p.sector;
       } else {
@@ -377,6 +409,15 @@ export default function Portfolio() {
     () =>
       positions
         .filter((p) => p.holding.assetType === 'crypto')
+        .filter((p) => !isHoldingClosed(p.holding, portfolioLots))
+        .sort((a, b) => (b.valueBase ?? 0) - (a.valueBase ?? 0)),
+    [positions, portfolioLots],
+  );
+  // v1.19 (NCC#204): bonds and custom holdings, their own section.
+  const sortedManual = useMemo(
+    () =>
+      positions
+        .filter((p) => isManuallyPriced(p.holding.assetType))
         .filter((p) => !isHoldingClosed(p.holding, portfolioLots))
         .sort((a, b) => (b.valueBase ?? 0) - (a.valueBase ?? 0)),
     [positions, portfolioLots],
@@ -676,6 +717,28 @@ export default function Portfolio() {
             />
           ))}
         </div>
+
+        {/* v1.19 (NCC#204): bonds and custom-priced holdings. */}
+        {sortedManual.length > 0 && (
+          <div className="card">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-heading font-semibold text-sm">{t('bonds.section')}</span>
+              <span className="text-[0.5625rem] uppercase tracking-wider text-text-muted border border-border rounded-sm px-1.5 py-0.5">
+                {t('bonds.noFeed')}
+              </span>
+            </div>
+            {sortedManual.map((p) => (
+              <HoldingRow
+                key={p.holding.id}
+                position={p}
+                sparkline={undefined}
+                baseCurrency={baseCurrency}
+                weightPct={totals.total > 0 && p.valueBase != null ? (p.valueBase / totals.total) * 100 : null}
+                onTap={() => navigate(`/finance/portfolio/lots/${p.holding.id}`)}
+              />
+            ))}
+          </div>
+        )}
         </>
         )}
 
@@ -713,7 +776,8 @@ function HoldingRow({
   weightPct: number | null;
   onTap?: () => void;
 }) {
-  const { holding, valueBase, dayChangePct, plBase, plPct, currency } = position;
+  const { t } = useTranslation();
+  const { holding, valueBase, dayChangePct, plBase, plPct, currency, manual } = position;
   const trend = dayChangePct >= 0 ? 'up' : 'down';
   const weightLabel = weightPct != null
     ? weightPct >= 10
@@ -733,7 +797,7 @@ function HoldingRow({
         <div className="flex flex-col min-w-0 w-[68px]">
           <span className="text-sm font-medium truncate">{holding.ticker.toUpperCase()}</span>
           <span className="text-[0.5625rem] uppercase tracking-wider text-text-muted truncate">
-            {holding.assetType === 'etf' ? `ETF · ${currency}` : currency}
+            {holding.assetType === 'etf' ? `ETF · ${currency}` : holding.assetType === 'bond' ? `${t('bonds.bond')} · ${currency}` : currency}
             {weightLabel && (
               <>
                 {' · '}
@@ -761,9 +825,20 @@ function HoldingRow({
           <span className="text-sm whitespace-nowrap">
             {valueBase != null ? fmtCompact(valueBase, baseCurrency) : '—'}
           </span>
-          <span className={`text-[0.625rem] whitespace-nowrap ${dayChangePct >= 0 ? 'text-success' : 'text-danger'}`}>
-            {dayChangePct >= 0 ? '↑' : '↓'} {Math.abs(dayChangePct).toFixed(2)}%
-          </span>
+          {manual ? (
+            // v1.19 (NCC#204): which price the value rests on, not a day move.
+            <span className="text-[0.5625rem] uppercase tracking-wider whitespace-nowrap text-text-muted">
+              {manual.basis === 'book'
+                ? t('bonds.basisBook')
+                : manual.ageDays != null
+                  ? t('bonds.basisManualAge', { count: manual.ageDays })
+                  : t('bonds.basisManual')}
+            </span>
+          ) : (
+            <span className={`text-[0.625rem] whitespace-nowrap ${dayChangePct >= 0 ? 'text-success' : 'text-danger'}`}>
+              {dayChangePct >= 0 ? '↑' : '↓'} {Math.abs(dayChangePct).toFixed(2)}%
+            </span>
+          )}
           {plBase != null && plPct != null && (
             <span className={`text-[0.5625rem] whitespace-nowrap ${plBase >= 0 ? 'text-success' : 'text-danger'} opacity-80`}>
               {plBase >= 0 ? '+' : '−'}{fmtCompact(Math.abs(plBase), baseCurrency)}{' '}

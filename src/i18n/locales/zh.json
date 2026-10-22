@@ -798,12 +798,16 @@
     "assetClass": {
       "stock": "股票",
       "etf": "ETF",
-      "crypto": "₿ 加密货币"
+      "crypto": "₿ 加密货币",
+      "bond": "债券",
+      "custom": "自定义"
     },
     "assetAbbr": {
       "stock": "股票",
       "etf": "ETF",
-      "crypto": "加密"
+      "crypto": "加密",
+      "bond": "债券",
+      "custom": "自定义"
     },
     "wl": {
       "add": "+ 关注",
@@ -1387,5 +1391,30 @@
     "entryTitle": "定期",
     "entrySub": "房租、工资、存入和定投计划",
     "addRecurring": "添加定期…"
+  },
+  "bonds": {
+    "section": "债券及其他",
+    "noFeed": "无行情",
+    "bond": "债券",
+    "basisBook": "账面价值",
+    "basisManual": "你的价格",
+    "basisManualAge_other": "你的价格 · {{count}} 天前",
+    "labelPh": "简称（如 DE-2034）",
+    "terms": "债券条款",
+    "faceValue": "每单位面值",
+    "currency": "货币",
+    "couponRate": "年票息 %",
+    "frequency": "付息",
+    "freq_1": "每年",
+    "freq_2": "每半年",
+    "freq_4": "每季度",
+    "maturity": "到期日",
+    "isinOptional": "ISIN（可选）",
+    "bookHint": "按账面价值估值：买入价在到期前线性趋向面值，另加应计利息。票息在付息日计入投资组合现金；到期时按面值兑付。",
+    "marketPriceOptional": "每单位市价（可选）",
+    "pricePerUnit": "当前每单位价格",
+    "useBookValue": "改回账面价值",
+    "bondHint": "无行情：除非你输入市价，否则按账面价值估值。",
+    "customHint": "由你定价：价格变化时请更新。"
   }
 }

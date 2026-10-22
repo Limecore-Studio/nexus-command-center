@@ -3,7 +3,7 @@
 // occurrence; see lib/recurringMaterialize.ts.
 import type { SyncStatus, TransactionType } from './finance';
 
-export type RecurringKind = 'transaction' | 'cash_deposit' | 'buy';
+export type RecurringKind = 'transaction' | 'cash_deposit' | 'buy' | 'coupon';
 export type RecurringUnit = 'day' | 'week' | 'month';
 
 /** One transaction per occurrence. Amount in the base currency, as every
@@ -62,4 +62,13 @@ interface RuleBase {
 export type RecurringRule =
   | (RuleBase & { kind: 'transaction'; template: TransactionTemplate })
   | (RuleBase & { kind: 'cash_deposit'; template: CashDepositTemplate })
-  | (RuleBase & { kind: 'buy'; template: BuyTemplate });
+  | (RuleBase & { kind: 'buy'; template: BuyTemplate })
+  | (RuleBase & { kind: 'coupon'; template: CouponTemplate });
+
+/** v1.19 (NCC#204): a bond's coupons and, on the rule's end date (the
+ *  maturity), its redemption at face value. Made and kept in step by
+ *  lib/bondCoupons.ts, one per bond holding, with a deterministic id; the
+ *  amounts are worked out from the bond's terms and lots on each date. */
+export interface CouponTemplate {
+  holdingId: string;
+}

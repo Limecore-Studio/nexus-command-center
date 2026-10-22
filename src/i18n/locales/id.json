@@ -904,12 +904,16 @@
     "assetClass": {
       "stock": "Saham",
       "etf": "ETF",
-      "crypto": "₿ Kripto"
+      "crypto": "₿ Kripto",
+      "bond": "Obligasi",
+      "custom": "Kustom"
     },
     "assetAbbr": {
       "stock": "SAHAM",
       "etf": "ETF",
-      "crypto": "KRIPTO"
+      "crypto": "KRIPTO",
+      "bond": "OBLIG.",
+      "custom": "KUSTOM"
     },
     "wl": {
       "add": "+ Pantau",
@@ -1381,5 +1385,30 @@
     "entryTitle": "Berulang",
     "entrySub": "Sewa, gaji, setoran, dan rencana tabungan",
     "addRecurring": "Tambah berulang…"
+  },
+  "bonds": {
+    "section": "Obligasi & lainnya",
+    "noFeed": "Tanpa data harga",
+    "bond": "Obligasi",
+    "basisBook": "Nilai buku",
+    "basisManual": "Harga Anda",
+    "basisManualAge_other": "Harga Anda · {{count}} hari lalu",
+    "labelPh": "Nama pendek (mis. DE-2034)",
+    "terms": "Ketentuan obligasi",
+    "faceValue": "Nilai nominal per unit",
+    "currency": "Mata uang",
+    "couponRate": "Kupon % per tahun",
+    "frequency": "Dibayar",
+    "freq_1": "Tahunan",
+    "freq_2": "Dua kali setahun",
+    "freq_4": "Kuartalan",
+    "maturity": "Jatuh tempo",
+    "isinOptional": "ISIN (opsional)",
+    "bookHint": "Dinilai pada nilai buku: harga yang Anda bayar bergerak ke nilai nominal hingga jatuh tempo, ditambah bunga berjalan. Kupon masuk ke kas portofolio pada tanggalnya; saat jatuh tempo obligasi dilunasi pada nilai nominal.",
+    "marketPriceOptional": "Harga pasar per unit (opsional)",
+    "pricePerUnit": "Harga saat ini per unit",
+    "useBookValue": "Pakai nilai buku lagi",
+    "bondHint": "Tanpa data harga: dinilai pada nilai buku kecuali Anda memasukkan harga pasar.",
+    "customHint": "Harga dari Anda: perbarui saat berubah."
   }
 }

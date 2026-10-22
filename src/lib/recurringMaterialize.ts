@@ -25,9 +25,12 @@
 // in. It never guesses a price.
 import { db, type SyncQueueItem } from '../db/database';
 import { enqueue } from '../db/syncQueue';
-import type { PortfolioCashEntry, PortfolioHolding, PortfolioLot, Transaction } from '../types/finance';
+import type { PortfolioCashEntry, PortfolioHolding, PortfolioLot, StockSale, Transaction } from '../types/finance';
 import type { RecurringRule } from '../types/recurring';
 import { occurrenceId, occurrencesBetween } from './recurring';
+import { reconcileCouponRules } from './bondCoupons';
+import { couponPerUnit, unitsHeldOn } from './manualValuation';
+import { applySoldShares, computeSale, saleCostBasisInCurrency, totalRemainingShares } from './stockSaleFifo';
 
 export interface MaterializeDeps {
   /** Today, local YYYY-MM-DD. */
@@ -115,6 +118,8 @@ async function writeOccurrence(rule: RecurringRule, date: string, deps: Material
     return true;
   }
 
+  if (rule.kind === 'coupon') return writeCoupon(rule, date, out);
+
   const t = rule.template;
   const holding = await db.portfolioHoldings.get(t.holdingId);
   if (!holding) return false;
@@ -169,9 +174,88 @@ async function writeOccurrence(rule: RecurringRule, date: string, deps: Material
   return true;
 }
 
+/**
+ * v1.19 (NCC#204): a bond's coupon date. The coupon is paid on the units
+ * held at the start of the day; on the maturity date (the rule's end date)
+ * the bond is also redeemed: those units are sold at face value (FIFO, like
+ * any sale), the proceeds go to portfolio cash and the holding closes.
+ * Waits while the holding or its terms are not on this device.
+ */
+async function writeCoupon(rule: Extract<RecurringRule, { kind: 'coupon' }>, date: string, out: MaterializeResult): Promise<boolean> {
+  const holding = await db.portfolioHoldings.get(rule.template.holdingId);
+  const terms = holding?.bond;
+  if (!holding || !terms) return false;
+  const createdAt = now();
+  const [lots, sales] = await Promise.all([
+    db.portfolioLots.where('holdingId').equals(holding.id).toArray(),
+    db.stockSales.filter((s) => s.holdingId === holding.id).toArray(),
+  ]);
+  const ownLots = lots.length > 0;
+  const units = ownLots ? unitsHeldOn(holding.id, lots, sales, date) : holding.quantity;
+
+  const coupon = couponPerUnit(terms) * units;
+  if (coupon > 0 && date <= terms.maturity) {
+    const cash: PortfolioCashEntry = {
+      id: await occurrenceId(rule.id, date, 'cash'),
+      type: 'dividend',
+      amount: coupon,
+      currency: terms.currency,
+      relatedId: holding.id,
+      note: holding.ticker,
+      recurringRuleId: rule.id,
+      createdAt,
+      syncStatus: 'pending',
+    };
+    if (await put(db.portfolioCashEntries, 'portfolio_cash_entry', cash)) out.created++;
+  }
+
+  if (date === terms.maturity && units > 0 && ownLots) {
+    const saleId = await occurrenceId(rule.id, date, 'sale');
+    if (!(await db.stockSales.get(saleId))) {
+      const held = applySoldShares(lots, sales);
+      const { lotAllocations } = computeSale(holding.ticker, Math.min(units, totalRemainingShares(held)), held);
+      const sharesSold = lotAllocations.reduce((s, a) => s + a.sharesTaken, 0);
+      if (sharesSold > 0) {
+        const cost = saleCostBasisInCurrency(held, lotAllocations, terms.currency, () => null);
+        const sale: StockSale = {
+          id: saleId,
+          ticker: holding.ticker,
+          holdingId: holding.id,
+          sharesSold,
+          salePricePerShare: terms.faceValue,
+          costBasisPerShare: cost / sharesSold,
+          realizedGainLoss: terms.faceValue * sharesSold - cost,
+          currency: terms.currency,
+          soldAt: date,
+          lotAllocations,
+          syncStatus: 'pending',
+          createdAt,
+        };
+        await put(db.stockSales, 'stock_sale', sale);
+        const proceeds: PortfolioCashEntry = {
+          id: await occurrenceId(rule.id, date, 'redeem'),
+          type: 'sell',
+          amount: terms.faceValue * sharesSold,
+          currency: terms.currency,
+          relatedId: sale.id,
+          recurringRuleId: rule.id,
+          createdAt,
+          syncStatus: 'pending',
+        };
+        await put(db.portfolioCashEntries, 'portfolio_cash_entry', proceeds);
+        out.created += 2;
+        if (!out.touchedHoldings.includes(holding.id)) out.touchedHoldings.push(holding.id);
+      }
+    }
+  }
+  return true;
+}
+
 /** Materialise every due occurrence of every active rule. */
 export async function materializeDue(deps: MaterializeDeps): Promise<MaterializeResult> {
   const out: MaterializeResult = { created: 0, touchedHoldings: [] };
+  // v1.19 (NCC#204): bonds' coupon rules follow their holdings' terms.
+  await reconcileCouponRules();
   for (const rule of await db.recurringRules.toArray()) {
     if (rule.pausedAt) continue;
     let last = rule.lastMaterializedDate;

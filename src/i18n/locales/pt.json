@@ -910,12 +910,16 @@
     "assetClass": {
       "stock": "Ação",
       "etf": "ETF",
-      "crypto": "₿ Cripto"
+      "crypto": "₿ Cripto",
+      "bond": "Obrigação",
+      "custom": "Personalizado"
     },
     "assetAbbr": {
       "stock": "AÇÃO",
       "etf": "ETF",
-      "crypto": "CRIPTO"
+      "crypto": "CRIPTO",
+      "bond": "OBRIG.",
+      "custom": "PERSON."
     },
     "wl": {
       "add": "+ Acompanhar",
@@ -1419,5 +1423,32 @@
     "entryTitle": "Recorrentes",
     "entrySub": "Renda, salário, depósitos e planos de poupança",
     "addRecurring": "Adicionar recorrente…"
+  },
+  "bonds": {
+    "section": "Obrigações e outros",
+    "noFeed": "Sem cotação",
+    "bond": "Obrigação",
+    "basisBook": "Valor contabilístico",
+    "basisManual": "O seu preço",
+    "basisManualAge_one": "O seu preço · há {{count}} dia",
+    "basisManualAge_many": "O seu preço · há {{count}} dias",
+    "basisManualAge_other": "O seu preço · há {{count}} dias",
+    "labelPh": "Nome curto (ex. DE-2034)",
+    "terms": "Condições da obrigação",
+    "faceValue": "Valor nominal por unidade",
+    "currency": "Moeda",
+    "couponRate": "Cupão % ao ano",
+    "frequency": "Pago",
+    "freq_1": "Anual",
+    "freq_2": "Semestral",
+    "freq_4": "Trimestral",
+    "maturity": "Vencimento",
+    "isinOptional": "ISIN (opcional)",
+    "bookHint": "Avaliada ao valor contabilístico: o preço pago aproxima-se do nominal até ao vencimento, mais os juros corridos. Os cupões vão para o dinheiro da carteira nas suas datas; no vencimento é reembolsada ao nominal.",
+    "marketPriceOptional": "Preço de mercado por unidade (opcional)",
+    "pricePerUnit": "Preço atual por unidade",
+    "useBookValue": "Voltar ao valor contabilístico",
+    "bondHint": "Sem cotação: avaliada ao valor contabilístico, salvo se indicar um preço de mercado.",
+    "customHint": "Preço definido por si: atualize-o quando mudar."
   }
 }

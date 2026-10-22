@@ -357,6 +357,11 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       avgCostNative: r.avg_cost_native != null ? Number(r.avg_cost_native) : undefined,
       costCurrency: r.cost_currency ?? undefined,
       sectorOverride: r.sector_override ?? undefined,
+      // v1.19 (NCC#204)
+      manualPrice: r.manual_price != null ? Number(r.manual_price) : undefined,
+      manualPriceCurrency: r.manual_price_currency ?? undefined,
+      manualPriceAt: r.manual_price_at ?? undefined,
+      bond: r.bond_terms ?? undefined,
       createdAt: r.created_at,
     }),
     async (rows) => {

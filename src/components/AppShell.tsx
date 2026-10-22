@@ -23,6 +23,10 @@ import { useTemplatesStore } from '../store/useTemplatesStore';
 import { useInsightsStore } from '../store/useInsightsStore';
 import { useSavingsGoalsStore } from '../store/useSavingsGoalsStore';
 import { useHabitsStore } from '../store/useHabitsStore';
+
+// v1.19 (NCC#202): the recurring engine loads on demand, outside the startup
+// bundle.
+const recurringStore = () => import('../store/useRecurringStore').then((m) => m.useRecurringStore.getState());
 import { checkBudgetThresholds } from '../lib/budgetAlerts';
 import { reconcileTaskReminders } from '../lib/taskReminders';
 import { runPortfolioEodTick } from '../lib/portfolioEod';
@@ -121,6 +125,17 @@ export default function AppShell() {
   const lastActivity = useAuthStore((s) => s.lastActivity);
   const didColdStartRefreshRef = useRef(false);
 
+  // v1.19 (NCC#202): a market-price recurring buy with no price loaded waits;
+  // try again when prices arrive.
+  const stockQuotes = useFinanceStore((s) => s.stockQuotes);
+  const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
+  useEffect(() => {
+    if (!stockQuotes.length && !cryptoPrices) return;
+    void recurringStore().then((s) => {
+      if (s.rules.some((r) => r.waitingSince && !r.pausedAt)) void s.materialize();
+    });
+  }, [stockQuotes, cryptoPrices]);
+
   useEffect(() => {
     // Module stores load first; templates depend on their Dexie tables, so
     // we kick off templates AFTER the store loads resolve. The detection
@@ -152,6 +167,10 @@ export default function AppShell() {
         hydrateInsights(),
         refreshPending(),
       ]);
+      // v1.19 (NCC#202): write recurring rules' due occurrences (missed days
+      // included). After settings, for the base currency. Runs again after
+      // every pull (useSyncStore) and when prices arrive (below).
+      void recurringStore().then((s) => s.materialize());
       // v1.2 follow-up — BUG-5. Migrate the legacy savingsBufferAmount into
       // the unified Emergency Buffer goal. Reads the setting after settings +
       // savings goals both loaded. Idempotent across cold starts — the

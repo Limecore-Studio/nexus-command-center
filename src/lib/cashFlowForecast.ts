@@ -12,7 +12,9 @@
 // base-currency code is carried through only for display labelling.
 
 import type { Transaction } from '../types/finance';
-import { parseDateLocal } from '@/utils/formatters';
+import type { RecurringRule, RecurringUnit } from '../types/recurring';
+import { localDateKey, parseDateLocal } from '@/utils/formatters';
+import { occurrencesBetween } from './recurring';
 
 const DAY_MS = 86_400_000;
 
@@ -32,6 +34,9 @@ interface RecurringItem {
   confidence: 'high' | 'medium';
   /** How many consistent occurrences were seen in the 90-day window. */
   occurrences: number;
+  /** v1.19 (NCC#202): set when the item is an explicit recurring rule, not a
+   *  detected pattern; its exact cadence. */
+  rule?: { every: number; unit: RecurringUnit };
 }
 
 interface CashFlowProjection {
@@ -79,6 +84,9 @@ export function detectRecurring(
 
   for (const t of transactions) {
     if (t.type === 'transfer') continue;
+    // v1.19 (NCC#202): a rule's own rows are forecast from the rule
+    // (projectCashFlow's `rules`); detecting them too counted them twice.
+    if (t.recurringRuleId) continue;
     const dateMs = parseDateLocal(t.date).getTime();
     if (!isFinite(dateMs) || dateMs < windowStart || dateMs > now) continue;
     if (!(t.amount > 0)) continue;
@@ -152,11 +160,42 @@ export function projectCashFlow(
   forecastDays: 30 | 60,
   baseCurrency: string,
   now: number = Date.now(),
+  rules: RecurringRule[] = [],
 ): CashFlowProjection {
   const windowEnd = now + forecastDays * DAY_MS;
   let projectedIncome = 0;
   let projectedExpenses = 0;
   const active: RecurringItem[] = [];
+
+  // v1.19 (NCC#202): explicit income/expense rules, by their exact dates.
+  // Only occurrences not written yet: a written one is a real transaction
+  // already. Transfers, portfolio deposits and buys are not income/expense.
+  const d = new Date(now);
+  const yesterday = localDateKey(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+  const endKey = localDateKey(new Date(windowEnd));
+  for (const r of rules) {
+    if (r.kind !== 'transaction' || r.pausedAt) continue;
+    const type = r.template.type;
+    if (type !== 'income' && type !== 'expense') continue;
+    const after = r.lastMaterializedDate && r.lastMaterializedDate > yesterday ? r.lastMaterializedDate : yesterday;
+    const dates = occurrencesBetween(r, after, endKey, 64);
+    if (dates.length === 0) continue;
+    const total = r.template.amount * dates.length;
+    if (type === 'income') projectedIncome += total;
+    else projectedExpenses += total;
+    const approxDays = r.unit === 'month' ? 30 * r.every : r.unit === 'week' ? 7 * r.every : r.every;
+    active.push({
+      key: `rule:${r.id}`,
+      label: r.template.description,
+      type,
+      estimatedAmount: r.template.amount,
+      intervalDays: approxDays <= 10 ? 7 : approxDays <= 21 ? 14 : 30,
+      nextExpected: dates[0],
+      confidence: 'high',
+      occurrences: dates.length,
+      rule: { every: r.every, unit: r.unit },
+    });
+  }
 
   for (const r of recurring) {
     let occ = parseDateLocal(r.nextExpected).getTime();

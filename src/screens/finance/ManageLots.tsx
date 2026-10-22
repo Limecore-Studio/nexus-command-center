@@ -234,6 +234,15 @@ export default function ManageLots() {
                   {t('fin.ml.sell')}
                 </button>
               )}
+              {/* v1.19 — NCC#202: a recurring buy of this holding. */}
+              <button
+                onClick={() => navigate(`/finance/recurring?new=buy&holding=${encodeURIComponent(holding.id)}`)}
+                className="text-xs px-2 py-1 rounded-sm border border-border text-text-muted active:text-text active:border-border"
+                aria-label={t('recurring.addRecurring')}
+                title={t('recurring.addRecurring')}
+              >
+                <Glyph name="refresh" size={13} />
+              </button>
               <button
                 onClick={startAdd}
                 className="chip press-spring"

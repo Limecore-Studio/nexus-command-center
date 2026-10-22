@@ -46,3 +46,21 @@ export function holdingValueBase(
   const nativeEur = p.priceEur * h.quantity;
   return baseCurrency === 'EUR' ? nativeEur : convertSync(nativeEur, 'EUR', baseCurrency, rates);
 }
+
+/** v1.19 (NCC#202) — one unit of a holding at the loaded price, in the
+ *  price's own (major) currency; null with no price loaded. A recurring
+ *  market-price buy waits on null rather than guessing. */
+export function holdingUnitPrice(
+  h: PortfolioHolding,
+  stockQuotes: QuoteResult[],
+  cryptoPrices: CryptoResult | null,
+): { price: number; currency: string } | null {
+  if (h.assetType === 'stock' || h.assetType === 'etf') {
+    const q = stockQuotes.find((s) => s.ticker === h.ticker);
+    if (!q || !(q.quote.c > 0)) return null;
+    const n = normalizeCurrency(q.quote.c, q.currency);
+    return { price: n.amount, currency: n.currency };
+  }
+  const p = cryptoPrices?.prices.find((cp) => cp.id === h.ticker);
+  return p && p.priceEur > 0 ? { price: p.priceEur, currency: 'EUR' } : null;
+}

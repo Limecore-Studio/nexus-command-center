@@ -50,6 +50,7 @@ const FinanceOverview = lazy(() => import('./screens/finance/FinanceOverview'));
 const AddTransaction = lazy(() => import('./screens/finance/AddTransaction'));
 const Portfolio = lazy(() => import('./screens/finance/Portfolio'));
 const ManageBudgets = lazy(() => import('./screens/finance/ManageBudgets'));
+const Recurring = lazy(() => import('./screens/finance/Recurring'));
 const ImportTransactions = lazy(() => import('./screens/finance/ImportTransactions'));
 const ManageHoldings = lazy(() => import('./screens/finance/ManageHoldings'));
 const ManageLots = lazy(() => import('./screens/finance/ManageLots'));
@@ -560,6 +561,8 @@ export default function App() {
           <Route path="/finance/account/:id" element={<AccountDetail />} />
           <Route path="/finance/whatif" element={<WhatIf />} />
           <Route path="/finance/budgets" element={<ManageBudgets />} />
+          {/* v1.19 — NCC#202 recurring rules. */}
+          <Route path="/finance/recurring" element={<Recurring />} />
           {/* v1.9 Item 14b #4 — CSV import/export. */}
           <Route path="/finance/import" element={<ImportTransactions />} />
           <Route path="/tasks" element={<TasksOverview />} />

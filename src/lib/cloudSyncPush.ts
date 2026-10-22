@@ -12,6 +12,7 @@ import type { Goal } from '../types/goals';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
+import type { RecurringRule } from '../types/recurring';
 import { dueAtForServer, dueLocalDate } from './taskDue';
 
 // ============================================================================
@@ -76,6 +77,32 @@ async function softDeleteOrHard(table: string, entityId: string, stamped: boolea
   if (hard.error) throw hard.error;
 }
 
+/**
+ * v1.19 (NCC#202) — the upsert for a row a recurring rule may have generated.
+ * The row carries `recurring_rule_id`. Its FIRST write (the queued insert)
+ * ignores a row already there: another device may have materialised the same
+ * occurrence (same deterministic id) and the user may have edited or deleted
+ * it since, which a second insert must not undo. Later edits are ordinary
+ * last-writer-wins upserts.
+ */
+async function upsertMaybeGenerated(
+  table: string,
+  row: Record<string, unknown>,
+  item: SyncQueueItem,
+  ruleId: string | undefined,
+): Promise<void> {
+  if (!ruleId) {
+    const { error } = await supabase.from(table).upsert(row);
+    if (error) throw error;
+    return;
+  }
+  const withRule = { ...row, recurring_rule_id: legacyIdToUuid(ruleId) };
+  const { error } = item.operation === 'insert'
+    ? await supabase.from(table).upsert(withRule, { onConflict: 'id', ignoreDuplicates: true })
+    : await supabase.from(table).upsert(withRule);
+  if (error) throw error;
+}
+
 async function pushTransaction(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
     await softDelete('transactions', item.entityId);
@@ -102,8 +129,7 @@ async function pushTransaction(item: SyncQueueItem, ctx: PushContext): Promise<v
     date: local.date,
     updated_at: stampOf(item),
   };
-  const { error } = await supabase.from('transactions').upsert(row);
-  if (error) throw error;
+  await upsertMaybeGenerated('transactions', row, item, local.recurringRuleId);
 }
 
 async function pushBudgetCategory(item: SyncQueueItem, ctx: PushContext): Promise<void> {
@@ -167,8 +193,7 @@ async function pushPortfolioLot(item: SyncQueueItem, ctx: PushContext): Promise<
     notes: local.notes ?? null,
     updated_at: updatedAt,
   };
-  const { error } = await supabase.from('portfolio_lots').upsert(row);
-  if (error) throw error;
+  await upsertMaybeGenerated('portfolio_lots', row, item, local.recurringRuleId);
 }
 
 // v1.3.1 (BUG-23) — realized stock sale. Append-only on the cloud; removal is
@@ -218,8 +243,7 @@ async function pushPortfolioCashEntry(item: SyncQueueItem, ctx: PushContext): Pr
     note: local.note ?? null,
     created_at: local.createdAt,
   };
-  const { error } = await supabase.from('portfolio_cash_entries').upsert(row);
-  if (error) throw error;
+  await upsertMaybeGenerated('portfolio_cash_entries', row, item, local.recurringRuleId);
 }
 
 async function pushManualAsset(item: SyncQueueItem, ctx: PushContext): Promise<void> {
@@ -707,6 +731,34 @@ async function pushWorkQualityLog(item: SyncQueueItem, ctx: PushContext): Promis
   if (error) throw error;
 }
 
+// v1.19 (NCC#202) — a recurring rule. Deletes are tombstones (the rule's
+// generated rows stay, or are deleted one by one, by the store).
+// `waitingSince` is local-only.
+async function pushRecurringRule(item: SyncQueueItem, ctx: PushContext): Promise<void> {
+  if (item.operation === 'delete') {
+    await softDelete('recurring_rules', item.entityId);
+    return;
+  }
+  const local: RecurringRule = JSON.parse(item.payload);
+  const row = {
+    id: legacyIdToUuid(local.id),
+    user_id: ctx.userId,
+    kind: local.kind,
+    template: local.template,
+    every: local.every,
+    unit: local.unit,
+    anchor_day: local.anchorDay ?? null,
+    start_date: local.startDate,
+    end_date: local.endDate ?? null,
+    last_materialized_date: local.lastMaterializedDate ?? null,
+    paused_at: local.pausedAt ?? null,
+    created_at: local.createdAt,
+    updated_at: stampOf(item, local),
+  };
+  const { error } = await supabase.from('recurring_rules').upsert(row);
+  if (error) throw error;
+}
+
 export const pushHandlers: Record<SyncQueueItem['entityType'], (item: SyncQueueItem, ctx: PushContext) => Promise<void>> = {
   transaction: pushTransaction,
   budget_category: pushBudgetCategory,
@@ -744,6 +796,7 @@ export const pushHandlers: Record<SyncQueueItem['entityType'], (item: SyncQueueI
   braindump_entry: pushBraindumpEntry,
   habit_completion: pushHabitCompletion,
   work_quality_log: pushWorkQualityLog,
+  recurring_rule: pushRecurringRule,
   // grade_import is a local-only snapshot concept — courses sync individually.
   grade_import: async () => {
     /* no-op */

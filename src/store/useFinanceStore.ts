@@ -128,6 +128,10 @@ interface FinanceStore {
     soldAt: string;
   }) => Promise<void>;
   deleteStockSale: (id: string) => Promise<void>;
+  /** v1.19 (NCC#202): re-derive a holding's cached quantity / average cost
+   *  from its lots after lots were written outside the store (recurring
+   *  buys). Call after load(). */
+  refreshHoldingAggregates: (holdingId: string) => Promise<void>;
 
   // v1.3.2 — portfolio cash transfers. `amount` is in `currency` (the UI passes
   // base currency). Deposit pulls from an account into portfolio cash;
@@ -527,6 +531,10 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       relatedId: sale.id,
     });
     await recomputeHoldingAggregates(holdingId, nextLots, set, get);
+  },
+
+  async refreshHoldingAggregates(holdingId) {
+    await recomputeHoldingAggregates(holdingId, get().portfolioLots, set, get);
   },
 
   async deleteStockSale(id) {

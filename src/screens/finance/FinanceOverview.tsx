@@ -348,6 +348,14 @@ export default function FinanceOverview() {
               onClick={() => navigate('/finance/savings')}
             />
 
+            {/* v1.19 — NCC#202 recurring rules. */}
+            <EntryCard
+              icon="refresh"
+              title={t('recurring.entryTitle')}
+              sub={t('recurring.entrySub')}
+              onClick={() => navigate('/finance/recurring')}
+            />
+
             {/* What-If — BUG-18 asked for this entry to stand out from the
                 rows above it. It did that with a cyan tinted frame; it does it
                 now with the lighter panel fill, which is the flat system's way

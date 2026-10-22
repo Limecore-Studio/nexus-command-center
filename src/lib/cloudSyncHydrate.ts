@@ -575,6 +575,7 @@ export async function hydratePortfolioCashFromCloud(
         accountId: r.account_id ?? undefined,
         relatedId: r.related_id ?? undefined,
         note: r.note ?? undefined,
+        recurringRuleId: r.recurring_rule_id ?? undefined,
         createdAt: r.created_at,
         syncStatus: 'synced' as const,
       }));

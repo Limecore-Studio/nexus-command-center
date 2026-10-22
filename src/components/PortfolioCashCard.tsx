@@ -7,6 +7,8 @@
 // deposit to cover. Self-contained: reads + writes the finance store directly.
 
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../lib/currencies';
 import { formatLocale } from '../utils/formatters';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -30,6 +32,8 @@ export default function PortfolioCashCard() {
   const deposit = useFinanceStore((s) => s.depositToPortfolio);
   const withdraw = useFinanceStore((s) => s.withdrawFromPortfolio);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const cash = useMemo(
     () => portfolioCashBalance(cashEntries, baseCurrency, fxRates),
@@ -144,6 +148,16 @@ export default function PortfolioCashCard() {
             </button>
             <button className="btn-ghost flex-1" onClick={cancel}>Cancel</button>
           </div>
+          {/* v1.19 (NCC#202): the same move on a schedule. */}
+          {mode === 'deposit' && (
+            <button
+              type="button"
+              className="text-[0.6875rem] text-text-muted active:text-text"
+              onClick={() => navigate('/finance/recurring?new=cash_deposit')}
+            >
+              {t('recurring.addRecurring')}
+            </button>
+          )}
         </div>
       )}
     </div>

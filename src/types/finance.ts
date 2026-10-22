@@ -27,6 +27,8 @@ export interface Transaction {
    * AddTransaction UI). Undefined for expense / income transactions.
    */
   destinationAccountId?: string;
+  /** v1.19 (NCC#202): the recurring rule that generated this row. */
+  recurringRuleId?: string;
 }
 
 export interface BudgetCategory {
@@ -107,6 +109,8 @@ export interface PortfolioLot {
    * upgrade hook back-fills existing rows.
    */
   soldShares?: number;
+  /** v1.19 (NCC#202): the recurring rule that generated this row. */
+  recurringRuleId?: string;
   syncStatus: SyncStatus;
   createdAt: string;
   updatedAt?: string;
@@ -192,6 +196,8 @@ export interface PortfolioCashEntry {
    *  rate. Unindexed, so no Dexie version bump. */
   accountAmount?: number;
   accountCurrency?: string;
+  /** v1.19 (NCC#202): the recurring rule that generated this row. */
+  recurringRuleId?: string;
   createdAt: string;
   syncStatus: SyncStatus;
 }

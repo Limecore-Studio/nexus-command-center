@@ -183,6 +183,15 @@ export interface PortfolioCashEntry {
   /** buy/sell: the originating lot / sale id, so deleting it removes this entry. */
   relatedId?: string;
   note?: string;
+  /** v1.18.1 (NCC#176) — deposit/withdrawal: `amount` as it hit the account,
+   *  in `accountCurrency`, at the rate used on the day (same sign as
+   *  `amount`). The history views use it instead of re-converting at today's
+   *  rate. LOCAL-ONLY: `portfolio_cash_entries` has no column for it, so it
+   *  is not pushed; the pull keeps the local value (cloudSyncHydrate), and an
+   *  entry made on another device, or before v1.18.1, falls back to today's
+   *  rate. Unindexed, so no Dexie version bump. */
+  accountAmount?: number;
+  accountCurrency?: string;
   createdAt: string;
   syncStatus: SyncStatus;
 }

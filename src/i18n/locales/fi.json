@@ -792,7 +792,9 @@
       "fromName": "tililtä {{name}}",
       "fromOther": "toiselta tililtä",
       "toName": "tilille {{name}}",
-      "toOther": "toiselle tilille"
+      "toOther": "toiselle tilille",
+      "toPortfolio": "Siirretty salkkuun",
+      "fromPortfolio": "Siirretty salkusta"
     },
     "assetClass": {
       "stock": "Osake",

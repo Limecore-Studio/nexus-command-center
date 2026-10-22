@@ -12,12 +12,12 @@
 //   - transfer where `t.destinationAccountId === account.id` → transfer-in
 //
 // The running balance is computed by walking the transactions oldest-first
-// applying signed deltas to `account.startingBalance`, then we reverse for
-// display so newest sits on top. Rows dated before a move to or from the
-// portfolio add that move back (lib/accountStatement, NCC#164), so each row is
-// the balance on its date; when a move came after the newest transaction, the
-// top row differs from the header balance by that move. A move in another
-// currency is added back at today's rate, as the net-worth trend does.
+// applying signed deltas to the opening balance, then we reverse for display
+// so newest sits on top. v1.18.1 (NCC#176) — a move to or from the portfolio
+// (Deposit, Withdraw, Savings "Invest") is a row of its own, and the walk
+// starts from the opening as it was before any move (lib/accountStatement), so
+// each row is the balance on its date and the top row is the header balance.
+// "Opened" shows that same pre-move opening, so Opened + Net change = balance.
 
 import { useMemo } from 'react';
 import { formatMoney } from '../../lib/currencies';
@@ -29,9 +29,15 @@ import { Pill } from '../../components/ui/Pill';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { computeAccountBalance } from '../../lib/accountBalance';
-import { statementRunningBalances } from '../../lib/accountStatement';
+import {
+  compareStatementRows,
+  portfolioMoveRows,
+  statementOpening,
+  statementRunningBalances,
+  type StatementRow,
+} from '../../lib/accountStatement';
 import { convertSync } from '../../api/fxRates';
-import type { Transaction } from '../../types/finance';
+import type { PortfolioCashEntry, Transaction } from '../../types/finance';
 import { LIABILITY_TYPES } from '../../types/finance';
 
 
@@ -40,7 +46,12 @@ function fmt(amount: number, currency: string): string {
 }
 
 interface RowEntry {
-  txn: Transaction;
+  key: string;
+  /** Null on a portfolio move row (NCC#176). */
+  txn: Transaction | null;
+  move: PortfolioCashEntry | null;
+  /** `YYYY-MM-DD`, local. */
+  date: string;
   /** Signed delta applied to THIS account (in account.currency). Positive
    *  = inflow (income / transfer-in), negative = outflow (expense /
    *  transfer-out). */
@@ -51,7 +62,7 @@ interface RowEntry {
    *  category name on an expense). Null when not applicable. */
   counterparty: string | null;
   /** Render hint — drives the colour + leading glyph on the row. */
-  kind: 'expense' | 'income' | 'transfer_in' | 'transfer_out';
+  kind: 'expense' | 'income' | 'transfer_in' | 'transfer_out' | 'to_portfolio' | 'from_portfolio';
 }
 
 export default function AccountDetail() {
@@ -86,8 +97,13 @@ export default function AccountDetail() {
   // for display (newest first). This is the only sane way to present a
   // bank-statement-style view — start with starting balance, apply each
   // event, finish at "balance".
-  const rows = useMemo<RowEntry[]>(() => {
-    if (!account) return [];
+  const { rows, opening, txnCount, unconvertibleMoves } = useMemo<{
+    rows: RowEntry[];
+    opening: number;
+    txnCount: number;
+    unconvertibleMoves: number;
+  }>(() => {
+    if (!account) return { rows: [], opening: 0, txnCount: 0, unconvertibleMoves: 0 };
 
     // Helper — convert a baseCurrency amount into account.currency. Returns
     // null on missing FX rate (we just skip the row from the running
@@ -121,25 +137,34 @@ export default function AccountDetail() {
       }
     }
 
+    // v1.18.1 (NCC#176): the account's portfolio moves join as rows.
     // Oldest-first by date+createdAt so the running balance accumulates
     // chronologically. Secondary createdAt sort handles same-day events
     // (which would otherwise be order-undefined and produce flickering
     // running balances on re-render).
-    matched.sort((a, b) => {
-      const dateCmp = a.txn.date.localeCompare(b.txn.date);
-      if (dateCmp !== 0) return dateCmp;
-      return a.txn.createdAt.localeCompare(b.txn.createdAt);
-    });
+    type Item = StatementRow & { m?: (typeof matched)[number] };
+    const moves = portfolioMoveRows(account, cashEntries, fxRates);
+    const items: Item[] = [
+      ...matched.map((m) => ({ date: m.txn.date, createdAt: m.txn.createdAt, delta: m.delta, m })),
+      ...moves.rows,
+    ].sort(compareStatementRows);
+    const balances = statementRunningBalances(account.startingBalance, items);
 
-    // v1.18.1 (NCC#164): a row dated before a Deposit / Withdraw / Invest
-    // adds the move back, since the move shifted the undated opening balance.
-    const balances = statementRunningBalances(
-      account,
-      matched.map((m) => ({ date: m.txn.date, createdAt: m.txn.createdAt, delta: m.delta })),
-      cashEntries,
-      fxRates,
-    );
-    const built: RowEntry[] = matched.map((m, i) => {
+    const built: RowEntry[] = items.map((item, i) => {
+      if (!item.m) {
+        const move = item.move!;
+        return {
+          key: `move:${move.id}`,
+          txn: null,
+          move,
+          date: item.date,
+          delta: item.delta,
+          runningBalance: balances[i],
+          counterparty: move.note || null,
+          kind: move.type === 'deposit' ? 'to_portfolio' : 'from_portfolio',
+        };
+      }
+      const m = item.m;
       const cat = m.txn.categoryId
         ? categories.find((c) => c.id === m.txn.categoryId)
         : null;
@@ -154,7 +179,10 @@ export default function AccountDetail() {
         counterparty = cat.name;
       }
       return {
+        key: m.txn.id,
         txn: m.txn,
+        move: null,
+        date: m.txn.date,
         delta: m.delta,
         runningBalance: balances[i],
         counterparty,
@@ -163,7 +191,12 @@ export default function AccountDetail() {
     });
 
     // Reverse — newest sits on top of the list (canonical statement view).
-    return built.reverse();
+    return {
+      rows: built.reverse(),
+      opening: statementOpening(account.startingBalance, items),
+      txnCount: matched.length,
+      unconvertibleMoves: moves.unconvertible,
+    };
   }, [account, allTransactions, cashEntries, categories, accounts, fxRates, baseCurrency, t]);
 
   if (!account) {
@@ -184,9 +217,12 @@ export default function AccountDetail() {
 
   const isLiability = LIABILITY_TYPES.includes(account.accountType);
   const balanceNative = balance?.balance ?? 0;
-  const delta = balanceNative - account.startingBalance;
+  // v1.18.1 (NCC#176) — measured from the pre-move opening, like the rows.
+  const delta = balanceNative - opening;
   const deltaTone = delta > 0 ? 'success' : delta < 0 ? 'danger' : 'neutral';
-  const unconvertableCount = balance?.unconvertableTxns.length ?? 0;
+  // v1.18.1 (NCC#176) — a move that could not be converted is missing from
+  // the rows and from "Opened", so it is counted in the same notice.
+  const unconvertableCount = (balance?.unconvertableTxns.length ?? 0) + unconvertibleMoves;
 
   return (
     <>
@@ -220,7 +256,7 @@ export default function AccountDetail() {
                 {t('fin.ad.opened')}
               </div>
               <div className="text-xs font-medium">
-                {fmt(account.startingBalance, account.currency)}
+                {fmt(opening, account.currency)}
               </div>
             </div>
             <div>
@@ -244,7 +280,7 @@ export default function AccountDetail() {
               <div className="text-[0.625rem] uppercase tracking-wider text-text-muted">
                 {t('fin.ad.transactions')}
               </div>
-              <div className="text-xs font-medium">{rows.length}</div>
+              <div className="text-xs font-medium">{txnCount}</div>
             </div>
           </div>
           {unconvertableCount > 0 && (
@@ -266,7 +302,7 @@ export default function AccountDetail() {
             </div>
             {rows.map((r) => {
               const tone =
-                r.kind === 'income' || r.kind === 'transfer_in'
+                r.kind === 'income' || r.kind === 'transfer_in' || r.kind === 'from_portfolio'
                   ? 'text-success'
                   : 'text-danger';
               const glyph =
@@ -274,25 +310,22 @@ export default function AccountDetail() {
                   ? '↑'
                   : r.kind === 'expense'
                     ? '↓'
-                    : r.kind === 'transfer_in'
+                    : r.kind === 'transfer_in' || r.kind === 'from_portfolio'
                       ? '⇇'
                       : '⇉';
-              return (
-                <button
-                  key={r.txn.id}
-                  type="button"
-                  onClick={() => navigate(`/finance/add?id=${r.txn.id}`)}
-                  className="w-full flex items-center gap-2 py-2 border-b border-border/40 last:border-0 text-start press-spring"
-                >
+              const body = (
+                <>
                   <span className={`text-base ${tone} w-5 text-center`}>
                     {glyph}
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">
-                      {r.txn.description}
+                      {r.txn
+                        ? r.txn.description
+                        : t(r.kind === 'to_portfolio' ? 'fin.ad.toPortfolio' : 'fin.ad.fromPortfolio')}
                     </div>
                     <div className="text-[0.625rem] text-text-muted truncate">
-                      {r.txn.date}
+                      {r.date}
                       {r.counterparty ? ` · ${r.counterparty}` : ''}
                     </div>
                   </div>
@@ -305,6 +338,27 @@ export default function AccountDetail() {
                       {fmt(r.runningBalance, account.currency)}
                     </div>
                   </div>
+                </>
+              );
+              const rowClass = 'w-full flex items-center gap-2 py-2 border-b border-border/40 last:border-0 text-start';
+              // v1.18.1 (NCC#176) — a move is not a transaction, so there is
+              // nothing to open in the transaction editor.
+              if (!r.txn) {
+                return (
+                  <div key={r.key} className={rowClass}>
+                    {body}
+                  </div>
+                );
+              }
+              const txnId = r.txn.id;
+              return (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => navigate(`/finance/add?id=${txnId}`)}
+                  className={`${rowClass} press-spring`}
+                >
+                  {body}
                 </button>
               );
             })}

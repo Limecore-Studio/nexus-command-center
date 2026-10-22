@@ -32,6 +32,7 @@
 import { computeAccountBalance } from './accountBalance';
 import { laterPortfolioMoves, portfolioCashBalance } from './portfolioCash';
 import { convertSync } from '../api/fxRates';
+import { localDayOf } from '../utils/formatters';
 import type {
   Account,
   AccountType,
@@ -94,7 +95,10 @@ function monthEndKey(year: number, month1: number): string {
   return `${year}-${String(month1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 }
 
-const dayOf = (iso: string) => iso.slice(0, 10);
+// v1.18.1 (NCC#176) — the local day, as the account statement and every
+// transaction date use (#145). This was the UTC day, so outside UTC a move
+// near midnight at a month's edge landed in a different month here.
+const dayOf = localDayOf;
 
 export function buildNetWorthTrend({
   accounts,
@@ -114,11 +118,15 @@ export function buildNetWorthTrend({
   const tx = [...transactions].sort((a, b) => a.date.localeCompare(b.date));
   const snaps = [...snapshots].sort((a, b) => a.date.localeCompare(b.date));
   const cash = [...cashEntries].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  // v1.18.1 (NCC#176) — each local day parsed once, not per account per
+  // month (120 months × 10 accounts × 1 000 entries would be ~1.2M parses).
+  const cashDay = new Map(cash.map((e) => [e, dayOf(e.createdAt)]));
+  const accountDay = new Map(accounts.map((a) => [a, { created: dayOf(a.createdAt), archived: a.archivedAt ? dayOf(a.archivedAt) : '' }]));
 
   // Earliest evidence of anything. Months before this would be a flat zero
   // line that says nothing except "the app did not exist yet".
   const firstSeen = [
-    ...accounts.map((a) => dayOf(a.createdAt)),
+    ...accounts.map((a) => accountDay.get(a)!.created),
     ...(tx.length > 0 ? [tx[0].date] : []),
   ]
     .filter(Boolean)
@@ -143,9 +151,12 @@ export function buildNetWorthTrend({
   // happened. Read as-is, every month before a deposit lost the amount and
   // net worth showed a drop that never happened. So for a month before a
   // move, the move is added back to the account it came from (see
-  // laterPortfolioMoves, shared with the account statement since #164).
-  const laterMovesBase = (accountId: string, asOf: string): number =>
-    laterPortfolioMoves(cash, accountId, baseCurrency, fxRates, (e) => dayOf(e.createdAt) > asOf);
+  // laterPortfolioMoves). v1.18.1 (NCC#176): added back in the ACCOUNT's
+  // currency, as the amount the account was actually debited (stored on the
+  // entry), and then converted with the rest of the balance — not the move
+  // re-converted into base at today's rate.
+  const laterMoves = (account: Account, asOf: string): number =>
+    laterPortfolioMoves(cash, account.id, account.currency, fxRates, (e) => cashDay.get(e)! > asOf);
 
   let txIdx = 0;
   let snapIdx = 0;
@@ -163,10 +174,10 @@ export function buildNetWorthTrend({
 
     const live = accounts.filter(
       (a) =>
-        dayOf(a.createdAt) <= asOf &&
+        accountDay.get(a)!.created <= asOf &&
         // An account archived in June should stop contributing after June
         // rather than vanish from its own history.
-        (!a.archivedAt || dayOf(a.archivedAt) > asOf),
+        (!a.archivedAt || accountDay.get(a)!.archived > asOf),
     );
 
     const slices: NetWorthAccountSlice[] = [];
@@ -177,7 +188,7 @@ export function buildNetWorthTrend({
         seenAccounts.add(a.id);
         addedAccounts.push(a.name);
       }
-      const native = computeAccountBalance(a, txSlice, fxRates, baseCurrency).balance;
+      const native = computeAccountBalance(a, txSlice, fxRates, baseCurrency).balance + laterMoves(a, asOf);
       let base: number | null = native;
       if (a.currency !== baseCurrency) {
         usedFx = true;
@@ -186,7 +197,6 @@ export function buildNetWorthTrend({
       // A balance we cannot convert is unknown, and adding 0 for it would
       // quietly understate net worth. Drop the slice instead.
       if (base == null) continue;
-      base += laterMovesBase(a.id, asOf);
       accountsBase += base;
       slices.push({ id: a.id, name: a.name, accountType: a.accountType, base });
     }
@@ -207,7 +217,7 @@ export function buildNetWorthTrend({
     }
     if (holdingsBase == null) hasHoldingsGap = true;
 
-    while (cashIdx < cash.length && dayOf(cash[cashIdx].createdAt) <= asOf) cashIdx++;
+    while (cashIdx < cash.length && cashDay.get(cash[cashIdx])! <= asOf) cashIdx++;
     const portfolioCashBase = portfolioCashBalance(cash.slice(0, cashIdx), baseCurrency, fxRates);
 
     return {

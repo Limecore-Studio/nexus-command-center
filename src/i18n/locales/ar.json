@@ -916,7 +916,9 @@
       "fromName": "من {{name}}",
       "fromOther": "من حساب آخر",
       "toName": "إلى {{name}}",
-      "toOther": "إلى حساب آخر"
+      "toOther": "إلى حساب آخر",
+      "toPortfolio": "نُقل إلى المحفظة",
+      "fromPortfolio": "نُقل من المحفظة"
     },
     "assetClass": {
       "stock": "سهم",

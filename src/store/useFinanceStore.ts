@@ -10,19 +10,20 @@ import { getCryptoPrices, CryptoResult } from '../api/coingecko';
 import { ensureFxRates, convertSync } from '../api/fxRates';
 import { clearProviderErrors, lastProviderErrors, getYahooSparkline, type ProviderError } from '../api/yahoo';
 import { getCompanyProfiles, type CompanyProfile } from '../api/companyProfile';
-import {
-  getStockMetric,
-  getRecommendations,
-  getCompanyNews,
-  getEarningsCalendar,
-  getDividendsAll,
-  type StockMetric,
-  type Recommendation,
-  type NewsItem,
-  type EarningsEvent,
-  type DividendEvent,
+import type {
+  StockMetric,
+  Recommendation,
+  NewsItem,
+  EarningsEvent,
+  DividendEvent,
 } from '../api/stockDetail';
-import { getMarketNews } from '../api/marketNews';
+// v1.18.2 — the portfolio detail providers (earnings, dividends, company and
+// market news, metrics, recommendations) load on first use instead of with the
+// app. They only ever run after a refresh tap, the cold-start refresh or a
+// holding's detail sheet, never on the first paint, and with yahooFundamentals
+// they were ~15 KiB of the startup chunk.
+const stockDetail = () => import('../api/stockDetail');
+const marketNewsApi = () => import('../api/marketNews');
 import { computeDividendCredits, guestDividendKey } from '../lib/dividendRealize';
 import { useSettingsStore } from './useSettingsStore';
 import { useSessionStore } from './useSessionStore';
@@ -808,6 +809,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // refresh — they're effectively a "once a day" workload that piggybacks
     // on the user's existing refresh tap. Also pull market news here so the
     // Finance Overview's news card stays fresh.
+    const [{ getEarningsCalendar, getDividendsAll }, { getMarketNews }] = await Promise.all([stockDetail(), marketNewsApi()]);
     const [earnings, dividendsMap, marketNews] = await Promise.all([
       equityTickers.length ? getEarningsCalendar(equityTickers) : Promise.resolve([]),
       equityTickers.length ? getDividendsAll(equityTickers) : Promise.resolve(new Map()),
@@ -925,6 +927,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // Fan out per-ticker fetches in parallel. getCompanyNews is cache-gated
     // (6h TTL) and rate-limit-gated at the api/cache layer, so this is safe
     // to call on every refresh — most tickers hit cache.
+    const { getCompanyNews } = await stockDetail();
     const results = await Promise.all(
       tickers.map(async (t) => ({ ticker: t, news: await getCompanyNews(t) })),
     );
@@ -941,6 +944,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     if (get().detailLoading[key]) return; // already in-flight
     set({ detailLoading: { ...get().detailLoading, [key]: true } });
     try {
+      const { getStockMetric, getRecommendations, getCompanyNews } = await stockDetail();
       const [metric, recommendations, news] = await Promise.all([
         getStockMetric(ticker),
         getRecommendations(ticker),

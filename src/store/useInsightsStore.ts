@@ -33,8 +33,17 @@
 // separate chronological log used for cooldown, not for rehydration.
 
 import { create } from 'zustand';
-import { computeInsightForTicker, type CompositeRating } from '../lib/insightsScore';
-import { computeFundamentalForTicker, type FundamentalRating } from '../lib/fundamentalsScore';
+import type { CompositeRating } from '../lib/insightsScore';
+import type { FundamentalRating } from '../lib/fundamentalsScore';
+// v1.18.2 — the scoring engines (signals, Yahoo history/news, fundamentals)
+// load on the first sweep instead of with the app. Hydrating stored ratings at
+// start-up doesn't need them; only computing a fresh one does.
+async function computeInsightForTicker(ticker: string): Promise<CompositeRating | null> {
+  return (await import('../lib/insightsScore')).computeInsightForTicker(ticker);
+}
+async function computeFundamentalForTicker(ticker: string): Promise<FundamentalRating | null> {
+  return (await import('../lib/fundamentalsScore')).computeFundamentalForTicker(ticker);
+}
 import {
   shouldRunDailyTechnicalSweep,
   markDailyTechnicalSweep,

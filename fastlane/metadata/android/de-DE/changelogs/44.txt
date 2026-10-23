@@ -1,0 +1,3 @@
+Wiederkehrende Buchungen und Anleihen.
+
+Lege wiederkehrende Einnahmen und Ausgaben, regelmäßige Einzahlungen ins Portfolio-Guthaben und Sparpläne an. Anleihen und Positionen mit eigenem Preis kommen ins Portfolio, bewertet nach ihren Bedingungen, mit automatisch gebuchten Kupons. Notenziele folgen deiner Skala, Zeugnis-Schnitte passen zu StudyDesk, und Life zeigt Größe und Körperdaten aus LimeLog. Erinnerungen kommen vor der Fälligkeit, und auf geteilten Geräten bleiben Konten getrennt.

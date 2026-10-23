@@ -1,0 +1,3 @@
+Toistuvat tapahtumat ja joukkovelkakirjat.
+
+Luo toistuvia tuloja ja menoja, säännöllisiä talletuksia salkun käteiseen ja toistuvia ostoja. Joukkovelkakirjat ja itse hinnoitellut omistukset tulevat salkkuun ehtojensa mukaan arvotettuina, ja korot kirjataan automaattisesti. Arvosanatavoitteet seuraavat asteikkoasi, todistuskeskiarvot vastaavat StudyDeskiä, ja Life näyttää LimeLogin pituus- ja kehotiedot. Muistutukset tulevat ennen määräaikaa, ja jaetulla laitteella tilit pysyvät erillään.

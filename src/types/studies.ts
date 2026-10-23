@@ -53,6 +53,9 @@ export interface GradeImport {
   importedAt: string;
   source: 'csv' | 'manual';
   calculatedGpa: number;
+  /** v1.19 (NCC#213) — the average counts a subject that is between two
+   *  report grades, so it is a projection ("≈"). In-memory only. */
+  gpaProjection?: boolean;
   courses: Course[];
 }
 

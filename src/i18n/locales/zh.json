@@ -1419,5 +1419,20 @@
     "useBookValue": "改回账面价值",
     "bondHint": "无行情：除非你输入市价，否则按账面价值估值。",
     "customHint": "由你定价：价格变化时请更新。"
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "提醒时间",
+      "lead_0": "到期时",
+      "lead_15": "提前 15 分钟",
+      "lead_60": "提前 1 小时",
+      "lead_1440": "提前 1 天",
+      "dueToday": "今天到期",
+      "dueTomorrow": "明天到期",
+      "dueAt": "{{time}} 到期",
+      "dueTomorrowAt": "明天 {{time}} 到期",
+      "highPriority": "高优先级",
+      "markDone": "标记完成"
+    }
   }
 }

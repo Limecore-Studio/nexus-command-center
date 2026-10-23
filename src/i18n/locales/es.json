@@ -1453,5 +1453,20 @@
     "useBookValue": "Volver al valor contable",
     "bondHint": "Sin cotización: valorado a valor contable salvo que indiques un precio de mercado.",
     "customHint": "Precio puesto por ti: actualízalo cuando cambie."
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Recordarme",
+      "lead_0": "A la hora límite",
+      "lead_15": "15 min antes",
+      "lead_60": "1 hora antes",
+      "lead_1440": "1 día antes",
+      "dueToday": "Vence hoy",
+      "dueTomorrow": "Vence mañana",
+      "dueAt": "Vence a las {{time}}",
+      "dueTomorrowAt": "Vence mañana a las {{time}}",
+      "highPriority": "Prioridad alta",
+      "markDone": "Marcar como hecha"
+    }
   }
 }

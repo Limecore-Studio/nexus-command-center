@@ -226,6 +226,24 @@ describe('the master switch and settings load (B2)', () => {
     expect(prefs.get).toHaveBeenCalledTimes(perLoad * 2);
   });
 
+  // v1.19 (NCC#170): nothing stored is the 1-hour default, not "at the due
+  // time" (Number(null) is 0, itself a valid choice); a stored one is kept.
+  it('task reminder lead time: defaults to 60 minutes, reads a stored choice', async () => {
+    delete prefs.values['settings.notif.taskLeadMin'];
+    useSettingsStore.setState({ loaded: false });
+    await useSettingsStore.getState().load();
+    expect(useSettingsStore.getState().taskReminderLeadMin).toBe(60);
+    await useSettingsStore.getState().setTaskReminderLeadMin(0);
+    useSettingsStore.setState({ loaded: false });
+    await useSettingsStore.getState().load();
+    expect(useSettingsStore.getState().taskReminderLeadMin).toBe(0);
+    prefs.values['settings.notif.taskLeadMin'] = '42';
+    useSettingsStore.setState({ loaded: false });
+    await useSettingsStore.getState().load();
+    expect(useSettingsStore.getState().taskReminderLeadMin).toBe(60);
+    delete prefs.values['settings.notif.taskLeadMin'];
+  });
+
   it('re-arms every active habit when the switch turns on, and only then', async () => {
     const { a, others } = collidingIds();
     const [archived] = others;

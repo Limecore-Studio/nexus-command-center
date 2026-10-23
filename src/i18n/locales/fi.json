@@ -1433,5 +1433,20 @@
     "useBookValue": "Käytä taas kirja-arvoa",
     "bondHint": "Ei hintasyötettä: arvostetaan kirja-arvoon, ellet syötä markkinahintaa.",
     "customHint": "Itse hinnoiteltu: päivitä hinta, kun se muuttuu."
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Muistuta",
+      "lead_0": "Eräaikana",
+      "lead_15": "15 min ennen",
+      "lead_60": "1 tunti ennen",
+      "lead_1440": "1 päivä ennen",
+      "dueToday": "Erääntyy tänään",
+      "dueTomorrow": "Erääntyy huomenna",
+      "dueAt": "Erääntyy klo {{time}}",
+      "dueTomorrowAt": "Erääntyy huomenna klo {{time}}",
+      "highPriority": "Korkea prioriteetti",
+      "markDone": "Merkitse tehdyksi"
+    }
   }
 }

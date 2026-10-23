@@ -1413,5 +1413,20 @@
     "useBookValue": "Pakai nilai buku lagi",
     "bondHint": "Tanpa data harga: dinilai pada nilai buku kecuali Anda memasukkan harga pasar.",
     "customHint": "Harga dari Anda: perbarui saat berubah."
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Ingatkan saya",
+      "lead_0": "Saat tenggat",
+      "lead_15": "15 menit sebelumnya",
+      "lead_60": "1 jam sebelumnya",
+      "lead_1440": "1 hari sebelumnya",
+      "dueToday": "Tenggat hari ini",
+      "dueTomorrow": "Tenggat besok",
+      "dueAt": "Tenggat pukul {{time}}",
+      "dueTomorrowAt": "Tenggat besok pukul {{time}}",
+      "highPriority": "Prioritas tinggi",
+      "markDone": "Tandai selesai"
+    }
   }
 }

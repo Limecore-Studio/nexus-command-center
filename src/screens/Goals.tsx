@@ -56,6 +56,7 @@ export default function Goals() {
   const tasks = useTaskStore((s) => s.tasks);
   const studySessions = useStudiesStore((s) => s.studySessions);
   const currentImport = useStudiesStore((s) => s.currentImport);
+  const gradeScale = useStudiesStore((s) => s.gradeScale);
   const workouts = useFitnessStore((s) => s.sessions);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
@@ -73,6 +74,7 @@ export default function Goals() {
       studySessions,
       workouts,
       currentGpa: currentImport?.calculatedGpa ?? null,
+      gradeScale,
     }),
     [
       transactions,
@@ -87,6 +89,7 @@ export default function Goals() {
       studySessions,
       workouts,
       currentImport,
+      gradeScale,
     ],
   );
 
@@ -213,7 +216,12 @@ function GoalRow({
   // v1.14 — pacing against an evenly distributed reference trajectory. The
   // old `paceLabel` is gone from this screen: it returned English to all ten
   // locales, and "behind by 1.5" is a verdict with no action in it.
-  const pacing = pacingFor(progress.currentValue, goal);
+  // v1.19 (NCC#197): a GPA is a level, not a running total, so the even
+  // trajectory pacing doesn't apply (and on a lower-is-better scale its
+  // "done" would be the wrong way round): done when reached, else silent.
+  const pacing = goal.goalType === 'gpa'
+    ? { ...pacingFor(progress.currentValue, goal), status: progress.reached ? ('done' as const) : ('unknown' as const) }
+    : pacingFor(progress.currentValue, goal);
 
   // The sentence under the bar, and the bar's own accessible name.
   //
@@ -230,11 +238,11 @@ function GoalRow({
     if (pacing.status === 'on') return t('goals.paceOn');
     if (pacing.remainingPerWeek != null) {
       return t('goals.paceBehind', {
-        amount: formatGoalValue(goal, pacing.remainingPerWeek, baseCurrency),
+        amount: formatGoalValue(goal, pacing.remainingPerWeek, baseCurrency, data.gradeScale),
       });
     }
     return t('goals.paceBehindNoTime', {
-      amount: formatGoalValue(goal, pacing.remaining, baseCurrency),
+      amount: formatGoalValue(goal, pacing.remaining, baseCurrency, data.gradeScale),
     });
   })();
 
@@ -264,9 +272,9 @@ function GoalRow({
           </div>
           <div className="flex items-center justify-between text-[0.625rem] text-text-muted mt-1">
             <span>
-              {formatGoalValue(goal, progress.currentValue, baseCurrency)}
+              {formatGoalValue(goal, progress.currentValue, baseCurrency, data.gradeScale)}
               {' / '}
-              {formatGoalValue(goal, goal.targetValue, baseCurrency)}
+              {formatGoalValue(goal, goal.targetValue, baseCurrency, data.gradeScale)}
             </span>
             <span>
               {progress.daysRemaining != null
@@ -312,6 +320,8 @@ function GoalForm({
   onSave: (g: Omit<Goal, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus' | 'completed' | 'completedAt' | 'deletedAt'>) => Promise<void>;
 }) {
   const { t } = useTranslation();
+  // v1.19 (NCC#197): a GPA target's default fits the account's scale.
+  const gradeScale = useStudiesStore((s) => s.gradeScale);
   const [title, setTitle] = useState(initial?.title ?? '');
   const [goalType, setGoalType] = useState<GoalType>(initial?.goalType ?? 'workout_count');
   const [targetValue, setTargetValue] = useState<string>(
@@ -327,8 +337,8 @@ function GoalForm({
     setGoalType(gt);
     // Auto-suggest a sensible target when the user picks a new type — only
     // if they haven't typed something custom yet.
-    if (!initial || targetValue === String(defaultTargetValue(initial.goalType))) {
-      setTargetValue(String(defaultTargetValue(gt)));
+    if (!initial || targetValue === String(defaultTargetValue(initial.goalType, gradeScale))) {
+      setTargetValue(String(defaultTargetValue(gt, gradeScale)));
     }
   };
 
@@ -389,7 +399,7 @@ function GoalForm({
         <input
           className="input"
           inputMode="decimal"
-          placeholder={String(defaultTargetValue(goalType))}
+          placeholder={String(defaultTargetValue(goalType, gradeScale))}
           value={targetValue}
           onChange={(e) => setTargetValue(e.target.value)}
         />

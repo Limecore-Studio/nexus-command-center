@@ -1433,5 +1433,20 @@
     "useBookValue": "Wieder Buchwert verwenden",
     "bondHint": "Kein Kursfeed: Bewertung zum Buchwert, außer du gibst einen Marktkurs ein.",
     "customHint": "Von dir bepreist: aktualisiere den Preis, wenn er sich ändert."
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Erinnern",
+      "lead_0": "Zur Fälligkeit",
+      "lead_15": "15 Min. vorher",
+      "lead_60": "1 Stunde vorher",
+      "lead_1440": "1 Tag vorher",
+      "dueToday": "Heute fällig",
+      "dueTomorrow": "Morgen fällig",
+      "dueAt": "Fällig um {{time}}",
+      "dueTomorrowAt": "Morgen fällig um {{time}}",
+      "highPriority": "Hohe Priorität",
+      "markDone": "Erledigt"
+    }
   }
 }

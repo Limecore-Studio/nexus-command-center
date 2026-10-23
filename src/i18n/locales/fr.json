@@ -1453,5 +1453,20 @@
     "useBookValue": "Revenir à la valeur comptable",
     "bondHint": "Sans cotation : valorisée au coût amorti, sauf si vous saisissez un cours.",
     "customHint": "Prix fixé par vous : mettez-le à jour quand il change."
+  },
+  "notif": {
+    "task": {
+      "leadLabel": "Me rappeler",
+      "lead_0": "À l’échéance",
+      "lead_15": "15 min avant",
+      "lead_60": "1 heure avant",
+      "lead_1440": "1 jour avant",
+      "dueToday": "Échéance aujourd’hui",
+      "dueTomorrow": "Échéance demain",
+      "dueAt": "Échéance à {{time}}",
+      "dueTomorrowAt": "Échéance demain à {{time}}",
+      "highPriority": "Priorité haute",
+      "markDone": "Marquer comme faite"
+    }
   }
 }

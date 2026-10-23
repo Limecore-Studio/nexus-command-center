@@ -117,11 +117,12 @@ export default function Dashboard() {
     const data = {
       transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency,
       tasks, studySessions, workouts: sessions, currentGpa: studies?.calculatedGpa ?? null,
+      gradeScale, // v1.19 (NCC#197)
     };
     return goals
       .filter((g) => !g.completed && !g.deletedAt)
       .map((g) => ({ goal: g, pct: Math.max(0, Math.min(100, Math.round(computeGoalProgress(g, data).percent))) }));
-  }, [goals, transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, studies]);
+  }, [goals, transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, studies, gradeScale]);
 
   // This week so far, from the builder the Review screen itself uses.
   const week = useMemo(

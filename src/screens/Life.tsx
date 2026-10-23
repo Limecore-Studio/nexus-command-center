@@ -98,6 +98,7 @@ export default function Life() {
   const workouts = useFitnessStore((s) => s.sessions);
   const studies = useStudiesStore((s) => s.studySessions);
   const currentImport = useStudiesStore((s) => s.currentImport);
+  const gradeScale = useStudiesStore((s) => s.gradeScale);
   const habits = useHabitsStore((s) => s.habits);
   const completions = useHabitsStore((s) => s.completions);
   const tasks = useTaskStore((s) => s.tasks);
@@ -153,6 +154,7 @@ export default function Life() {
         studySessions: studies,
         workouts: workouts as DataSources['workouts'],
         currentGpa: currentImport?.calculatedGpa ?? null,
+        gradeScale, // v1.19 (NCC#197)
       };
       const sum = activeGoals.reduce(
         (s, g) => s + Math.min(100, Math.max(0, computeGoalProgress(g, ds).percent)),
@@ -166,7 +168,7 @@ export default function Life() {
     const workLifeHabitsPct = habitWeek?.hitRatio != null ? habitWeek.hitRatio * 100 : 0;
 
     return computeWorkScore({ weeklyRatingAvg, daysLoggedThisWeek, goalsProgressPct, workLifeHabitsPct });
-  }, [workLogs, goals, txns, tasks, studies, workouts, currentImport, habits, completions]);
+  }, [workLogs, goals, txns, tasks, studies, workouts, currentImport, gradeScale, habits, completions]);
 
   const report = useMemo(
     () =>

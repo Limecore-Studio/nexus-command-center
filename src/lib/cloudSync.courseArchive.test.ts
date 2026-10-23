@@ -156,7 +156,7 @@ const subjectWrites = () => (holder.client.writes as Write[]).filter((w) => w.ta
 beforeEach(async () => {
   holder.client = lwwClient();
   await Promise.all(db.tables.map((t) => t.clear()));
-  useStudiesStore.setState({ courses: [], archivedCourses: [], grades: [], currentImport: null });
+  useStudiesStore.setState({ courses: [], grades: [], currentImport: null });
 });
 
 describe('course push: archived_at only for an archive change made in NCC (NCC#180)', () => {
@@ -254,12 +254,12 @@ describe('adoption insert of an archived course', () => {
 });
 
 describe('archive change made in NCC', () => {
-  it('restoreCourse writes only archived_at + archived_edited_at (edit time), no updated_at', async () => {
+  it('a restore writes only archived_at + archived_edited_at (edit time), no updated_at', async () => {
     const c = course({ archivedAt: ARCHIVED });
     holder.client = lwwClient([serverRow(c, { archived_at: ARCHIVED, archived_edited_at: ARCHIVED })]);
     await db.courses.put(c);
     const before = Date.now();
-    await useStudiesStore.getState().restoreCourse(c.id);
+    await useStudiesStore.getState().updateCourse(c.id, { archivedAt: undefined });
     expect((await db.courses.get(c.id))?.archivedAt).toBeUndefined();
     // The marker lives in the queue only, never in Dexie.
     expect(await db.courses.get(c.id)).not.toHaveProperty('archiveEditedAt');
@@ -279,7 +279,7 @@ describe('archive change made in NCC', () => {
     const FUTURE = new Date(Date.now() + 3_600_000).toISOString();
     holder.client = lwwClient([serverRow(c, { archived_at: ARCHIVED, archived_edited_at: FUTURE })]);
     await db.courses.put(c);
-    await useStudiesStore.getState().restoreCourse(c.id);
+    await useStudiesStore.getState().updateCourse(c.id, { archivedAt: undefined });
     expect((await pushQueue(USER)).failed).toBe(0);
     expect(await listPending()).toHaveLength(0);
     expect(holder.client.rows[0].archived_at).toBe(ARCHIVED);
@@ -289,7 +289,7 @@ describe('archive change made in NCC', () => {
     const c = course({ archivedAt: ARCHIVED });
     holder.client = lwwClient([serverRow(c, { archived_at: ARCHIVED })], stampedRefused);
     await db.courses.put(c);
-    await useStudiesStore.getState().restoreCourse(c.id);
+    await useStudiesStore.getState().updateCourse(c.id, { archivedAt: undefined });
     expect((await pushQueue(USER)).failed).toBe(0);
     const ws = subjectWrites();
     expect(ws).toHaveLength(2);
@@ -306,7 +306,7 @@ describe('archive change made in NCC', () => {
         : null,
     );
     await db.courses.put(c);
-    await useStudiesStore.getState().restoreCourse(c.id);
+    await useStudiesStore.getState().updateCourse(c.id, { archivedAt: undefined });
     expect((await pushQueue(USER)).failed).toBe(0);
     expect(subjectWrites()).toHaveLength(2);
   });
@@ -315,7 +315,7 @@ describe('archive change made in NCC', () => {
     holder.client = lwwClient([], () => ({ code: '42501', message: 'permission denied for table subjects' }));
     const c = course({ archivedAt: ARCHIVED });
     await db.courses.put(c);
-    await useStudiesStore.getState().restoreCourse(c.id);
+    await useStudiesStore.getState().updateCourse(c.id, { archivedAt: undefined });
     expect((await pushQueue(USER)).failed).toBe(1);
     expect(subjectWrites()).toHaveLength(1);
   });

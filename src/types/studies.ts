@@ -20,8 +20,8 @@ export interface Course {
   semester?: string;
   /** v1.2 — set by StudyDesk's semester-archive UI. ISO timestamp when
    *  the course was archived; absent/undefined means active. Filtered out
-   *  of the active studies UI and GPA computation; surfaced under an
-   *  "Archived" toggle. Sync-mirrored via subjects.archived_at column
+   *  of the GPA computation (NCC has no course list; NCC#181). Sync-
+   *  mirrored via subjects.archived_at column
    *  (pulled always; pushed only for an archive change made in NCC, NCC#180). */
   archivedAt?: string;
   createdAt: string;

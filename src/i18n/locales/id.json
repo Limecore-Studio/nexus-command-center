@@ -155,7 +155,22 @@
     "weekTarget": "Target minggu ini",
     "weekTargetAdjusted": "Disesuaikan untuk minggu ini — biasanya {{baseline}}",
     "weekTargetLess": "Kurangi satu minggu ini",
-    "weekTargetMore": "Tambah satu minggu ini"
+    "weekTargetMore": "Tambah satu minggu ini",
+    "body": {
+      "title": "Tubuh",
+      "weight": "Berat",
+      "height": "Tinggi",
+      "measured": "{{height}} (diukur {{date}})",
+      "bmi": "BMI {{bmi}}",
+      "bodyFat": "Lemak tubuh",
+      "water": "Air",
+      "protein": "Protein",
+      "bmr": "Metabolisme basal",
+      "visceral": "Lemak viseral",
+      "bone": "Massa tulang",
+      "muscle": "Massa otot",
+      "bodyAge": "Usia tubuh"
+    }
   },
   "onboarding": {
     "welcomeTitle": "Ayo siapkan sistem operasi hidupmu",

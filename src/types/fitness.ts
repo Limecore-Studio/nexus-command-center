@@ -47,6 +47,17 @@ export interface BodyMetric {
   hipsCm?: number;
   armsCm?: number;
   legsCm?: number;
+  /** v1.19 (NCC#214) — LimeLog's height log and smart-scale readings
+   *  (limelog#104). Nullable columns on the same row; BMI is never stored. */
+  heightCm?: number;
+  bodyFatPct?: number;
+  waterPct?: number;
+  proteinPct?: number;
+  bmrKcal?: number;
+  visceralFat?: number;
+  boneMassKg?: number;
+  muscleMassKg?: number;
+  bodyAge?: number;
   notes?: string;
   /** Mirrors the row's sync state. Always 'synced' for NCC since NCC only
    *  ever pulls these rows — kept on the type for shape-parity with the

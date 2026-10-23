@@ -155,7 +155,22 @@
     "weekTarget": "هدف هذا الأسبوع",
     "weekTargetAdjusted": "معدَّل لهذا الأسبوع — المعتاد {{baseline}}",
     "weekTargetLess": "واحد أقل هذا الأسبوع",
-    "weekTargetMore": "واحد أكثر هذا الأسبوع"
+    "weekTargetMore": "واحد أكثر هذا الأسبوع",
+    "body": {
+      "title": "الجسم",
+      "weight": "الوزن",
+      "height": "الطول",
+      "measured": "{{height}} (قيس في {{date}})",
+      "bmi": "مؤشر كتلة الجسم {{bmi}}",
+      "bodyFat": "دهون الجسم",
+      "water": "الماء",
+      "protein": "البروتين",
+      "bmr": "الأيض الأساسي",
+      "visceral": "الدهون الحشوية",
+      "bone": "كتلة العظام",
+      "muscle": "كتلة العضلات",
+      "bodyAge": "عمر الجسم"
+    }
   },
   "onboarding": {
     "welcomeTitle": "لنُعِدّ نظام تشغيل حياتك",

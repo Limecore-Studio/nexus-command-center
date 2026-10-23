@@ -86,7 +86,22 @@
     "weekTarget": "Objectif de la semaine",
     "weekTargetAdjusted": "Ajusté pour cette semaine — d’habitude {{baseline}}",
     "weekTargetLess": "Un de moins cette semaine",
-    "weekTargetMore": "Un de plus cette semaine"
+    "weekTargetMore": "Un de plus cette semaine",
+    "body": {
+      "title": "Corps",
+      "weight": "Poids",
+      "height": "Taille",
+      "measured": "{{height}} (mesurée le {{date}})",
+      "bmi": "IMC {{bmi}}",
+      "bodyFat": "Masse grasse",
+      "water": "Eau",
+      "protein": "Protéines",
+      "bmr": "Métabolisme de base",
+      "visceral": "Graisse viscérale",
+      "bone": "Masse osseuse",
+      "muscle": "Masse musculaire",
+      "bodyAge": "Âge corporel"
+    }
   },
   "auth": {
     "signInSubtitle": "Command Center · Connexion",

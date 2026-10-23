@@ -155,7 +155,22 @@
     "weekTarget": "इस सप्ताह का लक्ष्य",
     "weekTargetAdjusted": "इस सप्ताह के लिए बदला — आमतौर पर {{baseline}}",
     "weekTargetLess": "इस सप्ताह एक कम",
-    "weekTargetMore": "इस सप्ताह एक अधिक"
+    "weekTargetMore": "इस सप्ताह एक अधिक",
+    "body": {
+      "title": "शरीर",
+      "weight": "वज़न",
+      "height": "ऊँचाई",
+      "measured": "{{height}} ({{date}} को मापा गया)",
+      "bmi": "BMI {{bmi}}",
+      "bodyFat": "शरीर की चर्बी",
+      "water": "पानी",
+      "protein": "प्रोटीन",
+      "bmr": "बेसल मेटाबॉलिज़्म",
+      "visceral": "विसरल फैट",
+      "bone": "हड्डी का द्रव्यमान",
+      "muscle": "मांसपेशी द्रव्यमान",
+      "bodyAge": "शरीर की उम्र"
+    }
   },
   "onboarding": {
     "welcomeTitle": "चलिए आपका लाइफ़ OS सेट करें",

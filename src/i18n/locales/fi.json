@@ -86,7 +86,22 @@
     "weekTarget": "Tämän viikon tavoite",
     "weekTargetAdjusted": "Säädetty tälle viikolle — tavallisesti {{baseline}}",
     "weekTargetLess": "Yksi vähemmän tällä viikolla",
-    "weekTargetMore": "Yksi lisää tällä viikolla"
+    "weekTargetMore": "Yksi lisää tällä viikolla",
+    "body": {
+      "title": "Keho",
+      "weight": "Paino",
+      "height": "Pituus",
+      "measured": "{{height}} (mitattu {{date}})",
+      "bmi": "BMI {{bmi}}",
+      "bodyFat": "Rasvaprosentti",
+      "water": "Vesi",
+      "protein": "Proteiini",
+      "bmr": "Perusaineenvaihdunta",
+      "visceral": "Viskeraalirasva",
+      "bone": "Luumassa",
+      "muscle": "Lihasmassa",
+      "bodyAge": "Kehon ikä"
+    }
   },
   "auth": {
     "signInSubtitle": "Command Center · Kirjaudu sisään",

@@ -12,6 +12,7 @@ import { legacyIdToUuid } from '../utils/uuid';
 import type { StockSale, PortfolioCashEntry } from '../types/finance';
 import type { Course, Grade, StudySession } from '../types/studies';
 import type { BodyMetric } from '../types/fitness';
+import { scaleFields } from './bodyScale';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
@@ -382,6 +383,7 @@ export async function hydrateBodyMetricsFromCloud(
         hipsCm: r.hips_cm != null ? Number(r.hips_cm) : undefined,
         armsCm: r.arms_cm != null ? Number(r.arms_cm) : undefined,
         legsCm: r.legs_cm != null ? Number(r.legs_cm) : undefined,
+        ...scaleFields(r),
         notes: r.notes ?? undefined,
         syncStatus: 'synced' as const,
         createdAt: r.created_at,

@@ -86,7 +86,22 @@
     "weekTarget": "本周目标",
     "weekTargetAdjusted": "已为本周调整 — 平时是 {{baseline}}",
     "weekTargetLess": "本周减少一次",
-    "weekTargetMore": "本周增加一次"
+    "weekTargetMore": "本周增加一次",
+    "body": {
+      "title": "身体",
+      "weight": "体重",
+      "height": "身高",
+      "measured": "{{height}}（{{date}} 测量）",
+      "bmi": "BMI {{bmi}}",
+      "bodyFat": "体脂率",
+      "water": "水分",
+      "protein": "蛋白质",
+      "bmr": "基础代谢",
+      "visceral": "内脏脂肪",
+      "bone": "骨量",
+      "muscle": "肌肉量",
+      "bodyAge": "身体年龄"
+    }
   },
   "auth": {
     "signInSubtitle": "Command Center · 登录",

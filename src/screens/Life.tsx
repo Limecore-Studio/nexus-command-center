@@ -23,6 +23,9 @@ import DomainTrendGrid, { DOMAIN_COLOURS } from '../components/DomainTrendGrid';
 import { useShellTier } from '../lib/useShell';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useFitnessStore } from '../store/useFitnessStore';
+import { useBodyMetricsStore } from '../store/useBodyMetricsStore';
+import { bodySummary } from '../lib/bodyScale';
+import { formatShortDate } from '../utils/formatters';
 import { useStudiesStore } from '../store/useStudiesStore';
 import { useHabitsStore } from '../store/useHabitsStore';
 import { useTaskStore } from '../store/useTaskStore';
@@ -96,6 +99,8 @@ export default function Life() {
   const txns = useFinanceStore((s) => s.transactions);
   const budgets = useFinanceStore((s) => s.budgetCategories);
   const workouts = useFitnessStore((s) => s.sessions);
+  const bodyMetrics = useBodyMetricsStore((s) => s.metrics);
+  const body = useMemo(() => bodySummary(bodyMetrics), [bodyMetrics]);
   const studies = useStudiesStore((s) => s.studySessions);
   const currentImport = useStudiesStore((s) => s.currentImport);
   const habits = useHabitsStore((s) => s.habits);
@@ -356,6 +361,37 @@ export default function Life() {
             </div>
           )}
         </section>
+
+        {/* ─── BODY (v1.19, NCC#214) ────────────────────────────────────
+             LimeLog's body data, read-only: latest weight, height, BMI (by
+             LimeLog's rule) and smart-scale readings. Its own section, not
+             inside THIS WEEK, which waits for four weeks of activity. */}
+        {body && (
+          <section className="space-y-3">
+            <h2 className="font-heading font-semibold text-xs uppercase tracking-wider text-text-muted px-1">
+              {t('life.body.title')}
+            </h2>
+            <div className="card flex flex-wrap gap-x-4 gap-y-2 text-sm tabular-nums">
+              {body.weight && (
+                <span>
+                  <span className="text-text-muted">{t('life.body.weight')}</span> {Math.round(body.weight.kg * 10) / 10} kg
+                </span>
+              )}
+              {body.bmi != null && <span>{t('life.body.bmi', { bmi: body.bmi })}</span>}
+              {body.height && (
+                <span>
+                  <span className="text-text-muted">{t('life.body.height')}</span>{' '}
+                  {t('life.body.measured', { height: `${Math.round(body.height.cm * 10) / 10} cm`, date: formatShortDate(body.height.date) })}
+                </span>
+              )}
+              {body.scale.map((m) => (
+                <span key={m.key}>
+                  <span className="text-text-muted">{t(`life.body.${m.label}`)}</span> {m.text}
+                </span>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ─── HABITS (v1.15 Item 10) ───────────────────────────────────
              Habits had no home in the tab bar; its only way in was the strip

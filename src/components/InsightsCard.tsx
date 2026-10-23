@@ -12,6 +12,7 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { convertSync } from '../api/fxRates';
 import { holdingValueBase } from '../lib/positionValue';
 import { LIABILITY_TYPES } from '../types/finance';
+import type { PortfolioHolding } from '../types/finance';
 
 interface Insight {
   id: string;
@@ -25,6 +26,7 @@ function fmt(amount: number, currency: string): string {
 
 export default function InsightsCard() {
   const holdings = useFinanceStore((s) => s.holdings);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const sparklines = useFinanceStore((s) => s.sparklines);
@@ -36,13 +38,13 @@ export default function InsightsCard() {
     const out: Insight[] = [];
 
     // Compute portfolio value + per-position base values for downstream rules.
-    const positions: { ticker: string; valueBase: number; kind: 'stock' | 'etf' | 'crypto' }[] = [];
+    const positions: { ticker: string; valueBase: number; kind: PortfolioHolding['assetType'] }[] = [];
     let portfolioBase = 0;
     let cryptoBase = 0;
     for (const h of holdings) {
       // v1.9 — was an inline copy of Portfolio.tsx's conversion. Same maths,
       // now from one module, so a fix to either can't leave the other behind.
-      const v = holdingValueBase(h, stockQuotes, cryptoPrices, fxRates, baseCurrency);
+      const v = holdingValueBase(h, stockQuotes, cryptoPrices, fxRates, baseCurrency, portfolioLots);
       if (v != null) {
         positions.push({ ticker: h.ticker, valueBase: v, kind: h.assetType });
         portfolioBase += v;
@@ -136,7 +138,7 @@ export default function InsightsCard() {
     }
 
     return out;
-  }, [holdings, stockQuotes, cryptoPrices, sparklines, fxRates, manualAssets, baseCurrency]);
+  }, [holdings, portfolioLots, stockQuotes, cryptoPrices, sparklines, fxRates, manualAssets, baseCurrency]);
 
   if (insights.length === 0) return null;
 

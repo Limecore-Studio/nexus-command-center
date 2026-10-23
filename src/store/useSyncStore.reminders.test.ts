@@ -37,6 +37,8 @@ vi.mock('./useWorkQualityStore', () => ({ useWorkQualityStore: loadable }));
 vi.mock('./useBraindumpStore', () => ({ useBraindumpStore: loadable }));
 // v1.18.2 merge: habits reload after every pull too (NCC#138, #171).
 vi.mock('./useHabitsStore', () => ({ useHabitsStore: loadable }));
+// v1.19 (NCC#202): the sync materialises recurring rules after a pull.
+vi.mock('./useRecurringStore', () => ({ useRecurringStore: { getState: () => ({ materialize: async () => 0 }) } }));
 const TASKS = [{ id: 't-1' }];
 vi.mock('./useTaskStore', () => ({ useTaskStore: { getState: () => ({ load: async () => {}, tasks: TASKS }) } }));
 

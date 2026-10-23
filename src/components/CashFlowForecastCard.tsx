@@ -6,6 +6,7 @@
 import { useMemo, useState } from 'react';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useRecurringStore } from '../store/useRecurringStore';
 import { detectRecurring, projectCashFlow } from '../lib/cashFlowForecast';
 import { formatShortDate, formatLocale } from '../utils/formatters';
 
@@ -13,6 +14,8 @@ export default function CashFlowForecastCard() {
   const transactions = useFinanceStore((s) => s.transactions);
   const budgetCategories = useFinanceStore((s) => s.budgetCategories);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  // v1.19 (NCC#202): explicit rules forecast exactly; see projectCashFlow.
+  const rules = useRecurringStore((s) => s.rules);
 
   const [forecastDays, setForecastDays] = useState<30 | 60>(30);
   const [expanded, setExpanded] = useState(false);
@@ -22,8 +25,8 @@ export default function CashFlowForecastCard() {
       budgetCategories.map((c) => [c.id, `${c.icon ? c.icon + ' ' : ''}${c.name}`]),
     );
     const recurring = detectRecurring(transactions, baseCurrency, names);
-    return projectCashFlow(recurring, forecastDays, baseCurrency);
-  }, [transactions, budgetCategories, baseCurrency, forecastDays]);
+    return projectCashFlow(recurring, forecastDays, baseCurrency, undefined, rules);
+  }, [transactions, budgetCategories, baseCurrency, forecastDays, rules]);
 
   const money = useMemo(
     () =>
@@ -130,7 +133,7 @@ export default function CashFlowForecastCard() {
                   <div className="flex-1 min-w-0">
                     <div className="text-xs truncate">{r.label}</div>
                     <div className="text-[0.625rem] text-text-muted">
-                      every {cadenceLabel(r.intervalDays)} · next {formatShortDate(r.nextExpected)}
+                      every {r.rule ? ruleCadenceLabel(r.rule) : cadenceLabel(r.intervalDays)} · next {formatShortDate(r.nextExpected)}
                       {r.confidence === 'medium' && ' · low confidence'}
                     </div>
                   </div>
@@ -150,6 +153,12 @@ export default function CashFlowForecastCard() {
       )}
     </div>
   );
+}
+
+// v1.19 (NCC#202): an explicit rule's own cadence. English like the rest of
+// this card (its strings are NCC#114's).
+function ruleCadenceLabel(c: { every: number; unit: 'day' | 'week' | 'month' }): string {
+  return c.every === 1 ? c.unit : `${c.every} ${c.unit}s`;
 }
 
 function cadenceLabel(intervalDays: 7 | 14 | 30): string {

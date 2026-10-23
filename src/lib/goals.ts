@@ -7,8 +7,9 @@
 import type { Goal, GoalType } from '../types/goals';
 import { formatLocale, parseDateLocal } from '../utils/formatters';
 import { isCumulativeGoal } from '../types/goals';
-import type { Transaction, PortfolioHolding, ManualAsset } from '../types/finance';
-import { LIABILITY_TYPES } from '../types/finance';
+import type { Transaction, PortfolioHolding, PortfolioLot, ManualAsset } from '../types/finance';
+import { LIABILITY_TYPES, isManuallyPriced } from '../types/finance';
+import { manualHoldingValueBase } from './manualValuation';
 import type { StudySession } from '../types/studies';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
@@ -17,6 +18,8 @@ import { convertSync, normalizeCurrency } from '../api/fxRates';
 export interface DataSources {
   transactions: Transaction[];
   holdings: PortfolioHolding[];
+  /** v1.19 (NCC#204): a bond's book value is per lot. */
+  portfolioLots?: PortfolioLot[];
   manualAssets: ManualAsset[];
   // Quote + price data needed to value the portfolio in base currency.
   stockQuotes: Array<{ ticker: string; quote: { c: number }; currency: string }>;
@@ -47,7 +50,11 @@ interface GoalProgress {
 function netWorthBase(d: DataSources): number {
   let portfolioBase = 0;
   for (const h of d.holdings) {
-    if (h.assetType === 'stock' || h.assetType === 'etf') {
+    if (isManuallyPriced(h.assetType)) {
+      // v1.19 (NCC#204): bonds and custom holdings carry their own price.
+      const v = manualHoldingValueBase(h, d.portfolioLots ?? [], d.fxRates, d.baseCurrency);
+      if (v != null) portfolioBase += v;
+    } else if (h.assetType === 'stock' || h.assetType === 'etf') {
       const q = d.stockQuotes.find((s) => s.ticker === h.ticker);
       if (!q) continue;
       const native = normalizeCurrency(q.quote.c * h.quantity, q.currency);

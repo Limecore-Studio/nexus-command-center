@@ -7,6 +7,7 @@ import { Goal } from '../types/goals';
 import { Habit, HabitCompletion } from '../types/habits';
 import { WorkQualityLog } from '../types/work';
 import { BraindumpEntry } from '../types/braindump';
+import type { RecurringRule } from '../types/recurring';
 import { generateId } from '../utils/uuid';
 import { clearEntitlement } from '../lib/entitlement';
 import { cancelAllReminders } from '../lib/notifications';
@@ -93,7 +94,9 @@ export interface SyncQueueItem {
     // the composite key, so a retry is idempotent by construction.
     | 'app_open'
     // v1.12 Item 10 - Braindump quick capture.
-    | 'braindump_entry';
+    | 'braindump_entry'
+    // v1.19 - NCC#202 recurring rules.
+    | 'recurring_rule';
   entityId: string;
   operation: 'insert' | 'update' | 'delete';
   payload: string;
@@ -186,6 +189,8 @@ class NexusDB extends Dexie {
   bodyMetrics!: Table<BodyMetric, string>;
   workQualityLogs!: Table<WorkQualityLog, string>;
   braindumpEntries!: Table<BraindumpEntry, string>;
+  // v1.19 - NCC#202.
+  recurringRules!: Table<RecurringRule, string>;
 
   // v15 — BUG-23 Stock Sales Tracking (v1.3.1). One row per realized sale.
   // FIFO cost basis computed at sale time; realized P&L is Σ realizedGainLoss.
@@ -874,6 +879,13 @@ class NexusDB extends Dexie {
     this.version(23).stores({
       transactions: 'id, date, type, syncStatus, accountId, categoryId',
     });
+
+    // v24 - v1.19, NCC#202 recurring rules. Additive: one new table, no
+    // upgrade hook. Generated rows carry `recurringRuleId`, unindexed (a
+    // rule's history is a scan of one user's rows, rarely run).
+    this.version(24).stores({
+      recurringRules: 'id, kind, syncStatus',
+    });
   }
 }
 
@@ -910,6 +922,7 @@ export async function clearAllLocalData(): Promise<void> {
       db.lifeNarrative,
       db.workQualityLogs,
       db.braindumpEntries,
+      db.recurringRules,
       db.syncQueue,
     ],
     async () => {
@@ -941,6 +954,7 @@ export async function clearAllLocalData(): Promise<void> {
         db.lifeNarrative.clear(),
         db.workQualityLogs.clear(),
         db.braindumpEntries.clear(),
+        db.recurringRules.clear(),
         db.syncQueue.clear(),
       ]);
     }

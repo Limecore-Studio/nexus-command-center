@@ -6,12 +6,14 @@ import { stampOf } from './editStamp';
 import { db, SyncQueueItem } from '../db/database';
 import { legacyIdToUuid } from '../utils/uuid';
 import type { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry } from '../types/finance';
+import { isManuallyPriced } from '../types/finance';
 import type { CoursePushPayload, Grade } from '../types/studies';
 import type { Task, TaskPriority } from '../types/tasks';
 import type { Goal } from '../types/goals';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
+import type { RecurringRule } from '../types/recurring';
 import { dueAtForServer, dueLocalDate } from './taskDue';
 
 // ============================================================================
@@ -56,6 +58,52 @@ async function softDelete(table: string, entityId: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * v1.19 (NCC#92) — softDelete for the portfolio tables that gained
+ * `deleted_at` in 20261022_portfolio_tombstones.sql. `stamped` is false for
+ * stock_sales and portfolio_cash_entries, which have no `updated_at`. Until
+ * that migration is applied the column is unknown (PostgREST PGRST204,
+ * Postgres 42703), and the delete falls back to the hard delete of old.
+ */
+async function softDeleteOrHard(table: string, entityId: string, stamped: boolean): Promise<void> {
+  const stamp = new Date().toISOString();
+  const id = legacyIdToUuid(entityId);
+  const { error } = await supabase
+    .from(table)
+    .update(stamped ? { deleted_at: stamp, updated_at: stamp } : { deleted_at: stamp })
+    .eq('id', id);
+  if (!error) return;
+  if (error.code !== 'PGRST204' && error.code !== '42703') throw error;
+  const hard = await supabase.from(table).delete().eq('id', id);
+  if (hard.error) throw hard.error;
+}
+
+/**
+ * v1.19 (NCC#202) — the upsert for a row a recurring rule may have generated.
+ * The row carries `recurring_rule_id`. Its FIRST write (the queued insert)
+ * ignores a row already there: another device may have materialised the same
+ * occurrence (same deterministic id) and the user may have edited or deleted
+ * it since, which a second insert must not undo. Later edits are ordinary
+ * last-writer-wins upserts.
+ */
+async function upsertMaybeGenerated(
+  table: string,
+  row: Record<string, unknown>,
+  item: SyncQueueItem,
+  ruleId: string | undefined,
+): Promise<void> {
+  if (!ruleId) {
+    const { error } = await supabase.from(table).upsert(row);
+    if (error) throw error;
+    return;
+  }
+  const withRule = { ...row, recurring_rule_id: legacyIdToUuid(ruleId) };
+  const { error } = item.operation === 'insert'
+    ? await supabase.from(table).upsert(withRule, { onConflict: 'id', ignoreDuplicates: true })
+    : await supabase.from(table).upsert(withRule);
+  if (error) throw error;
+}
+
 async function pushTransaction(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
     await softDelete('transactions', item.entityId);
@@ -82,8 +130,7 @@ async function pushTransaction(item: SyncQueueItem, ctx: PushContext): Promise<v
     date: local.date,
     updated_at: stampOf(item),
   };
-  const { error } = await supabase.from('transactions').upsert(row);
-  if (error) throw error;
+  await upsertMaybeGenerated('transactions', row, item, local.recurringRuleId);
 }
 
 async function pushBudgetCategory(item: SyncQueueItem, ctx: PushContext): Promise<void> {
@@ -107,11 +154,9 @@ async function pushBudgetCategory(item: SyncQueueItem, ctx: PushContext): Promis
 
 async function pushPortfolioHolding(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('portfolio_holdings')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    // v1.19 (NCC#92): a tombstone. deleteHolding queues its lots' deletes
+    // too, so nothing relies on the FK cascade any more.
+    await softDeleteOrHard('portfolio_holdings', item.entityId, true);
     return;
   }
   const local: PortfolioHolding = JSON.parse(item.payload);
@@ -126,6 +171,16 @@ async function pushPortfolioHolding(item: SyncQueueItem, ctx: PushContext): Prom
     cost_currency: local.costCurrency ?? null,
     sector_override: local.sectorOverride ?? null,
     updated_at: stampOf(item),
+    // v1.19 (NCC#204): the price and terms of a bond / custom holding. Sent
+    // for those types only, so every other holding's push stays the same.
+    ...(isManuallyPriced(local.assetType)
+      ? {
+          manual_price: local.manualPrice ?? null,
+          manual_price_currency: local.manualPriceCurrency ?? null,
+          manual_price_at: local.manualPriceAt ?? null,
+          bond_terms: local.assetType === 'bond' ? local.bond ?? null : null,
+        }
+      : {}),
   };
   const { error } = await supabase.from('portfolio_holdings').upsert(row);
   if (error) throw error;
@@ -149,21 +204,16 @@ async function pushPortfolioLot(item: SyncQueueItem, ctx: PushContext): Promise<
     notes: local.notes ?? null,
     updated_at: updatedAt,
   };
-  const { error } = await supabase.from('portfolio_lots').upsert(row);
-  if (error) throw error;
+  await upsertMaybeGenerated('portfolio_lots', row, item, local.recurringRuleId);
 }
 
-// v1.3.1 (BUG-23) — realized stock sale. Append-only on the cloud (hard delete
-// on removal — there's no deleted_at column, matching the plan's schema). The
+// v1.3.1 (BUG-23) — realized stock sale. Append-only on the cloud; removal is
+// a tombstone from v1.19 (NCC#92). The
 // per-lot soldShares is NOT pushed (the cloud portfolio_lots table has no such
 // column); it's derived on every device from these sales' lot_allocations.
 async function pushStockSale(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('stock_sales')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    await softDeleteOrHard('stock_sales', item.entityId, false);
     return;
   }
   const local: StockSale = JSON.parse(item.payload);
@@ -185,15 +235,11 @@ async function pushStockSale(item: SyncQueueItem, ctx: PushContext): Promise<voi
   if (error) throw error;
 }
 
-// v1.3.2 — portfolio cash ledger entry. Hard-delete (no deleted_at), same as
-// stock_sales — the table is a personal append-only ledger.
+// v1.3.2 — portfolio cash ledger entry. A tombstone on removal from v1.19
+// (NCC#92), same as stock_sales — the table is a personal append-only ledger.
 async function pushPortfolioCashEntry(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('portfolio_cash_entries')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    await softDeleteOrHard('portfolio_cash_entries', item.entityId, false);
     return;
   }
   const local: PortfolioCashEntry = JSON.parse(item.payload);
@@ -208,8 +254,7 @@ async function pushPortfolioCashEntry(item: SyncQueueItem, ctx: PushContext): Pr
     note: local.note ?? null,
     created_at: local.createdAt,
   };
-  const { error } = await supabase.from('portfolio_cash_entries').upsert(row);
-  if (error) throw error;
+  await upsertMaybeGenerated('portfolio_cash_entries', row, item, local.recurringRuleId);
 }
 
 async function pushManualAsset(item: SyncQueueItem, ctx: PushContext): Promise<void> {
@@ -697,6 +742,34 @@ async function pushWorkQualityLog(item: SyncQueueItem, ctx: PushContext): Promis
   if (error) throw error;
 }
 
+// v1.19 (NCC#202) — a recurring rule. Deletes are tombstones (the rule's
+// generated rows stay, or are deleted one by one, by the store).
+// `waitingSince` is local-only.
+async function pushRecurringRule(item: SyncQueueItem, ctx: PushContext): Promise<void> {
+  if (item.operation === 'delete') {
+    await softDelete('recurring_rules', item.entityId);
+    return;
+  }
+  const local: RecurringRule = JSON.parse(item.payload);
+  const row = {
+    id: legacyIdToUuid(local.id),
+    user_id: ctx.userId,
+    kind: local.kind,
+    template: local.template,
+    every: local.every,
+    unit: local.unit,
+    anchor_day: local.anchorDay ?? null,
+    start_date: local.startDate,
+    end_date: local.endDate ?? null,
+    last_materialized_date: local.lastMaterializedDate ?? null,
+    paused_at: local.pausedAt ?? null,
+    created_at: local.createdAt,
+    updated_at: stampOf(item, local),
+  };
+  const { error } = await supabase.from('recurring_rules').upsert(row);
+  if (error) throw error;
+}
+
 export const pushHandlers: Record<SyncQueueItem['entityType'], (item: SyncQueueItem, ctx: PushContext) => Promise<void>> = {
   transaction: pushTransaction,
   budget_category: pushBudgetCategory,
@@ -734,6 +807,7 @@ export const pushHandlers: Record<SyncQueueItem['entityType'], (item: SyncQueueI
   braindump_entry: pushBraindumpEntry,
   habit_completion: pushHabitCompletion,
   work_quality_log: pushWorkQualityLog,
+  recurring_rule: pushRecurringRule,
   // grade_import is a local-only snapshot concept — courses sync individually.
   grade_import: async () => {
     /* no-op */

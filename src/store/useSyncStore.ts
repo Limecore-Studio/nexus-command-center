@@ -50,6 +50,12 @@ async function reloadDataStores(): Promise<void> {
       // re-arms the rest from the synced completions.
       useHabitsStore.getState().load(),
     ]);
+    // v1.19 (NCC#202): rules (and their progress) may have arrived from
+    // another device; write what is due. Deterministic ids make an occurrence
+    // that device already wrote a no-op here.
+    // Loaded on demand: the engine stays out of the startup bundle.
+    const { useRecurringStore } = await import('./useRecurringStore');
+    await useRecurringStore.getState().materialize();
   } catch (e) {
     // Reload failures shouldn't surface as sync errors — the data IS in Dexie,
     // we just couldn't refresh in-memory state. Log for diagnostics; next

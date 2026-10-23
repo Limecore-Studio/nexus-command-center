@@ -22,6 +22,8 @@ import { formatMoney } from '../../lib/currencies';
 import { useShellTier } from '../../lib/useShell';
 import { portfolioCashBalance } from '../../lib/portfolioCash';
 import Glyph from '../../components/Glyph';
+import { isManuallyPriced } from '../../types/finance';
+import { manualHoldingValueBase } from '../../lib/manualValuation';
 
 // v1.3 BUG-18 — Finance is split into two segments. "Balance" carries the
 // cash-flow + net-worth + budgeting surface; "Portfolio" carries the
@@ -69,6 +71,7 @@ export default function FinanceOverview() {
   const budgetCategories = useFinanceStore((s) => s.budgetCategories);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
   const holdings = useFinanceStore((s) => s.holdings);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
@@ -105,7 +108,11 @@ export default function FinanceOverview() {
   const netWorth = useMemo(() => {
     let portfolioBase = 0;
     for (const h of holdings) {
-      if (h.assetType === 'stock' || h.assetType === 'etf') {
+      if (isManuallyPriced(h.assetType)) {
+        // v1.19 (NCC#204): bonds and custom holdings carry their own price.
+        const v = manualHoldingValueBase(h, portfolioLots, fxRates, baseCurrency);
+        if (v != null) portfolioBase += v;
+      } else if (h.assetType === 'stock' || h.assetType === 'etf') {
         const q = stockQuotes.find((s) => s.ticker === h.ticker);
         if (!q) continue;
         const native = normalizeCurrency(q.quote.c * h.quantity, q.currency);
@@ -134,7 +141,7 @@ export default function FinanceOverview() {
       total: portfolioBase + cashBase + accountsBase,
       hasData: holdings.length > 0 || manualAssets.length > 0 || portfolioCashEntries.length > 0,
     };
-  }, [holdings, stockQuotes, cryptoPrices, fxRates, manualAssets, transactions, portfolioCashEntries, baseCurrency]);
+  }, [holdings, portfolioLots, stockQuotes, cryptoPrices, fxRates, manualAssets, transactions, portfolioCashEntries, baseCurrency]);
 
   // v1.9 Item 14b #2 — cash-flow diagram, desktop tier only. The month bounds
   // are ISO strings rather than Date objects: no timezone in play, so a
@@ -346,6 +353,14 @@ export default function FinanceOverview() {
               title={t('fin.ov.savingsBuffer')}
               sub={t('fin.ov.savingsSub')}
               onClick={() => navigate('/finance/savings')}
+            />
+
+            {/* v1.19 — NCC#202 recurring rules. */}
+            <EntryCard
+              icon="refresh"
+              title={t('recurring.entryTitle')}
+              sub={t('recurring.entrySub')}
+              onClick={() => navigate('/finance/recurring')}
             />
 
             {/* What-If — BUG-18 asked for this entry to stand out from the

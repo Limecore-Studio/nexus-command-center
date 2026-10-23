@@ -133,7 +133,8 @@ export default function Dashboard() {
     [transactions, studyCourses, studySessions, sessions, tasks, studies, holdings],
   );
 
-  const gpaDisplay = studies ? studies.calculatedGpa.toFixed(2) + scaleSuffix(gradeScale) : '—';
+  // v1.19 (NCC#213): ≈ when a subject is between two report grades, as StudyDesk.
+  const gpaDisplay = studies ? (studies.gpaProjection ? '≈' : '') + studies.calculatedGpa.toFixed(2) + scaleSuffix(gradeScale) : '—';
 
   return (
     <>

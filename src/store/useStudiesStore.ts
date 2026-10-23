@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { Preferences } from '@capacitor/preferences';
 import { db } from '../db/database';
 import { Course, CoursePushPayload, Grade, GradeImport, StudySession } from '../types/studies';
-import { calculateGPA, inferGradeMode, GradeMode } from '../utils/gpa';
+import { calculateScaleGPA, inferGradeMode, GradeMode } from '../utils/gpa';
 import { generateId } from '../utils/uuid';
 import { enqueue } from '../db/syncQueue';
 import { fetchAccountScale, inferredScale, readCachedAccountScale, type GradeScale } from '../lib/gradeScale';
@@ -36,6 +36,13 @@ function indexGradesBySubject(grades: Grade[]): Map<string, Grade[]> {
     else map.set(g.subjectId, [g]);
   }
   return map;
+}
+
+// v1.19 (NCC#213) — the GPA fields of the synthetic currentImport, on the
+// account's scale (whole report grades when StudyDesk's report rule is on).
+function gpaOf(courses: Course[], idx: Map<string, Grade[]>, scale: GradeScale): Pick<GradeImport, 'calculatedGpa' | 'gpaProjection'> {
+  const { gpa, projection } = calculateScaleGPA(courses, idx, scale);
+  return { calculatedGpa: gpa, gpaProjection: projection };
 }
 
 interface StudiesStore {
@@ -162,7 +169,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     const archivedCourses = allCoursesIncludingArchived.filter((c) => !!c.archivedAt);
     const previous = imports[1] ?? null;
     const idx = indexGradesBySubject(allGrades);
-    const gpa = calculateGPA(allCourses, idx, gradeMode);
+
     // Synthesize a single in-memory currentImport so the UI (which consumes
     // currentImport.calculatedGpa) gets a live aggregate even when there are
     // zero gradeImport rows. Not persisted — recomputed on every load() and
@@ -171,7 +178,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       id: 'cloud',
       importedAt: new Date().toISOString(),
       source: 'manual',
-      calculatedGpa: gpa,
+      ...gpaOf(allCourses, idx, gradeScale),
       courses: allCourses,
     };
     set({
@@ -203,7 +210,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     const imp = get().currentImport;
     if (imp) {
       const idx = indexGradesBySubject(get().grades);
-      set({ currentImport: { ...imp, calculatedGpa: calculateGPA(get().courses, idx, next.mode) } });
+      set({ currentImport: { ...imp, ...gpaOf(get().courses, idx, next) } });
     }
   },
 
@@ -215,7 +222,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     const imp = get().currentImport;
     if (imp) {
       const idx = indexGradesBySubject(get().grades);
-      const updated = { ...imp, calculatedGpa: calculateGPA(get().courses, idx, mode) };
+      const updated = { ...imp, ...gpaOf(get().courses, idx, get().gradeScale) };
       set({ currentImport: updated });
     }
   },
@@ -236,7 +243,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     set({
       courses: nextCourses,
       currentImport: cur
-        ? { ...cur, courses: nextCourses, calculatedGpa: calculateGPA(nextCourses, idx, get().gradeMode) }
+        ? { ...cur, courses: nextCourses, ...gpaOf(nextCourses, idx, get().gradeScale) }
         : cur,
     });
   },
@@ -253,7 +260,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     set({
       courses: nextCourses,
       currentImport: cur
-        ? { ...cur, courses: nextCourses, calculatedGpa: calculateGPA(nextCourses, idx, get().gradeMode) }
+        ? { ...cur, courses: nextCourses, ...gpaOf(nextCourses, idx, get().gradeScale) }
         : cur,
     });
   },
@@ -281,7 +288,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       archivedCourses: nextArchived,
       grades: nextGrades,
       currentImport: cur
-        ? { ...cur, courses: nextCourses, calculatedGpa: calculateGPA(nextCourses, idx, get().gradeMode) }
+        ? { ...cur, courses: nextCourses, ...gpaOf(nextCourses, idx, get().gradeScale) }
         : cur,
     });
   },
@@ -306,7 +313,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       courses: nextActive,
       archivedCourses: nextArchived,
       currentImport: cur
-        ? { ...cur, courses: nextActive, calculatedGpa: calculateGPA(nextActive, idx, get().gradeMode) }
+        ? { ...cur, courses: nextActive, ...gpaOf(nextActive, idx, get().gradeScale) }
         : cur,
     });
   },
@@ -330,7 +337,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       const idx = indexGradesBySubject(nextGrades);
       const updated = {
         ...imp,
-        calculatedGpa: calculateGPA(get().courses, idx, get().gradeMode),
+        ...gpaOf(get().courses, idx, get().gradeScale),
       };
       set({ currentImport: updated });
     }
@@ -355,7 +362,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       const idx = indexGradesBySubject(nextGrades);
       const recomputed = {
         ...imp,
-        calculatedGpa: calculateGPA(get().courses, idx, get().gradeMode),
+        ...gpaOf(get().courses, idx, get().gradeScale),
       };
       set({ currentImport: recomputed });
     }
@@ -371,7 +378,7 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       const idx = indexGradesBySubject(nextGrades);
       const recomputed = {
         ...imp,
-        calculatedGpa: calculateGPA(get().courses, idx, get().gradeMode),
+        ...gpaOf(get().courses, idx, get().gradeScale),
       };
       set({ currentImport: recomputed });
     }

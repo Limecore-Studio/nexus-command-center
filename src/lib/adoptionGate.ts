@@ -16,6 +16,11 @@ interface AdoptionGate {
   status: AdoptionStatus;
 }
 
+/** v1.19 (limecore#66) — the gate's (and the device's "last account") id for
+ *  a guest. Not a uuid, so it never matches a real account: the next sign-in
+ *  over a guest's data is an account switch. */
+export const GUEST_ID = 'guest';
+
 export const useAdoptionGate = create<AdoptionGate>(() => ({ userId: null, status: 'checking' }));
 
 export function setAdoptionStatus(userId: string, status: AdoptionStatus): void {
@@ -33,5 +38,13 @@ export function adoptionClearFor(userId: string | null | undefined): boolean {
  *  account has been on screen this launch (a guest); otherwise one is waiting
  *  to answer, or its state is unknown. */
 export function exportAllowed(userId: string | null | undefined): boolean {
-  return userId ? adoptionClearFor(userId) : useAdoptionGate.getState().userId === null;
+  if (userId) return adoptionClearFor(userId);
+  // v1.19 (limecore#66): a guest, once the guest gate is clear.
+  const s = useAdoptionGate.getState();
+  return s.userId === null || (s.userId === GUEST_ID && s.status === 'clear');
+}
+
+/** v1.19 (limecore#66) — may a guest see and be reminded of local data? */
+export function guestClear(): boolean {
+  return adoptionClearFor(GUEST_ID);
 }

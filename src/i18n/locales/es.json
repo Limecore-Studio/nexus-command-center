@@ -151,8 +151,11 @@
     "working": "Procesando…",
     "failed": "No se pudo guardar tu elección en este dispositivo. Inténtalo de nuevo.",
     "footer": "No te lo volveremos a preguntar en esta cuenta.",
-    "switchBody": "Este dispositivo todavía guarda datos de una cuenta que cerró sesión aquí o del uso como invitado. ¿Los añadimos a tu cuenta y los sincronizamos con la nube, o los borramos de este dispositivo? Si cierras sesión, se quedan como están.",
-    "switchFooter": "Estos datos no se muestran ni se sincronizan hasta que elijas."
+    "switchBody": "Este dispositivo guarda datos de otra cuenta o de un invitado. ¿Añadir sus elementos sin sincronizar a tu cuenta o eliminarlos aquí? Los elementos ya sincronizados con la otra cuenta salen de este dispositivo; siguen en su nube. Cerrar sesión lo deja todo como está.",
+    "switchFooter": "Estos datos no se muestran ni se sincronizan hasta que elijas.",
+    "guestBody": "Este dispositivo guarda datos de una cuenta que cerró sesión. ¿Conservar sus elementos sin sincronizar como datos de invitado o eliminarlos aquí? Los elementos ya sincronizados con esa cuenta salen de este dispositivo en cualquier caso; siguen en su nube.",
+    "guestKeep": "Conservar como invitado",
+    "backToSignIn": "Volver a iniciar sesión"
   },
   "onboarding": {
     "welcomeTitle": "Configuremos el sistema de tu vida",

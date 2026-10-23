@@ -36,8 +36,8 @@ vi.mock('./guestMode', () => ({ setGuestMode: async () => {}, isGuestModeKnown: 
 vi.stubGlobal('window', { dispatchEvent: () => true, addEventListener: () => {}, removeEventListener: () => {} });
 
 const { db } = await import('../db/database');
-const { evaluateAdoption, readLastUserId, LAST_USER_KEY } = await import('./adoptionChoice');
-const { keepLocalData, discardLocalData } = await import('./adoptionAnswer');
+const { evaluateAdoption, evaluateGuestAdoption, readLastUserId, LAST_USER_KEY, GUEST_ID } = await import('./adoptionChoice');
+const { keepLocalData, discardLocalData, keepAsGuest, discardAsGuest } = await import('./adoptionAnswer');
 const { adoptionClearFor, setAdoptionStatus, exportAllowed, useAdoptionGate } = await import('./adoptionGate');
 const { downloadExport } = await import('./dataRights');
 const { readDecided, writeDecided } = await import('./adoptionFlag');
@@ -201,7 +201,8 @@ describe('Keep and Discard', () => {
     await keepLocalData('b10');
     const owners = Object.fromEntries((await db.syncQueue.toArray()).map((q) => [q.entityId, q.owner]));
     expect(owners).toEqual({ 'pending-row': 'b10', 'guest-edit': 'b10' });
-    expect(await db.tasks.count()).toBe(2); // the rows stay on the device
+    // v1.19 (NCC#189): the unsynced row stays; A's synced row leaves the device.
+    expect((await db.tasks.toArray()).map((t) => t.id)).toEqual(['pending-row']);
     expect(readLastUserId()).toBe('b10');
     expect(await evaluateAdoption('b10')).toBe('clear');
   });
@@ -275,5 +276,56 @@ describe('export before the choice', () => {
     expect(src).toMatch(/<SheetBoundary onFail=\{\(\) => setPromptFailed\(true\)\}>\s*<Suspense fallback=\{splash\}>\s*<AdoptionPrompt \/>/);
     expect(src).toMatch(/setAdoptionPrompt\(\(\) => lazy\(loadAdoptionPrompt\)\)/); // a fresh lazy() on Retry
     expect(src).toMatch(/t\('common\.retry'\)[\s\S]{0,400}t\('settings\.signOut'\)/);
+  });
+});
+
+describe('v1.19: a guest over kept data (limecore#66) and Keep on a switch (NCC#189)', () => {
+  it('asks a guest when an account kept data here, without the network', async () => {
+    await keptByA('a20');
+    expect(await evaluateGuestAdoption()).toBe('ask');
+    expect(h.reads).toBe(0);
+  });
+
+  it('does not ask a guest over an empty device, or over its own earlier data', async () => {
+    localStorage.setItem(LAST_USER_KEY, 'a21'); // A kept nothing
+    expect(await evaluateGuestAdoption()).toBe('clear');
+    await db.tasks.add(task('g-task', 'pending'));
+    localStorage.setItem(LAST_USER_KEY, GUEST_ID);
+    expect(await evaluateGuestAdoption()).toBe('clear');
+  });
+
+  it("guest Keep drops the account's synced rows, keeps unsynced ones, and A is asked on return", async () => {
+    await keptByA('a22');
+    await db.tasks.add(task('a22-unsynced', 'pending'));
+    await keepAsGuest();
+    expect((await db.tasks.toArray()).map((t) => t.id)).toEqual(['a22-unsynced']);
+    expect(readLastUserId()).toBe(GUEST_ID);
+    expect(adoptionClearFor(GUEST_ID)).toBe(true);
+    expect(exportAllowed(null)).toBe(true);
+    expect(await evaluateAdoption('a22')).toBe('ask');
+  });
+
+  it("guest Discard empties the device", async () => {
+    await keptByA('a23');
+    await discardAsGuest();
+    expect(await db.tasks.count()).toBe(0);
+    expect(readLastUserId()).toBe(GUEST_ID);
+  });
+
+  it("B's Keep on a switch adopts A's unsynced rows and drops A's synced ones", async () => {
+    await keptByA('a24');
+    await db.tasks.add(task('a24-unsynced', 'pending'));
+    await keepLocalData('b24');
+    expect((await db.tasks.toArray()).map((t) => t.id)).toEqual(['a24-unsynced']);
+    const q = await db.syncQueue.filter((i) => i.entityId === 'a24-unsynced').toArray();
+    expect(q.map((i) => i.owner)).toEqual(['b24']);
+  });
+
+  it("Keep by the same account drops nothing", async () => {
+    await db.tasks.add(task('own-synced', 'synced'));
+    await db.tasks.add(task('own-pending', 'pending'));
+    localStorage.setItem(LAST_USER_KEY, 'a25');
+    await keepLocalData('a25');
+    expect(await db.tasks.count()).toBe(2);
   });
 });

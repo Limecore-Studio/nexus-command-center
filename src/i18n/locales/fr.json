@@ -151,8 +151,11 @@
     "working": "Traitement…",
     "failed": "Impossible d’enregistrer votre choix sur cet appareil. Réessayez.",
     "footer": "Cette question ne vous sera plus posée sur ce compte.",
-    "switchBody": "Cet appareil contient encore des données d’un compte qui s’y est déconnecté, ou d’une utilisation en invité. Faut-il les ajouter à votre compte et les synchroniser avec le cloud, ou les supprimer de cet appareil ? Si vous vous déconnectez, elles restent telles quelles.",
-    "switchFooter": "Ces données ne sont ni affichées ni synchronisées tant que vous n’avez pas choisi."
+    "switchBody": "Cet appareil contient des données d'un autre compte ou d'un invité. Ajouter ses éléments non synchronisés à votre compte, ou les supprimer ici ? Les éléments déjà synchronisés avec l'autre compte quittent l'appareil ; ils restent dans son cloud. Se déconnecter laisse tout en l'état.",
+    "switchFooter": "Ces données ne sont ni affichées ni synchronisées tant que vous n’avez pas choisi.",
+    "guestBody": "Cet appareil contient des données d'un compte déconnecté. Garder ses éléments non synchronisés comme données invité, ou les supprimer ici ? Les éléments déjà synchronisés avec ce compte quittent l'appareil dans tous les cas ; ils restent dans son cloud.",
+    "guestKeep": "Garder en invité",
+    "backToSignIn": "Retour à la connexion"
   },
   "onboarding": {
     "welcomeTitle": "Configurons le système de votre vie",

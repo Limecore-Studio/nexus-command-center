@@ -151,8 +151,11 @@
     "working": "Working…",
     "failed": "Couldn't save your choice on this device. Try again.",
     "footer": "You won't be asked again on this account.",
-    "switchBody": "This device holds another account's or a guest's data. Add it to your account and sync it, or delete it here? Signing out leaves it as is.",
-    "switchFooter": "Nothing here is shown or synced until you choose."
+    "switchBody": "This device holds another account's or a guest's data. Add its unsynced items to your account, or delete them here? Items already synced to the other account leave this device; they stay in its cloud. Signing out leaves everything as is.",
+    "switchFooter": "Nothing here is shown or synced until you choose.",
+    "guestBody": "This device holds data kept by an account that signed out. Keep its unsynced items as guest data, or delete them here? Items already synced to that account leave this device either way; they stay in its cloud.",
+    "guestKeep": "Keep as guest",
+    "backToSignIn": "Back to sign-in"
   },
   "onboarding": {
     "welcomeTitle": "Let's set up your life OS",

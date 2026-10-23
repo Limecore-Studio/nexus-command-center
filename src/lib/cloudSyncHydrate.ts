@@ -174,7 +174,7 @@ export async function hydrateStudiesTables(userId: string): Promise<StudiesHydra
         semester: s.semester ?? undefined,
         // v1.2 — archived_at column. Null/undefined = active. The studies
         // store filters this out of the active list + GPA but keeps the
-        // row hydrated so a "Show archived" toggle can surface it.
+        // row hydrated, so a restore in StudyDesk brings it straight back.
         archivedAt: s.archived_at ?? undefined,
         createdAt: s.created_at,
       }));

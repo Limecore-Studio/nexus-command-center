@@ -40,11 +40,11 @@ function indexGradesBySubject(grades: Grade[]): Map<string, Grade[]> {
 
 interface StudiesStore {
   currentImport: GradeImport | null;
+  /** Active courses. Archived ones (archived in StudyDesk) stay in Dexie and
+   *  ride the sync, but are left out here and so out of the GPA. v1.19
+   *  (NCC#181): NCC has no screen that lists courses, so the unused
+   *  archivedCourses list and restoreCourse were removed. */
   courses: Course[];
-  /** v1.2 — archived semester courses (archived_at IS NOT NULL). Loaded
-   *  alongside `courses` so the "Show archived" UI can surface them without
-   *  a separate cloud round-trip. Excluded from GPA computation. */
-  archivedCourses: Course[];
   grades: Grade[];
   previousGpa: number | null;
   gradeMode: GradeMode;
@@ -64,12 +64,6 @@ interface StudiesStore {
   addCourse: (c: Omit<Course, 'id' | 'createdAt' | 'importId'>) => Promise<void>;
   updateCourse: (id: string, patch: Partial<Course>) => Promise<void>;
   deleteCourse: (id: string) => Promise<void>;
-  /** v1.2 — restore an archived course (clear archivedAt). Patches the same
-   *  cloud column StudyDesk uses. v1.18.1 (NCC#180): sent as an archive-only
-   *  write stamped with the moment of the restore (archived_edited_at), so it
-   *  wins or loses against StudyDesk's archive on edit time. No UI calls it
-   *  today. */
-  restoreCourse: (id: string) => Promise<void>;
 
   // Grades (per-subject assessments) — added v1.0.3
   addGrade: (g: Omit<Grade, 'id' | 'createdAt' | 'updatedAt' | 'syncStatus'>) => Promise<void>;
@@ -121,7 +115,6 @@ async function enqueueCourseEdit(existing: Course, updated: Course): Promise<voi
 export const useStudiesStore = create<StudiesStore>((set, get) => ({
   currentImport: null,
   courses: [],
-  archivedCourses: [],
   grades: [],
   previousGpa: null,
   gradeMode: 'us',
@@ -143,10 +136,9 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
       db.grades.toArray(),
       db.studySessions.orderBy('startedAt').reverse().toArray(),
     ]);
-    // v1.2 — exclude archived courses from the live working set. They land
-    // in `archivedCourses` so the "Show archived" UI in StudiesOverview can
-    // surface them. Archived rows continue to ride the realtime channel and
-    // re-hydrate correctly on restore.
+    // v1.2 — exclude archived courses from the live working set. Archived
+    // rows continue to ride the realtime channel and re-hydrate correctly
+    // when StudyDesk restores them.
     // An explicit choice wins; otherwise read the scale off the data. Defaulting
     // blindly to 'us' put IB grades (1–7) through the percentage table, which
     // floors everything under 60 — so synced StudyDesk grades rendered as
@@ -159,7 +151,6 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     const gradeScale = cachedScale ?? inferredScale(fallbackMode);
     const gradeMode: GradeMode = gradeScale.mode;
     const allCourses = allCoursesIncludingArchived.filter((c) => !c.archivedAt);
-    const archivedCourses = allCoursesIncludingArchived.filter((c) => !!c.archivedAt);
     const previous = imports[1] ?? null;
     const idx = indexGradesBySubject(allGrades);
     const gpa = calculateGPA(allCourses, idx, gradeMode);
@@ -177,7 +168,6 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     set({
       currentImport: synthCurrentImport,
       courses: allCourses,
-      archivedCourses,
       grades: allGrades,
       previousGpa: previous ? previous.calculatedGpa : null,
       gradeMode,
@@ -272,41 +262,14 @@ export const useStudiesStore = create<StudiesStore>((set, get) => ({
     await db.courses.delete(id);
     await enqueue('course', id, 'delete', { id });
     const nextCourses = get().courses.filter((c) => c.id !== id);
-    const nextArchived = get().archivedCourses.filter((c) => c.id !== id);
     const nextGrades = get().grades.filter((g) => g.subjectId !== id);
     const idx = indexGradesBySubject(nextGrades);
     const cur = get().currentImport;
     set({
       courses: nextCourses,
-      archivedCourses: nextArchived,
       grades: nextGrades,
       currentImport: cur
         ? { ...cur, courses: nextCourses, calculatedGpa: calculateGPA(nextCourses, idx, get().gradeMode) }
-        : cur,
-    });
-  },
-
-  // v1.2 — restore an archived course. Clears archivedAt locally + enqueues
-  // an archive change (v1.18.1, NCC#180: see enqueueCourseEdit) so the sync
-  // sends it to Supabase, which StudyDesk then sees via its realtime
-  // subscription and surfaces in the active list.
-  // Course moves from `archivedCourses` back to `courses` in local state; GPA
-  // recomputes to include it again.
-  async restoreCourse(id) {
-    const existing = await db.courses.get(id);
-    if (!existing || !existing.archivedAt) return;
-    const updated: Course = { ...existing, archivedAt: undefined };
-    await db.courses.put(updated);
-    await enqueueCourseEdit(existing, updated);
-    const nextActive = [...get().courses, updated];
-    const nextArchived = get().archivedCourses.filter((c) => c.id !== id);
-    const idx = indexGradesBySubject(get().grades);
-    const cur = get().currentImport;
-    set({
-      courses: nextActive,
-      archivedCourses: nextArchived,
-      currentImport: cur
-        ? { ...cur, courses: nextActive, calculatedGpa: calculateGPA(nextActive, idx, get().gradeMode) }
         : cur,
     });
   },

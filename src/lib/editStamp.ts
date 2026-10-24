@@ -33,6 +33,7 @@ const ENTITY_TABLE: Partial<Record<string, string>> = {
   grade: 'grades',
   braindump_entry: 'braindump_entries',
   work_quality_log: 'work_quality_logs',
+  recurring_rule: 'recurring_rules',
 };
 
 const lastSeen = new Map<string, number>();

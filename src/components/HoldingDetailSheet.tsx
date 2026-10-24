@@ -117,7 +117,7 @@ export default function HoldingDetailSheet({ holding, onClose, inline = false }:
           ) : (
             <div className="w-12 h-12 rounded-md bg-surface2 border border-border/40 flex items-center justify-center text-text-muted text-xs">
               <Glyph
-                name={holding.assetType === 'crypto' ? 'crypto' : holding.assetType === 'etf' ? 'etf' : 'stock'}
+                name={holding.assetType === 'crypto' ? 'crypto' : holding.assetType === 'etf' ? 'etf' : holding.assetType === 'bond' || holding.assetType === 'custom' ? 'investment' : 'stock'}
                 size={20}
               />
             </div>

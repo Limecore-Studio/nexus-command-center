@@ -13,6 +13,7 @@ import { scheduleOriginStamp } from '../lib/originMarker';
 import { db } from '../db/database';
 import { claimUnowned, setQueueOwner } from '../db/syncQueue';
 import { cancelAllReminders, setReminderAudience } from '../lib/notifications';
+import { guestClear } from '../lib/adoptionGate';
 
 interface SessionState {
   session: Session | null;
@@ -264,7 +265,9 @@ export const useSessionStore = create<SessionState>((set) => ({
 // v1.18.1 (NCC#186): a reminder is scheduled only while someone is there to
 // get it: a user on screen, or guest mode. Checked by scheduleNotification
 // right before the native call.
-setReminderAudience(() => !!useSessionStore.getState().user || isGuestModeKnown());
+// v1.19 (limecore#66): a guest only once the guest's adoption gate is clear,
+// so another account's kept rows arm nothing before the guest has answered.
+setReminderAudience(() => !!useSessionStore.getState().user || (isGuestModeKnown() && guestClear()));
 
 // v1.18.1 (limecore#59 §2, NCC#140): queued edits are tagged with the user on
 // screen (null as a guest), from the moment the session is known. See

@@ -34,6 +34,8 @@ import { buildNetWorthTrend } from '../../lib/netWorthTrend';
 import NetWorthTrendChart, { NetWorthBreakdown } from '../../components/NetWorthTrendChart';
 import { useShellTier } from '../../lib/useShell';
 import Glyph from '../../components/Glyph';
+import { isManuallyPriced } from '../../types/finance';
+import { manualHoldingValueBase } from '../../lib/manualValuation';
 // v1.18.1 (NCC#144): typed amounts accept a decimal comma.
 import { numberInput } from '@/lib/numberInput';
 
@@ -664,13 +666,18 @@ function Cell({ label, value, tone }: { label: string; value: string; tone?: 'de
 // reads what's already loaded.
 function usePortfolioValueBase(baseCurrency: string): number {
   const holdings = useFinanceStore((s) => s.holdings);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
   return useMemo(() => {
     let total = 0;
     for (const h of holdings) {
-      if (h.assetType === 'stock' || h.assetType === 'etf') {
+      if (isManuallyPriced(h.assetType)) {
+        // v1.19 (NCC#204): bonds and custom holdings carry their own price.
+        const v = manualHoldingValueBase(h, portfolioLots, fxRates, baseCurrency);
+        if (v != null) total += v;
+      } else if (h.assetType === 'stock' || h.assetType === 'etf') {
         const q = stockQuotes.find((s) => s.ticker === h.ticker);
         if (!q) continue;
         const native = q.quote.c * h.quantity;
@@ -685,5 +692,5 @@ function usePortfolioValueBase(baseCurrency: string): number {
       }
     }
     return total;
-  }, [holdings, stockQuotes, cryptoPrices, fxRates, baseCurrency]);
+  }, [holdings, portfolioLots, stockQuotes, cryptoPrices, fxRates, baseCurrency]);
 }

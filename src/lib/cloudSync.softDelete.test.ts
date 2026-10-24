@@ -28,7 +28,7 @@ type Write = { table: string; op: 'update' | 'delete' | 'upsert'; row?: any; eq?
 /** The shared read-side fake plus a capture of writes. Kept local, as in
  *  cloudSync.stamps.test.ts: the shared fake gains writes in #89, a sibling
  *  of this stack. */
-function client(tables: Record<string, any[]>, opts?: Parameters<typeof fakeClient>[1]) {
+function client(tables: Record<string, any[]>, opts?: Parameters<typeof fakeClient>[1], updateError: any = null) {
   const base = fakeClient(tables, opts);
   const writes: Write[] = [];
   return {
@@ -44,7 +44,7 @@ function client(tables: Record<string, any[]>, opts?: Parameters<typeof fakeClie
       b.update = (row: any) => ({
         eq: (col: string, val: unknown) => {
           writes.push({ table, op: 'update', row, eq: [col, val] });
-          return Promise.resolve(done);
+          return Promise.resolve(updateError ? { error: updateError } : done);
         },
       });
       b.delete = () => ({
@@ -119,6 +119,10 @@ const serverRow: Record<string, (id: string, deleted: boolean) => any> = {
   watchlist_items: (id, d) => ({ id, user_id: USER, ticker: 'ABC', name: 'Abc', asset_type: 'stock', created_at: T0, updated_at: T0, deleted_at: d ? DELETED : null }),
   goals: (id, d) => ({ id, user_id: USER, title: 'g', goal_type: 'custom', target_value: 1, start_date: '2026-09-01', completed: false, created_at: T0, updated_at: T0, deleted_at: d ? DELETED : null }),
   portfolio_lots: (id, d) => ({ id, user_id: USER, holding_id: uuid(), quantity: 1, cost_per_unit: 1, cost_currency: 'EUR', created_at: T0, updated_at: T0, deleted_at: d ? DELETED : null }),
+  // v1.19 (NCC#92)
+  portfolio_holdings: (id, d) => ({ id, user_id: USER, ticker: 'ABC', asset_type: 'stock', quantity: 1, created_at: T0, updated_at: T0, deleted_at: d ? DELETED : null }),
+  stock_sales: (id, d) => ({ id, user_id: USER, ticker: 'ABC', shares_sold: 1, sale_price_per_share: 2, cost_basis_per_share: 1, realized_gain_loss: 1, currency: 'EUR', sold_at: T0, lot_allocations: [], created_at: T0, deleted_at: d ? DELETED : null }),
+  portfolio_cash_entries: (id, d) => ({ id, user_id: USER, type: 'deposit', amount: 5, currency: 'EUR', created_at: T0, deleted_at: d ? DELETED : null }),
 };
 const localTable = {
   transactions: () => db.transactions,
@@ -128,6 +132,9 @@ const localTable = {
   watchlist_items: () => db.watchlistItems,
   goals: () => db.goals,
   portfolio_lots: () => db.portfolioLots,
+  portfolio_holdings: () => db.portfolioHoldings,
+  stock_sales: () => db.stockSales,
+  portfolio_cash_entries: () => db.portfolioCashEntries,
 } as const;
 const TABLES = Object.keys(localTable) as (keyof typeof localTable)[];
 const resultKey = {
@@ -138,6 +145,9 @@ const resultKey = {
   watchlist_items: 'watchlistItems',
   goals: 'goals',
   portfolio_lots: 'portfolioLots',
+  portfolio_holdings: 'portfolioHoldings',
+  stock_sales: 'stockSales',
+  portfolio_cash_entries: 'portfolioCashEntries',
 } as const;
 
 describe('pull: tombstones from another device remove the local row', () => {
@@ -200,5 +210,41 @@ describe('pull: tombstones from another device remove the local row', () => {
     await pullAll(USER);
     const req = (holder.client.requests as any[]).find((r) => r.table === 'workout_sessions');
     expect(req.filters).toContainEqual(['is', 'deleted_at', null]);
+  });
+});
+
+// v1.19 (NCC#92): the portfolio tables that gained deleted_at.
+describe('push: portfolio holdings, sales and cash entries are tombstoned', () => {
+  it.each([
+    ['portfolio_holding', 'portfolio_holdings', ['deleted_at', 'updated_at']],
+    ['stock_sale', 'stock_sales', ['deleted_at']],
+    ['portfolio_cash_entry', 'portfolio_cash_entries', ['deleted_at']],
+  ] as const)('%s → tombstones %s', async (entityType, table, keys) => {
+    const id = uuid();
+    await enqueue(entityType, id, 'delete', { id });
+    await pushQueue(USER);
+    const writes = holder.client.writes as Write[];
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toMatchObject({ table, op: 'update', eq: ['id', id] });
+    expect(Object.keys(writes[0].row).sort()).toEqual([...keys]);
+  });
+
+  it('falls back to the hard delete while the column is not there yet (migration not applied)', async () => {
+    holder.client = client({}, undefined, { code: 'PGRST204', message: "Could not find the 'deleted_at' column" });
+    const id = uuid();
+    await enqueue('stock_sale', id, 'delete', { id });
+    await pushQueue(USER);
+    const writes = holder.client.writes as Write[];
+    expect(writes.map((w) => w.op)).toEqual(['update', 'delete']);
+    expect(writes[1]).toMatchObject({ table: 'stock_sales', eq: ['id', id] });
+    expect(await db.syncQueue.filter((q) => !q.syncedAt).count()).toBe(0);
+  });
+
+  it('does not hard-delete on any other error', async () => {
+    holder.client = client({}, undefined, { code: '57014', message: 'statement timeout' });
+    const id = uuid();
+    await enqueue('portfolio_holding', id, 'delete', { id });
+    await pushQueue(USER);
+    expect((holder.client.writes as Write[]).some((w) => w.op === 'delete')).toBe(false);
   });
 });

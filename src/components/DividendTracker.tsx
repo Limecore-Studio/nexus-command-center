@@ -77,7 +77,7 @@ export default function DividendTracker({
   const rows = useMemo(() => {
     const out: DividendRow[] = [];
     for (const h of holdings) {
-      if (h.assetType === 'crypto') continue;
+      if (h.assetType !== 'stock' && h.assetType !== 'etf') continue;
       const events = dividends[h.ticker.toUpperCase()];
       if (!events) continue;
       const r = buildRow(h, events, fxRates, baseCurrency);

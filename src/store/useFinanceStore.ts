@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { db } from '../db/database';
-import { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, PortfolioSnapshot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry, PortfolioCashEntryType } from '../types/finance';
+import { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, PortfolioSnapshot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry, PortfolioCashEntryType, isManuallyPriced } from '../types/finance';
+import { manualHoldingValueBase } from '../lib/manualValuation';
 import { generateId } from '../utils/uuid';
 import { localDateKey } from '../utils/formatters';
 import { enqueue } from '../db/syncQueue';
@@ -128,6 +129,10 @@ interface FinanceStore {
     soldAt: string;
   }) => Promise<void>;
   deleteStockSale: (id: string) => Promise<void>;
+  /** v1.19 (NCC#202): re-derive a holding's cached quantity / average cost
+   *  from its lots after lots were written outside the store (recurring
+   *  buys). Call after load(). */
+  refreshHoldingAggregates: (holdingId: string) => Promise<void>;
 
   // v1.3.2 — portfolio cash transfers. `amount` is in `currency` (the UI passes
   // base currency). Deposit pulls from an account into portfolio cash;
@@ -407,6 +412,12 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       await db.portfolioLots.delete(lot.id);
       await enqueue('portfolio_lot', lot.id, 'delete', { id: lot.id });
     }
+    // v1.19 (NCC#204): a bond's coupon rule goes with it; the coupons and
+    // the redemption it already wrote stay, like any past entries.
+    if (get().holdings.find((h) => h.id === id)?.assetType === 'bond') {
+      const { couponRuleId, removeCouponRule } = await import('../lib/bondCoupons');
+      await removeCouponRule(await couponRuleId(id));
+    }
     await db.portfolioHoldings.delete(id);
     await enqueue('portfolio_holding', id, 'delete', { id });
     set({
@@ -527,6 +538,10 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       relatedId: sale.id,
     });
     await recomputeHoldingAggregates(holdingId, nextLots, set, get);
+  },
+
+  async refreshHoldingAggregates(holdingId) {
+    await recomputeHoldingAggregates(holdingId, get().portfolioLots, set, get);
   },
 
   async deleteStockSale(id) {
@@ -789,7 +804,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // counted in the snapshot, not benchmarks.
     const baseCurrency = useSettingsStore.getState().baseCurrency;
     const rates = fxPayload?.rates ?? get().fxRates;
-    const totalBase = computeTotalBase(holdings, stockQuotes, cryptoPrices, rates, baseCurrency);
+    const totalBase = computeTotalBase(holdings, stockQuotes, cryptoPrices, rates, baseCurrency, get().portfolioLots);
     let nextSnapshots = get().portfolioSnapshots;
     if (totalBase != null && totalBase > 0) {
       const todayKey = localDateKey(new Date());
@@ -1150,10 +1165,19 @@ function computeTotalBase(
   cryptoPrices: CryptoResult | null,
   rates: Record<string, number> | null,
   baseCurrency: string,
+  lots: PortfolioLot[] = [],
 ): number | null {
   let total = 0;
   let anyPriced = false;
   for (const h of holdings) {
+    // v1.19 (NCC#204): bonds and custom holdings carry their own price.
+    if (isManuallyPriced(h.assetType)) {
+      const v = manualHoldingValueBase(h, lots, rates, baseCurrency);
+      if (v == null) continue;
+      total += v;
+      anyPriced = true;
+      continue;
+    }
     if (h.assetType === 'stock' || h.assetType === 'etf') {
       const q = stockQuotes.find((s) => s.ticker === h.ticker);
       if (!q) continue;

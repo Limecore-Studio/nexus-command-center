@@ -1,0 +1,3 @@
+Transaksi berulang dan obligasi.
+
+Buat pemasukan dan pengeluaran berulang, setoran rutin ke kas portofolio, dan pembelian berulang. Obligasi dan aset berharga manual masuk ke portofolio, dinilai sesuai ketentuannya, dengan kupon dicatat otomatis. Target nilai mengikuti skala nilaimu, rata-rata rapor sama dengan StudyDesk, dan Life menampilkan tinggi serta data tubuh dari LimeLog. Pengingat tugas datang sebelum tenggat, dan di perangkat bersama data tiap akun tetap terpisah.

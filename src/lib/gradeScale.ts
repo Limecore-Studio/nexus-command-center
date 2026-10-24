@@ -14,6 +14,7 @@
 
 import { Preferences } from '@capacitor/preferences';
 import type { GradeMode } from '../utils/gpa';
+import { bandOf, normalizeReport, type ReportRule } from './reportGrade';
 
 export type ScaleDirection = 'up' | 'down';
 
@@ -28,6 +29,10 @@ export interface GradeScale {
   name: string;
   /** Where it came from: StudyDesk's account setting, or NCC's guess. */
   source: 'account' | 'inferred';
+  /** v1.19 (NCC#213) — StudyDesk's whole-report-grade rule, when it is on.
+   *  min/max/passMark/direction are then on the report scale (1–6, down),
+   *  because that is the scale the average is shown on. */
+  report?: ReportRule;
 }
 
 /** Largest magnitude grades.grade can hold (numeric(7,2)), as in StudyDesk. */
@@ -68,6 +73,23 @@ export function parseAccountScale(raw: unknown): GradeScale | null {
   const passMark = Math.min(max, Math.max(min, num(c.passMark, 5)));
   const direction: ScaleDirection = c.direction === 'down' ? 'down' : 'up';
   const name = typeof c.name === 'string' ? c.name.trim().slice(0, 24) : '';
+  // v1.19 (NCC#213): with StudyDesk's report rule on, the average is on the
+  // whole-grade scale (DIA: 1–6, 1 best), so the scale shown is that one.
+  const report = normalizeReport(c.report);
+  if (report?.enabled) {
+    const lo = Math.min(report.best, report.worst);
+    const hi = Math.max(report.best, report.worst);
+    return {
+      mode: 'custom',
+      min: lo,
+      max: hi === lo ? lo + 1 : hi,
+      passMark: bandOf(passMark, report) ?? hi,
+      direction: report.best <= report.worst ? 'down' : 'up',
+      name,
+      source: 'account',
+      report,
+    };
+  }
   return { mode: 'custom', min, max, passMark, direction, name, source: 'account' };
 }
 

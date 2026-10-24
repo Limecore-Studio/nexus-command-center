@@ -8,7 +8,8 @@ import RowActions from '../../components/RowActions';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { validateTicker } from '../../lib/tickerValidation';
 import { isHoldingClosed } from '../../lib/positionStatus';
-import type { PortfolioHolding, AssetType } from '../../types/finance';
+import type { PortfolioHolding, AssetType, BondTerms } from '../../types/finance';
+import { isManuallyPriced } from '../../types/finance';
 import Glyph from '../../components/Glyph';
 // v1.18.1 (NCC#144): typed amounts accept a decimal comma.
 import { numberInput } from '@/lib/numberInput';
@@ -48,6 +49,17 @@ export default function ManageHoldings() {
   const [firstCurrency, setFirstCurrency] = useState('EUR');
   const [firstDate, setFirstDate] = useState(() => localDateKey(new Date()));
 
+  // v1.19 (NCC#204): a bond's terms, and the price the user enters (a custom
+  // holding's price, or a bond's market price that overrides its book value).
+  const [faceValue, setFaceValue] = useState('100');
+  const [bondCurrency, setBondCurrency] = useState('EUR');
+  const [couponRate, setCouponRate] = useState('');
+  const [couponFreq, setCouponFreq] = useState<BondTerms['couponFrequency']>(1);
+  const [maturity, setMaturity] = useState('');
+  const [isin, setIsin] = useState('');
+  const [manualPrice, setManualPrice] = useState('');
+  const [manualCurrency, setManualCurrency] = useState('EUR');
+
   const lotsByHolding = (id: string) => portfolioLots.filter((l) => l.holdingId === id);
 
   // Fully-sold positions (e.g. a stock you bought then entirely closed) move
@@ -68,6 +80,14 @@ export default function ManageHoldings() {
     setFirstPrice('');
     setFirstCurrency('EUR');
     setFirstDate(localDateKey(new Date()));
+    setFaceValue('100');
+    setBondCurrency('EUR');
+    setCouponRate('');
+    setCouponFreq(1);
+    setMaturity('');
+    setIsin('');
+    setManualPrice('');
+    setManualCurrency('EUR');
   };
 
   const startEdit = (h: PortfolioHolding) => {
@@ -77,6 +97,40 @@ export default function ManageHoldings() {
     setName(h.name);
     setAssetType(h.assetType);
     setSectorOverride(h.sectorOverride ?? '');
+    setFaceValue(h.bond ? String(h.bond.faceValue) : '100');
+    setBondCurrency(h.bond?.currency ?? 'EUR');
+    setCouponRate(h.bond ? String(h.bond.couponRate) : '');
+    setCouponFreq(h.bond?.couponFrequency ?? 1);
+    setMaturity(h.bond?.maturity ?? '');
+    setIsin(h.bond?.isin ?? '');
+    setManualPrice(h.manualPrice != null ? String(h.manualPrice) : '');
+    setManualCurrency(h.manualPriceCurrency ?? h.bond?.currency ?? 'EUR');
+  };
+
+  /** v1.19 (NCC#204): the bond / custom fields, or null while incomplete. */
+  const manualFields = (): Partial<PortfolioHolding> | null => {
+    if (!isManuallyPriced(assetType)) {
+      return { bond: undefined, manualPrice: undefined, manualPriceCurrency: undefined, manualPriceAt: undefined };
+    }
+    const price = manualPrice.trim() ? numberInput(manualPrice) : undefined;
+    if (price !== undefined && !(price >= 0)) return null;
+    const priceChanged = price !== editing?.manualPrice || manualCurrency !== editing?.manualPriceCurrency;
+    const priceFields = {
+      manualPrice: price,
+      manualPriceCurrency: price !== undefined ? manualCurrency : undefined,
+      manualPriceAt: price === undefined ? undefined : priceChanged ? new Date().toISOString() : editing?.manualPriceAt,
+    };
+    if (assetType === 'custom') {
+      if (price === undefined) return null; // a custom holding is its price
+      return { ...priceFields, bond: undefined };
+    }
+    const face = numberInput(faceValue);
+    const rate = couponRate.trim() ? numberInput(couponRate) : 0;
+    if (!(face > 0) || !(rate >= 0) || rate > 100 || !maturity) return null;
+    return {
+      ...priceFields,
+      bond: { faceValue: face, currency: bondCurrency, couponRate: rate, couponFrequency: rate > 0 ? couponFreq : 0, maturity, isin: isin.trim() || undefined },
+    };
   };
 
   const cancel = () => {
@@ -95,6 +149,8 @@ export default function ManageHoldings() {
       return;
     }
     setTickerError(null);
+    const extra = manualFields();
+    if (!extra) return;
     const normalisedTicker = assetType === 'crypto'
       ? v.normalised.toLowerCase()
       : v.normalised.toUpperCase();
@@ -106,6 +162,7 @@ export default function ManageHoldings() {
         name: name.trim(),
         assetType,
         sectorOverride: sectorOverride.trim() || undefined,
+        ...extra,
       });
     } else {
       // Add flow — must have at least quantity + price for the first lot
@@ -120,6 +177,7 @@ export default function ManageHoldings() {
         assetType,
         quantity: qty, // initial value; lot creation will overwrite via recompute
         sectorOverride: sectorOverride.trim() || undefined,
+        ...extra,
       });
       await addLot({
         holdingId,
@@ -130,6 +188,11 @@ export default function ManageHoldings() {
       });
     }
     await refreshPortfolio();
+    // v1.19 (NCC#204): a bond's coupons (and a past maturity) are written by
+    // the recurring engine; run it now so they show without a restart.
+    if (assetType === 'bond') {
+      void import('../../store/useRecurringStore').then((m) => m.useRecurringStore.getState().materialize());
+    }
     cancel();
   };
 
@@ -199,12 +262,15 @@ export default function ManageHoldings() {
             <div className="font-heading font-semibold text-sm">
               {editing ? t('fin.mh.editHolding') : t('fin.mh.newHolding')}
             </div>
-            <div className="flex gap-2">
-              {(['stock', 'etf', 'crypto'] as AssetType[]).map((ty) => (
+            <div className="grid grid-cols-5 gap-1.5">
+              {(['stock', 'etf', 'crypto', 'bond', 'custom'] as AssetType[]).map((ty) => (
                 <button
                   key={ty}
-                  onClick={() => setAssetType(ty)}
-                  className={`chip flex-1 ${assetType === ty ? 'chip-on' : ''}`}
+                  onClick={() => {
+                    setAssetType(ty);
+                    if (ty === 'bond' && !editing) setFirstPrice((p) => p || faceValue);
+                  }}
+                  className={`chip justify-center px-1 ${assetType === ty ? 'chip-on' : ''}`}
                   type="button"
                 >
                   {t(`fin.assetClass.${ty}`)}
@@ -216,7 +282,9 @@ export default function ManageHoldings() {
               placeholder={
                 assetType === 'crypto'
                   ? t('fin.mh.cgIdPh')
-                  : assetType === 'etf'
+                  : isManuallyPriced(assetType)
+                    ? t('bonds.labelPh')
+                    : assetType === 'etf'
                     ? t('fin.mh.etfTickerPh')
                     : t('fin.mh.stockTickerPh')
               }
@@ -242,6 +310,74 @@ export default function ManageHoldings() {
               value={sectorOverride}
               onChange={(e) => setSectorOverride(e.target.value)}
             />
+            {/* v1.19 (NCC#204): a bond's terms. */}
+            {assetType === 'bond' && (
+              <div className="panel-2 p-2.5 space-y-2">
+                <div className="text-[0.625rem] uppercase tracking-wider text-text-muted">{t('bonds.terms')}</div>
+                <div className="flex gap-2">
+                  <label className="flex-1 min-w-0">
+                    <span className="text-[0.625rem] text-text-muted block mb-0.5">{t('bonds.faceValue')}</span>
+                    <input className="input w-full" inputMode="decimal" value={faceValue} onChange={(e) => setFaceValue(e.target.value)} />
+                  </label>
+                  <label className="w-[96px]">
+                    <span className="text-[0.625rem] text-text-muted block mb-0.5">{t('bonds.currency')}</span>
+                    <select className="input w-full" value={bondCurrency}
+                      onChange={(e) => { setBondCurrency(e.target.value); setFirstCurrency(e.target.value); setManualCurrency(e.target.value); }}>
+                      {currencyOptions(formatLocale()).map((c) => (
+                        <option key={c.code} value={c.code}>{c.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <label className="flex-1 min-w-0">
+                    <span className="text-[0.625rem] text-text-muted block mb-0.5">{t('bonds.couponRate')}</span>
+                    <input className="input w-full" inputMode="decimal" placeholder="0" value={couponRate} onChange={(e) => setCouponRate(e.target.value)} />
+                  </label>
+                  <label className="flex-1 min-w-0">
+                    <span className="text-[0.625rem] text-text-muted block mb-0.5">{t('bonds.frequency')}</span>
+                    <select className="input w-full" value={couponFreq}
+                      onChange={(e) => setCouponFreq(Number(e.target.value) as BondTerms['couponFrequency'])}>
+                      {([1, 2, 4] as const).map((n) => (
+                        <option key={n} value={n}>{t(`bonds.freq_${n}`)}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="flex gap-2">
+                  <label className="flex-1 min-w-0">
+                    <span className="text-[0.625rem] text-text-muted block mb-0.5">{t('bonds.maturity')}</span>
+                    <input className="input w-full" type="date" value={maturity} onChange={(e) => setMaturity(e.target.value)} />
+                  </label>
+                  <label className="flex-1 min-w-0">
+                    <span className="text-[0.625rem] text-text-muted block mb-0.5">{t('bonds.isinOptional')}</span>
+                    <input className="input w-full uppercase" maxLength={12} value={isin} onChange={(e) => setIsin(e.target.value.toUpperCase())} />
+                  </label>
+                </div>
+                <div className="text-[0.625rem] text-text-muted">{t('bonds.bookHint')}</div>
+              </div>
+            )}
+            {/* v1.19 (NCC#204): the price the user enters. Required for a
+                custom holding; for a bond it replaces the book value. */}
+            {isManuallyPriced(assetType) && (
+              <div className="space-y-1">
+                <div className="flex gap-2">
+                  <input className="input flex-1 min-w-0" inputMode="decimal" value={manualPrice}
+                    placeholder={assetType === 'bond' ? t('bonds.marketPriceOptional') : t('bonds.pricePerUnit')}
+                    onChange={(e) => setManualPrice(e.target.value)} />
+                  <select className="input max-w-[88px]" value={manualCurrency} onChange={(e) => setManualCurrency(e.target.value)}>
+                    {currencyOptions(formatLocale()).map((c) => (
+                      <option key={c.code} value={c.code}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {assetType === 'bond' && manualPrice.trim() !== '' && (
+                  <button type="button" className="text-[0.6875rem] text-text-muted active:text-text" onClick={() => setManualPrice('')}>
+                    {t('bonds.useBookValue')}
+                  </button>
+                )}
+              </div>
+            )}
             {!editing && (
               <>
                 <div className="text-[0.625rem] uppercase tracking-wider text-text-muted mt-1">
@@ -293,7 +429,11 @@ export default function ManageHoldings() {
                 ? t('fin.mh.stockHint')
                 : assetType === 'etf'
                   ? t('fin.mh.etfHint')
-                  : t('fin.mh.cryptoHint')}
+                  : assetType === 'bond'
+                    ? t('bonds.bondHint')
+                    : assetType === 'custom'
+                      ? t('bonds.customHint')
+                      : t('fin.mh.cryptoHint')}
               {t('fin.mh.addLater')}
             </div>
           </div>

@@ -12,6 +12,7 @@ import { legacyIdToUuid } from '../utils/uuid';
 import type { StockSale, PortfolioCashEntry } from '../types/finance';
 import type { Course, Grade, StudySession } from '../types/studies';
 import type { BodyMetric } from '../types/fitness';
+import { scaleFields } from './bodyScale';
 import type { Habit, HabitCompletion } from '../types/habits';
 import type { WorkQualityLog } from '../types/work';
 import type { BraindumpEntry } from '../types/braindump';
@@ -174,7 +175,7 @@ export async function hydrateStudiesTables(userId: string): Promise<StudiesHydra
         semester: s.semester ?? undefined,
         // v1.2 — archived_at column. Null/undefined = active. The studies
         // store filters this out of the active list + GPA but keeps the
-        // row hydrated so a "Show archived" toggle can surface it.
+        // row hydrated, so a restore in StudyDesk brings it straight back.
         archivedAt: s.archived_at ?? undefined,
         createdAt: s.created_at,
       }));
@@ -382,6 +383,7 @@ export async function hydrateBodyMetricsFromCloud(
         hipsCm: r.hips_cm != null ? Number(r.hips_cm) : undefined,
         armsCm: r.arms_cm != null ? Number(r.arms_cm) : undefined,
         legsCm: r.legs_cm != null ? Number(r.legs_cm) : undefined,
+        ...scaleFields(r),
         notes: r.notes ?? undefined,
         syncStatus: 'synced' as const,
         createdAt: r.created_at,
@@ -508,8 +510,8 @@ interface StockSalesHydrationResult {
 
 // v1.3.1 (BUG-23) — pull the user's realized stock sales into Dexie. Same
 // authenticated-client + RLS posture as the other hydrators; bad/garbage rows
-// degrade gracefully (lot_allocations falls back to []). No deleted_at filter
-// — stock_sales is hard-delete (the table has no such column).
+// degrade gracefully (lot_allocations falls back to []). v1.19 (NCC#92):
+// tombstoned rows are not written, and their local copies are removed.
 export async function hydrateStockSalesFromCloud(
   userId: string,
 ): Promise<StockSalesHydrationResult> {
@@ -521,7 +523,8 @@ export async function hydrateStockSalesFromCloud(
     });
     if (error) throw error;
     if (data) {
-      const rows: StockSale[] = (data as any[]).map((r) => ({
+      const live = (data as any[]).filter((r) => !r.deleted_at);
+      const rows: StockSale[] = live.map((r) => ({
         id: r.id,
         ticker: r.ticker,
         holdingId: r.holding_id ?? undefined,
@@ -536,6 +539,7 @@ export async function hydrateStockSalesFromCloud(
         createdAt: r.created_at,
       }));
       await putFromCloud(db.stockSales, rows);
+      await removeTombstoned(db.stockSales, (data as any[]).filter((r) => r.deleted_at).map((r) => r.id));
       count = rows.length;
     }
   } catch (e) {
@@ -552,7 +556,7 @@ interface PortfolioCashHydrationResult {
 }
 
 // v1.3.2 — pull the user's portfolio cash ledger into Dexie. Same RLS posture
-// as the other hydrators. Hard-delete table (no deleted_at filter).
+// as the other hydrators. v1.19 (NCC#92): tombstones, as stock_sales above.
 export async function hydratePortfolioCashFromCloud(
   userId: string,
 ): Promise<PortfolioCashHydrationResult> {
@@ -564,7 +568,8 @@ export async function hydratePortfolioCashFromCloud(
     });
     if (error) throw error;
     if (data) {
-      const rows: PortfolioCashEntry[] = (data as any[]).map((r) => ({
+      const live = (data as any[]).filter((r) => !r.deleted_at);
+      const rows: PortfolioCashEntry[] = live.map((r) => ({
         id: r.id,
         type: r.type,
         amount: Number(r.amount),
@@ -572,6 +577,7 @@ export async function hydratePortfolioCashFromCloud(
         accountId: r.account_id ?? undefined,
         relatedId: r.related_id ?? undefined,
         note: r.note ?? undefined,
+        recurringRuleId: r.recurring_rule_id ?? undefined,
         createdAt: r.created_at,
         syncStatus: 'synced' as const,
       }));
@@ -579,6 +585,10 @@ export async function hydratePortfolioCashFromCloud(
       // server column); putFromCloud keeps them, and skips rows with a change
       // still queued (NCC#146).
       await putFromCloud(db.portfolioCashEntries, rows, ['accountAmount', 'accountCurrency']);
+      await removeTombstoned(
+        db.portfolioCashEntries,
+        (data as any[]).filter((r) => r.deleted_at).map((r) => r.id),
+      );
       count = rows.length;
     }
   } catch (e) {

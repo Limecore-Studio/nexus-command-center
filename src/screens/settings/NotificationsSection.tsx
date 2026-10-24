@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSettingsStore } from '../../store/useSettingsStore';
+import { useSettingsStore, TASK_LEAD_OPTIONS, type TaskLeadMin } from '../../store/useSettingsStore';
 import {
   notificationsAvailable,
   requestNotificationPermission,
@@ -25,6 +25,8 @@ export default function NotificationsSection() {
   const setNotifMasterEnabled = useSettingsStore((s) => s.setNotifMasterEnabled);
   const notifTasksEnabled = useSettingsStore((s) => s.notifTasksEnabled);
   const setNotifTasksEnabled = useSettingsStore((s) => s.setNotifTasksEnabled);
+  const taskLead = useSettingsStore((s) => s.taskReminderLeadMin);
+  const setTaskLead = useSettingsStore((s) => s.setTaskReminderLeadMin);
   const notifBudgetsEnabled = useSettingsStore((s) => s.notifBudgetsEnabled);
   const setNotifBudgetsEnabled = useSettingsStore((s) => s.setNotifBudgetsEnabled);
   const notifPortfolioEodEnabled = useSettingsStore((s) => s.notifPortfolioEodEnabled);
@@ -191,6 +193,24 @@ export default function NotificationsSection() {
           onAfterEnable: rearmTaskReminders,
         })}
       />
+      {/* v1.19 (NCC#170): when a task with a due time reminds. */}
+      {notifMasterEnabled && notifTasksEnabled && (
+        <label className="flex items-center justify-between gap-3 ps-1 py-1.5">
+          <span className="text-xs text-text-muted">{t('notif.task.leadLabel')}</span>
+          <select
+            className="input max-w-[170px] text-xs"
+            value={taskLead}
+            onChange={async (e) => {
+              await setTaskLead(Number(e.target.value) as TaskLeadMin);
+              await rearmTaskReminders();
+            }}
+          >
+            {TASK_LEAD_OPTIONS.map((m) => (
+              <option key={m} value={m}>{t(`notif.task.lead_${m}`)}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <Toggle
         label={t('settings.budgetAlerts')}
         sub={t('settings.budgetAlertsSub')}

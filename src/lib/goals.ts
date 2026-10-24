@@ -7,16 +7,20 @@
 import type { Goal, GoalType } from '../types/goals';
 import { formatLocale, parseDateLocal } from '../utils/formatters';
 import { isCumulativeGoal } from '../types/goals';
-import type { Transaction, PortfolioHolding, ManualAsset } from '../types/finance';
-import { LIABILITY_TYPES } from '../types/finance';
+import type { Transaction, PortfolioHolding, PortfolioLot, ManualAsset } from '../types/finance';
+import { LIABILITY_TYPES, isManuallyPriced } from '../types/finance';
+import { manualHoldingValueBase } from './manualValuation';
 import type { StudySession } from '../types/studies';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
 import { convertSync, normalizeCurrency } from '../api/fxRates';
+import { gpaSuffix, type GradeScale } from './gradeScale';
 
 export interface DataSources {
   transactions: Transaction[];
   holdings: PortfolioHolding[];
+  /** v1.19 (NCC#204): a bond's book value is per lot. */
+  portfolioLots?: PortfolioLot[];
   manualAssets: ManualAsset[];
   // Quote + price data needed to value the portfolio in base currency.
   stockQuotes: Array<{ ticker: string; quote: { c: number }; currency: string }>;
@@ -27,6 +31,9 @@ export interface DataSources {
   studySessions: StudySession[];
   workouts: Array<WorkoutSession & { sets: WorkoutSet[] }>;
   currentGpa: number | null;
+  /** v1.19 (NCC#197): the account's grade scale; a GPA goal reads progress
+   *  in its direction. Absent = a 0–4-style higher-is-better scale. */
+  gradeScale?: GradeScale;
 }
 
 interface GoalProgress {
@@ -47,7 +54,11 @@ interface GoalProgress {
 function netWorthBase(d: DataSources): number {
   let portfolioBase = 0;
   for (const h of d.holdings) {
-    if (h.assetType === 'stock' || h.assetType === 'etf') {
+    if (isManuallyPriced(h.assetType)) {
+      // v1.19 (NCC#204): bonds and custom holdings carry their own price.
+      const v = manualHoldingValueBase(h, d.portfolioLots ?? [], d.fxRates, d.baseCurrency);
+      if (v != null) portfolioBase += v;
+    } else if (h.assetType === 'stock' || h.assetType === 'etf') {
       const q = d.stockQuotes.find((s) => s.ticker === h.ticker);
       if (!q) continue;
       const native = normalizeCurrency(q.quote.c * h.quantity, q.currency);
@@ -117,10 +128,29 @@ function currentValueFor(goal: Goal, d: DataSources): number {
   }
 }
 
+/**
+ * v1.19 (NCC#197): a GPA goal on its own scale. Higher-is-better keeps the
+ * plain current/target reading. Lower-is-better (German, Czech 1–6) measures
+ * from the scale's worst end, (worst − current) / (worst − target), and is
+ * reached at or below the target. No grades yet is no progress on any scale
+ * (a missing GPA reads as 0, which on a 1–6 scale would beat every target).
+ */
+export function gpaProgress(current: number | null, target: number, scale?: GradeScale): { percent: number; reached: boolean } {
+  if (current == null) return { percent: 0, reached: false };
+  if (scale?.direction === 'down') {
+    const worst = scale.max;
+    const span = worst - target;
+    const percent = span > 0 ? ((worst - current) / span) * 100 : current <= target ? 100 : 0;
+    return { percent: Math.max(0, Math.min(100, percent)), reached: current <= target };
+  }
+  return { percent: target > 0 ? (current / target) * 100 : 0, reached: current >= target };
+}
+
 export function computeGoalProgress(goal: Goal, d: DataSources): GoalProgress {
   const currentValue = currentValueFor(goal, d);
-  const percent = goal.targetValue > 0 ? (currentValue / goal.targetValue) * 100 : 0;
-  const reached = currentValue >= goal.targetValue;
+  const gpa = goal.goalType === 'gpa' ? gpaProgress(d.currentGpa, goal.targetValue, d.gradeScale) : null;
+  const percent = gpa ? gpa.percent : goal.targetValue > 0 ? (currentValue / goal.targetValue) * 100 : 0;
+  const reached = gpa ? gpa.reached : currentValue >= goal.targetValue;
 
   let daysRemaining: number | null = null;
   let paceDelta: number | null = null;
@@ -146,7 +176,7 @@ export function computeGoalProgress(goal: Goal, d: DataSources): GoalProgress {
 }
 
 /** Pretty-print the target value with its unit. */
-export function formatGoalValue(goal: Goal, value: number, baseCurrency: string): string {
+export function formatGoalValue(goal: Goal, value: number, baseCurrency: string, scale?: GradeScale): string {
   switch (goal.goalType) {
     case 'net_worth':
       return new Intl.NumberFormat(formatLocale(), {
@@ -159,14 +189,26 @@ export function formatGoalValue(goal: Goal, value: number, baseCurrency: string)
     case 'study_hours':
       return `${value.toFixed(1)} h`;
     case 'gpa':
-      return value.toFixed(2);
+      // v1.19 (NCC#197): with the scale's suffix ("/7", "/20"; none for
+      // US points or a lower-is-better scale).
+      return value.toFixed(2) + (scale ? gpaSuffix(scale) : '');
     default:
       return value.toLocaleString(formatLocale());
   }
 }
 
 /** Sensible default targetValue when the user picks a goal type. */
-export function defaultTargetValue(t: GoalType): number {
+/** v1.19 (NCC#197): a GPA target worth aiming for on this scale: the pass
+ *  mark plus 60% of the way to the best grade, to the nearest half. 3.0 on
+ *  US points, 6 on IB 1–7, 2.0 on German 1–6, 8 on 4–10. */
+export function defaultGpaTarget(scale?: GradeScale): number {
+  if (!scale) return 3.0;
+  const best = scale.direction === 'down' ? scale.min : scale.max;
+  const raw = scale.passMark + 0.6 * (best - scale.passMark);
+  return Math.round(raw * 2) / 2;
+}
+
+export function defaultTargetValue(t: GoalType, scale?: GradeScale): number {
   switch (t) {
     case 'net_worth':
       return 50_000;
@@ -179,7 +221,7 @@ export function defaultTargetValue(t: GoalType): number {
     case 'lift_pr':
       return 100;
     case 'gpa':
-      return 4.0;
+      return defaultGpaTarget(scale);
     default:
       return 0;
   }

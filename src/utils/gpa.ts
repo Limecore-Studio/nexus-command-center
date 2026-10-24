@@ -1,4 +1,6 @@
 import { Course, Grade } from '../types/studies';
+import { overallReport, subjectReport } from '../lib/reportGrade';
+import type { GradeScale } from '../lib/gradeScale';
 
 // v1.18.1 (NCC#165): 'custom' is a points scale that is neither 1–7/0–10 nor
 // a percentage — in practice 0–20 (France, Belgium, Portugal …). StudyDesk has
@@ -64,6 +66,24 @@ export function calculateGPA(
   }
   const weightedSum = scored.reduce((sum, x) => sum + x.points * x.credits, 0);
   return Math.round((weightedSum / totalCredits) * 100) / 100;
+}
+
+/** v1.19 (NCC#213) — the average on the account's scale, as StudyDesk's
+ *  overallAverage: with the report rule on, the credit-weighted mean of the
+ *  subjects' whole report grades (`projection` when a subject is between two);
+ *  otherwise calculateGPA. */
+export function calculateScaleGPA(
+  courses: Course[],
+  gradesBySubject: Map<string, Grade[]>,
+  scale: Pick<GradeScale, 'mode' | 'report'>,
+): { gpa: number; projection: boolean } {
+  const report = scale.mode === 'custom' ? scale.report ?? null : null;
+  if (!report) return { gpa: calculateGPA(courses, gradesBySubject, scale.mode), projection: false };
+  const { value, projection } = overallReport(courses.map((c) => ({
+    report: subjectReport(gradesBySubject.get(c.id) ?? [], report),
+    credits: gpaCredits(c.credits),
+  })));
+  return { gpa: value, projection };
 }
 
 function gpaCredits(credits: unknown): number {

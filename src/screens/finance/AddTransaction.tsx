@@ -310,6 +310,16 @@ export default function AddTransaction() {
             {t('fin.tx.deleteTx')}
           </button>
         )}
+        {/* v1.19 — NCC#202: rent, salary and the like, on a schedule. */}
+        {!editId && (
+          <button
+            type="button"
+            className="btn-ghost w-full"
+            onClick={() => navigate('/finance/recurring?new=transaction')}
+          >
+            {t('recurring.addRecurring')}
+          </button>
+        )}
         <div className="text-[0.625rem] text-text-muted text-center">
           {t('fin.tx.queued')}
         </div>

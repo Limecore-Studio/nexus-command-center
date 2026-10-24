@@ -35,6 +35,7 @@ import { legacyAssetTypeToAccountType } from '../types/finance';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
 import type { Goal, GoalType } from '../types/goals';
+import type { RecurringRule } from '../types/recurring';
 import { selectRequeue, REQUEUE_TAG } from './requeueDropped';
 import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, putFromCloud, removeTombstoned } from './cloudSyncHydrate';
 import { pushHandlers } from './cloudSyncPush';
@@ -84,6 +85,9 @@ const ENTITY_PRIORITY: Record<SyncQueueItem['entityType'], number> = {
   // so an out-of-order push degrades to a lost link rather than an error, but
   // ordering it correctly means the link simply survives.
   braindump_entry: 2,
+  // v1.19 (NCC#202): no FK either way (generated rows keep only a plain
+  // recurring_rule_id), so any tier works; with the other parents.
+  recurring_rule: 1,
 };
 
 // Postgres integrity-constraint violations whose cause is the payload itself, not
@@ -222,6 +226,7 @@ export interface PullResult {
   portfolioCashEntries: number;
   workQualityLogs: number;
   braindumpEntries: number;
+  recurringRules: number;
   errors: string[];
 }
 
@@ -248,6 +253,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
     portfolioCashEntries: 0,
     workQualityLogs: 0,
     braindumpEntries: 0,
+    recurringRules: 0,
     errors,
   };
 
@@ -311,6 +317,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
         destinationAccountId: r.destination_account_id ?? undefined,
         date: r.date,
         type: (isTransfer ? 'transfer' : r.type) as Transaction['type'],
+        recurringRuleId: r.recurring_rule_id ?? undefined,
         syncStatus: 'synced',
         createdAt: r.created_at,
       };
@@ -350,11 +357,18 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       avgCostNative: r.avg_cost_native != null ? Number(r.avg_cost_native) : undefined,
       costCurrency: r.cost_currency ?? undefined,
       sectorOverride: r.sector_override ?? undefined,
+      // v1.19 (NCC#204)
+      manualPrice: r.manual_price != null ? Number(r.manual_price) : undefined,
+      manualPriceCurrency: r.manual_price_currency ?? undefined,
+      manualPriceAt: r.manual_price_at ?? undefined,
+      bond: r.bond_terms ?? undefined,
       createdAt: r.created_at,
     }),
     async (rows) => {
       await putPulled(db.portfolioHoldings, rows);
-    }
+    },
+    // v1.19 (NCC#92): holdings carry tombstones.
+    db.portfolioHoldings
   );
 
   // Studies: pull subjects → courses (no embedded grade) AND grades → grades
@@ -552,6 +566,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       costCurrency: r.cost_currency,
       purchaseDate: r.purchase_date ?? undefined,
       notes: r.notes ?? undefined,
+      recurringRuleId: r.recurring_rule_id ?? undefined,
       syncStatus: 'synced',
       createdAt: r.created_at,
       updatedAt: r.updated_at,
@@ -560,6 +575,33 @@ export async function pullAll(_userId: string): Promise<PullResult> {
       await putPulled(db.portfolioLots, rows);
     },
     db.portfolioLots
+  );
+
+  // v1.19 (NCC#202) — recurring rules, with tombstones. `waitingSince` is
+  // local-only. last_materialized_date never moves backwards on the server,
+  // and a rule with an edit still queued is not overwritten (putFromCloud).
+  result.recurringRules = await pullTable<any, RecurringRule>(
+    'recurring_rules',
+    [],
+    (r) => ({
+      id: r.id,
+      kind: r.kind,
+      template: r.template,
+      every: Number(r.every),
+      unit: r.unit,
+      anchorDay: r.anchor_day ?? undefined,
+      startDate: r.start_date,
+      endDate: r.end_date ?? undefined,
+      lastMaterializedDate: r.last_materialized_date ?? undefined,
+      pausedAt: r.paused_at ?? undefined,
+      syncStatus: 'synced',
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }) as RecurringRule,
+    async (rows) => {
+      await putPulled(db.recurringRules, rows, ['waitingSince']);
+    },
+    db.recurringRules
   );
 
   // v1.3 AUDIT-FSG-5b — extend pullAll coverage so cross-device habit edits
@@ -677,12 +719,27 @@ export async function adoptLocalData(userId: string): Promise<number> {
   await enqueueAll('stock_sale', stockSales);
   await enqueueAll('portfolio_cash_entry', cashEntries);
   await enqueueAll('work_quality_log', workQualityLogs);
+  // v1.19 (NCC#202): unsynced recurring rules, like the rows above.
+  await enqueueAll('recurring_rule', await db.recurringRules.filter((r) => r.syncStatus === 'pending').toArray());
 
   // v1.18.1 (limecore#59 §2): "Keep" is the guest's queued edits' release.
   // Until now they were held back (see syncQueue.ts pushableFor); from here
   // they are this user's, like the rows queued above.
   await db.syncQueue.filter((q) => !q.syncedAt && q.owner === null).modify({ owner: userId });
   return count;
+}
+
+/** v1.19 (NCC#189): "Keep" on an account switch adopts only unsynced rows.
+ *  The previous account's synced rows are already in its own cloud, could
+ *  never reach the adopting account's (RLS), and an edit to one was dropped
+ *  silently, so they leave the device. Tables without a per-row syncStatus
+ *  (budgets, holdings, courses — adopted in full — and derived caches) keep
+ *  their rows. */
+export async function dropSyncedRows(): Promise<void> {
+  const tables = db.tables.filter((t) => t.name !== 'apiCache' && t.name !== 'syncQueue');
+  for (const t of tables) {
+    await t.filter((r: { syncStatus?: string }) => r.syncStatus === 'synced').delete();
+  }
 }
 
 // ============================================================================

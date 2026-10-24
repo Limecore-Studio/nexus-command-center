@@ -71,8 +71,9 @@ describe('Dexie v23 upgrade from v1.15 data (issue #45)', () => {
     await Dexie.delete(DB_NAME);
   });
 
-  it('upgrades to schema version 23', () => {
-    expect(db.verno).toBe(23);
+  // v1.19 (NCC#202): v24 adds recurringRules; the v23 index still applies.
+  it('upgrades to the latest schema version (24)', () => {
+    expect(db.verno).toBe(24);
   });
 
   it('declares categoryId as an index on transactions', () => {

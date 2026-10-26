@@ -272,15 +272,20 @@ Deno.serve(async (req: Request) => {
   const maxOutputTokens = clampInt(body.maxTokens, 1, 1024, 256);
   const wantJson = body.json === true;
 
-  const generationConfig: Record<string, unknown> = {
-    temperature,
-    maxOutputTokens,
-    // Gemini 2.5 models "think" by default, and that reasoning is billed
-    // against maxOutputTokens — a small cap can be fully consumed by thinking,
-    // returning just a few visible words. These are short narrative/extraction
-    // tasks, so disable thinking for fast, complete responses.
-    thinkingConfig: { thinkingBudget: 0 },
-  };
+  // 2026-10-26 (limecore#60): the 2.5 models no longer serve new projects, so
+  // GEMINI_MODEL is now a 3.x model (gemini-3.5-flash-lite). Google's 3.x
+  // guidance: `thinkingBudget` is legacy, replaced by `thinkingLevel` (sending
+  // both is a 400), and temperature/top_p/top_k are deprecated and ignored,
+  // with a 400 announced for later generations. So 3.x gets the lowest thinking
+  // level and no temperature; a 2.x model keeps the old config unchanged.
+  //
+  // Thinking is billed against maxOutputTokens, so a small cap can be used up
+  // by reasoning and return only a few visible words. These are short
+  // narrative/extraction tasks: keep thinking at the minimum.
+  const legacyModel = /^gemini-2\./.test(GEMINI_MODEL);
+  const generationConfig: Record<string, unknown> = legacyModel
+    ? { temperature, maxOutputTokens, thinkingConfig: { thinkingBudget: 0 } }
+    : { maxOutputTokens, thinkingConfig: { thinkingLevel: "MINIMAL" } };
   if (wantJson) generationConfig.responseMimeType = "application/json";
 
   // v1.18.1 — the key goes in a header, never the URL. Fetch errors carry the

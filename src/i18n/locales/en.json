@@ -228,6 +228,13 @@
     "lockNow": "Lock Now",
     "dataSync": "Data & Sync",
     "cloudSync": "Cloud Sync",
+    "liveUpdates": "Live updates",
+    "liveState": {
+      "live": "Live",
+      "connecting": "Connecting",
+      "down": "Reconnecting",
+      "off": "Off"
+    },
     "active": "Active",
     "offline": "Offline",
     "notSignedIn": "Not signed in",

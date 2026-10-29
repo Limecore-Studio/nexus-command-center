@@ -228,6 +228,13 @@
     "lockNow": "Lukitse nyt",
     "dataSync": "Tiedot ja synkronointi",
     "cloudSync": "Pilvisynkronointi",
+    "liveUpdates": "Reaaliaikaiset päivitykset",
+    "liveState": {
+      "live": "Käynnissä",
+      "connecting": "Yhdistetään",
+      "down": "Yhdistetään uudelleen",
+      "off": "Pois"
+    },
     "active": "Aktiivinen",
     "offline": "Offline",
     "notSignedIn": "Ei kirjautunut",

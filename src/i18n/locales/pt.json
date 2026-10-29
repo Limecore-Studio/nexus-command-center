@@ -289,6 +289,13 @@
     "lockNow": "Bloquear agora",
     "dataSync": "Dados e sincronização",
     "cloudSync": "Sincronização na nuvem",
+    "liveUpdates": "Atualizações ao vivo",
+    "liveState": {
+      "live": "Ao vivo",
+      "connecting": "Conectando",
+      "down": "Reconectando",
+      "off": "Desligado"
+    },
     "active": "Ativa",
     "offline": "Offline",
     "notSignedIn": "Não conectado",

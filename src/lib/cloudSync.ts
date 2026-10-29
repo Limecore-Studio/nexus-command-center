@@ -40,12 +40,16 @@ import { selectRequeue, REQUEUE_TAG } from './requeueDropped';
 import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, putFromCloud, removeTombstoned } from './cloudSyncHydrate';
 import { pushHandlers } from './cloudSyncPush';
 import { dueFromServer } from './taskDue';
+import { ENTITY_TABLES } from './liveHints';
 export { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydrateStudiesFromCloud, hydrateWorkQualityFromCloud } from './cloudSyncHydrate';
 
 // ============================================================================
 // Push: drain queue to Supabase
 // ============================================================================
 export interface PushResult {
+  /** v1.20 (NCC#221): tables written by the items that succeeded, for the
+   *  live-sync hint. Absent on results built before any push ran. */
+  pushedTables?: string[];
   attempted: number;
   succeeded: number;
   failed: number;
@@ -144,6 +148,7 @@ export async function pushQueue(userId: string): Promise<PushResult> {
   });
 
   const result: PushResult = { attempted: 0, succeeded: 0, failed: 0, errors: [] };
+  const pushedTables = new Set<string>();
   const now = new Date().toISOString();
   // v1.18.1 (NCC#147): the lowest priority (a parent tier) that failed in this
   // drain without being dropped. A child's FK violation after that is the
@@ -165,6 +170,8 @@ export async function pushQueue(userId: string): Promise<PushResult> {
       await handler(item, { userId });
       await db.syncQueue.update(item.id, { syncedAt: now, lastError: undefined });
       result.succeeded++;
+      const table = ENTITY_TABLES[item.entityType];
+      if (table) pushedTables.add(table);
     } catch (e) {
       const msg = (e as Error).message ?? String(e);
       const code = (e as { code?: string } | null)?.code;
@@ -199,6 +206,7 @@ export async function pushQueue(userId: string): Promise<PushResult> {
       if (isTransportError(e)) break;
     }
   }
+  result.pushedTables = [...pushedTables];
   return result;
 }
 
@@ -230,7 +238,17 @@ export interface PullResult {
   errors: string[];
 }
 
-export async function pullAll(_userId: string): Promise<PullResult> {
+/**
+ * Pull every synced table into Dexie, or with `only`, just those tables.
+ *
+ * v1.20 (NCC#221): a live-sync hint names the tables another device wrote, and
+ * pulling only those is what makes it cheap. Every step below is gated on the
+ * tables it reads; a step that reads several (the StudyDesk trio, habits and
+ * their completions) runs when any of them is named. Counts for skipped tables
+ * stay 0.
+ */
+export async function pullAll(_userId: string, only?: ReadonlySet<string>): Promise<PullResult> {
+  const want = (...tables: string[]) => !only || tables.some((t) => only.has(t));
   const errors: string[] = [];
   const result: PullResult = {
     transactions: 0,
@@ -274,6 +292,7 @@ export async function pullAll(_userId: string): Promise<PullResult> {
     writeToDexie: (rows: L[]) => Promise<void>,
     tombstonesIn?: Table<any, string>
   ): Promise<number> {
+    if (!want(table)) return 0;
     const { data, error } = await selectAll(supabase, table, {
       filter: (q) => {
         for (const f of extraFilters) {
@@ -379,7 +398,9 @@ export async function pullAll(_userId: string): Promise<PullResult> {
   // doesn't poison the other. StudyDesk owns these tables — if either lacks
   // a `deleted_at` column the filter falls back to "no filter" so we don't
   // silently drop everything on a schema mismatch.
-  const studiesHydration = await hydrateStudiesTables(_userId);
+  const studiesHydration = want('subjects', 'grades', 'study_sessions')
+    ? await hydrateStudiesTables(_userId)
+    : { subjects: 0, grades: 0, studySessions: 0, errors: [] as string[] };
   result.subjects = studiesHydration.subjects;
   result.grades = studiesHydration.grades;
   for (const e of studiesHydration.errors) errors.push(e);
@@ -612,7 +633,9 @@ export async function pullAll(_userId: string): Promise<PullResult> {
   // start via the dedicated hydrateHabitsFromCloud cold-start hook. Now both
   // paths re-use the same hydration helper. (v1.3 — body_metrics joins them
   // below now that NCC has a Dexie table + Fitness UI surface for them.)
-  const habitsHydration = await hydrateHabitsFromCloud(_userId);
+  const habitsHydration = want('habits', 'habit_completions')
+    ? await hydrateHabitsFromCloud(_userId)
+    : { habits: 0, completions: 0, errors: [] as string[] };
   result.habits = habitsHydration.habits;
   result.habitCompletions = habitsHydration.completions;
   for (const e of habitsHydration.errors) errors.push(e);
@@ -623,7 +646,9 @@ export async function pullAll(_userId: string): Promise<PullResult> {
   // schedulePull → syncNow → pullAll, but pullAll had no body_metrics step
   // and no local table, so cross-device body-metric edits only surfaced on
   // cold start. Now both paths converge on hydrateBodyMetricsFromCloud.
-  const bodyMetricsHydration = await hydrateBodyMetricsFromCloud(_userId);
+  const bodyMetricsHydration = want('body_metrics')
+    ? await hydrateBodyMetricsFromCloud(_userId)
+    : { bodyMetrics: 0, errors: [] as string[] };
   result.bodyMetrics = bodyMetricsHydration.bodyMetrics;
   for (const e of bodyMetricsHydration.errors) errors.push(e);
 
@@ -631,23 +656,31 @@ export async function pullAll(_userId: string): Promise<PullResult> {
   // on another device surfaces on the next sync (cold start + 30s flusher +
   // realtime-triggered pull all route through here). soldShares is re-derived
   // from these in useFinanceStore.load() after the reload.
-  const stockSalesHydration = await hydrateStockSalesFromCloud(_userId);
+  const stockSalesHydration = want('stock_sales')
+    ? await hydrateStockSalesFromCloud(_userId)
+    : { stockSales: 0, errors: [] as string[] };
   result.stockSales = stockSalesHydration.stockSales;
   for (const e of stockSalesHydration.errors) errors.push(e);
 
-  const cashHydration = await hydratePortfolioCashFromCloud(_userId);
+  const cashHydration = want('portfolio_cash_entries')
+    ? await hydratePortfolioCashFromCloud(_userId)
+    : { portfolioCashEntries: 0, errors: [] as string[] };
   result.portfolioCashEntries = cashHydration.portfolioCashEntries;
   for (const e of cashHydration.errors) errors.push(e);
 
   // v1.5 — Work domain self-assessment. NCC-native; hydrate-in-pullAll so a
   // rating logged on another device surfaces on the next sync, mirroring the
   // habits/body-metrics convergence above.
-  const workQualityHydration = await hydrateWorkQualityFromCloud(_userId);
+  const workQualityHydration = want('work_quality_logs')
+    ? await hydrateWorkQualityFromCloud(_userId)
+    : { workQualityLogs: 0, errors: [] as string[] };
   result.workQualityLogs = workQualityHydration.workQualityLogs;
   for (const e of workQualityHydration.errors) errors.push(e);
 
   // v1.12 Item 10 - Braindump.
-  const braindumpHydration = await hydrateBraindumpFromCloud(_userId);
+  const braindumpHydration = want('braindump_entries')
+    ? await hydrateBraindumpFromCloud(_userId)
+    : { braindumpEntries: 0, errors: [] as string[] };
   result.braindumpEntries = braindumpHydration.braindumpEntries;
   for (const e of braindumpHydration.errors) errors.push(e);
 

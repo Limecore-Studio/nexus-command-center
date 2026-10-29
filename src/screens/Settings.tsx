@@ -20,6 +20,14 @@ import { IS_DESKTOP } from '../lib/desktop';
 import { checkForDesktopUpdate, runDesktopUpdateAction, useDesktopUpdate } from '../lib/desktopUpdate';
 import { setUpdateCheckEnabled, useFdroidUpdate } from '../lib/fdroidUpdate';
 import { useSyncStore } from '../store/useSyncStore';
+import { useRealtimeState, type RealtimeState } from '../lib/realtimeState';
+
+const LIVE_TONE: Record<RealtimeState, 'green' | 'amber' | 'muted'> = {
+  live: 'green',
+  connecting: 'amber',
+  down: 'amber',
+  off: 'muted',
+};
 import { useSessionStore, userDisplayName } from '../store/useSessionStore';
 import { listPending } from '../db/syncQueue';
 import { useSettingsStore, BaseCurrency, UI_SCALES } from '../store/useSettingsStore';
@@ -79,6 +87,9 @@ export default function Settings() {
   const lastError = useSyncStore((s) => s.lastError);
   const itemErrors = useSyncStore((s) => s.itemErrors);
   const refreshPending = useSyncStore((s) => s.refreshPending);
+  // v1.20 (NCC#221): what the live channel is really doing. It said nothing
+  // before, through months of a dead channel (limecore#24).
+  const liveState = useRealtimeState();
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioReason, setBioReason] = useState('');
   const [signOutOpen, setSignOutOpen] = useState(false);
@@ -310,6 +321,12 @@ export default function Settings() {
             onChange={() => {}}
             locked
           />
+          {user && (
+            <ListRow
+              label={t('settings.liveUpdates')}
+              tag={{ text: t(`settings.liveState.${liveState}`), tone: LIVE_TONE[liveState] }}
+            />
+          )}
           <ListRow label={t('settings.lastSync')} value={lastSyncDisplay} />
           <ListRow
             label={t('settings.pendingWrites')}

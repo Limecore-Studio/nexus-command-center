@@ -228,6 +228,13 @@
     "lockNow": "Verrouiller",
     "dataSync": "Données et synchro",
     "cloudSync": "Synchro cloud",
+    "liveUpdates": "Mises à jour en direct",
+    "liveState": {
+      "live": "En direct",
+      "connecting": "Connexion",
+      "down": "Reconnexion",
+      "off": "Désactivé"
+    },
     "active": "Actif",
     "offline": "Hors ligne",
     "notSignedIn": "Non connecté",

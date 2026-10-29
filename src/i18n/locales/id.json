@@ -289,6 +289,13 @@
     "lockNow": "Kunci sekarang",
     "dataSync": "Data & sinkronisasi",
     "cloudSync": "Sinkronisasi awan",
+    "liveUpdates": "Pembaruan langsung",
+    "liveState": {
+      "live": "Langsung",
+      "connecting": "Menyambungkan",
+      "down": "Menyambungkan ulang",
+      "off": "Mati"
+    },
     "active": "Aktif",
     "offline": "Luring",
     "notSignedIn": "Belum masuk",

@@ -228,6 +228,13 @@
     "lockNow": "Jetzt sperren",
     "dataSync": "Daten & Sync",
     "cloudSync": "Cloud-Sync",
+    "liveUpdates": "Live-Updates",
+    "liveState": {
+      "live": "Live",
+      "connecting": "Verbinde",
+      "down": "Neu verbinden",
+      "off": "Aus"
+    },
     "active": "Aktiv",
     "offline": "Offline",
     "notSignedIn": "Nicht angemeldet",

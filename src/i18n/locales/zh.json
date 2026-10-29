@@ -228,6 +228,13 @@
     "lockNow": "立即锁定",
     "dataSync": "数据与同步",
     "cloudSync": "云同步",
+    "liveUpdates": "实时更新",
+    "liveState": {
+      "live": "实时",
+      "connecting": "正在连接",
+      "down": "正在重新连接",
+      "off": "关闭"
+    },
     "active": "活动",
     "offline": "离线",
     "notSignedIn": "未登录",

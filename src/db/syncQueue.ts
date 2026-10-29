@@ -46,7 +46,26 @@ export function nextQueueTime(now = Date.now()): string {
   return new Date(lastQueuedAt).toISOString();
 }
 
+// v1.20 (NCC#221): told after every enqueue, so the sync store can push within
+// a moment instead of on the next 30 s flush. A listener rather than an import:
+// the store imports this module.
+const enqueuedListeners = new Set<() => void>();
+export function onEnqueued(listener: () => void): () => void {
+  enqueuedListeners.add(listener);
+  return () => enqueuedListeners.delete(listener);
+}
+
 export async function enqueue(
+  entityType: SyncQueueItem['entityType'],
+  entityId: string,
+  operation: SyncQueueItem['operation'],
+  payload: unknown
+): Promise<void> {
+  await enqueueRow(entityType, entityId, operation, payload);
+  for (const l of enqueuedListeners) l();
+}
+
+async function enqueueRow(
   entityType: SyncQueueItem['entityType'],
   entityId: string,
   operation: SyncQueueItem['operation'],

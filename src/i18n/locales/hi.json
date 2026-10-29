@@ -289,6 +289,13 @@
     "lockNow": "अभी लॉक करें",
     "dataSync": "डेटा और सिंक",
     "cloudSync": "क्लाउड सिंक",
+    "liveUpdates": "लाइव अपडेट",
+    "liveState": {
+      "live": "लाइव",
+      "connecting": "कनेक्ट हो रहा है",
+      "down": "फिर से कनेक्ट हो रहा है",
+      "off": "बंद"
+    },
     "active": "सक्रिय",
     "offline": "ऑफ़लाइन",
     "notSignedIn": "साइन इन नहीं है",

@@ -287,7 +287,11 @@ export async function hydrateHabitsFromCloud(
     });
     if (error) throw error;
     if (data) {
-      const habits: Habit[] = data.map((h: any) => ({
+      // v1.20 (NCC#92): tombstones come down too. Live rows are put; a habit
+      // deleted on another device leaves this one (and its reminder with it,
+      // when the store reloads).
+      const live = (data as any[]).filter((h) => !h.deleted_at);
+      const habits: Habit[] = live.map((h: any) => ({
         id: h.id,
         title: h.title,
         type: h.type,
@@ -303,6 +307,7 @@ export async function hydrateHabitsFromCloud(
         updatedAt: h.updated_at,
       }));
       await putFromCloud(db.habits, habits);
+      await removeTombstoned(db.habits, (data as any[]).filter((h) => h.deleted_at).map((h) => h.id));
       habitCount = habits.length;
     }
   } catch (e) {
@@ -317,7 +322,8 @@ export async function hydrateHabitsFromCloud(
     });
     if (error) throw error;
     if (data) {
-      const completions: HabitCompletion[] = data.map((c: any) => ({
+      const live = (data as any[]).filter((c) => !c.deleted_at);
+      const completions: HabitCompletion[] = live.map((c: any) => ({
         id: c.id,
         habitId: c.habit_id,
         date: c.date,
@@ -340,6 +346,21 @@ export async function hydrateHabitsFromCloud(
         })
         .map((l) => l.id);
       if (shadowed.length > 0) await db.habitCompletions.bulkDelete(shadowed);
+      // v1.20 (NCC#92): a day cleared on another device. Its row goes, and so
+      // does a local row for that day held under another id, unless this
+      // device has a push queued for it: the user re-marked the day here, and
+      // that push revives it upstream.
+      const dead = (data as any[]).filter((c) => c.deleted_at);
+      if (dead.length > 0) {
+        await removeTombstoned(db.habitCompletions, dead.map((c) => c.id));
+        const liveDays = new Set(completions.map((c) => `${c.habitId}|${c.date}`));
+        const deadDays = new Set(dead.map((c) => `${c.habit_id}|${c.date}`).filter((k) => !liveDays.has(k)));
+        const queued = new Set((await listPending()).map((q) => q.entityId));
+        const cleared = (await db.habitCompletions.toArray())
+          .filter((l) => deadDays.has(`${legacyIdToUuid(l.habitId)}|${l.date}`) && !queued.has(l.id))
+          .map((l) => l.id);
+        if (cleared.length > 0) await db.habitCompletions.bulkDelete(cleared);
+      }
       completionCount = completions.length;
     }
   } catch (e) {
@@ -423,7 +444,9 @@ export async function hydrateWorkQualityFromCloud(
     if (error) throw error;
     recordSeen('work_quality_logs', (data ?? []) as any[]);
     if (data) {
-      const rows: WorkQualityLog[] = (data as any[]).map((r) => ({
+      // v1.20 (NCC#92): tombstones come down too; only live days are put.
+      const live = (data as any[]).filter((r) => !r.deleted_at);
+      const rows: WorkQualityLog[] = live.map((r) => ({
         id: r.id,
         date: r.log_date,
         rating: Number(r.rating) || 0,
@@ -445,6 +468,17 @@ export async function hydrateWorkQualityFromCloud(
         .filter((l) => serverIdByDate.has(l.date) && serverIdByDate.get(l.date) !== l.id && !queued.has(l.id))
         .map((l) => l.id);
       if (shadowed.length > 0) await db.workQualityLogs.bulkDelete(shadowed);
+      // A day cleared on another device: its row goes, and so does a local
+      // row for that day under another id, unless a push is queued for it.
+      const dead = (data as any[]).filter((r) => r.deleted_at);
+      if (dead.length > 0) {
+        await removeTombstoned(db.workQualityLogs, dead.map((r) => r.id));
+        const deadDates = new Set(dead.map((r) => r.log_date).filter((d) => !serverIdByDate.has(d)));
+        const cleared = (await db.workQualityLogs.toArray())
+          .filter((l) => deadDates.has(l.date) && !queued.has(l.id))
+          .map((l) => l.id);
+        if (cleared.length > 0) await db.workQualityLogs.bulkDelete(cleared);
+      }
     }
   } catch (e) {
     const msg = (e as Error).message;
@@ -465,9 +499,11 @@ interface BraindumpHydrationResult {
  *
  * Same posture as the other hydrators: the ordinary authenticated client with
  * RLS as the gate, an explicit user_id filter as defence in depth, and a
- * try/catch so one bad row cannot take the whole sync down. Soft-deleted rows
- * are filtered out rather than tombstoned locally - nothing references an
- * entry, so there is no reconciliation that needs to see the deletion.
+ * try/catch so one bad row cannot take the whole sync down.
+ *
+ * v1.20 (NCC#92): tombstones come down too, so an entry deleted on another
+ * device leaves this one. They used to be filtered out at the server, which
+ * hid them from a fresh device but never removed them from an existing one.
  */
 export async function hydrateBraindumpFromCloud(
   userId: string,
@@ -476,12 +512,13 @@ export async function hydrateBraindumpFromCloud(
   let count = 0;
   try {
     const { data, error } = await selectAll(supabase, 'braindump_entries', {
-      filter: (q) => q.eq('user_id', userId).is('deleted_at', null),
+      filter: (q) => q.eq('user_id', userId),
     });
     if (error) throw error;
     recordSeen('braindump_entries', (data ?? []) as any[]);
     if (data) {
-      const rows: BraindumpEntry[] = (data as any[]).map((r) => ({
+      const live = (data as any[]).filter((r) => !r.deleted_at);
+      const rows: BraindumpEntry[] = live.map((r) => ({
         id: r.id,
         // Coerced rather than trusted: content is free text arriving from the
         // network, and a null would break every consumer that measures length.
@@ -493,6 +530,7 @@ export async function hydrateBraindumpFromCloud(
         deletedAt: null,
       }));
       await putFromCloud(db.braindumpEntries, rows);
+      await removeTombstoned(db.braindumpEntries, (data as any[]).filter((r) => r.deleted_at).map((r) => r.id));
       count = rows.length;
     }
   } catch (e) {

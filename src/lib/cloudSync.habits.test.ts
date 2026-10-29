@@ -85,16 +85,22 @@ describe('pushHabitCompletion — the second device on the same day', () => {
   });
 });
 
+// v1.20 (NCC#92): un-marking a day is a tombstone, so the user's other
+// devices clear it too; before the migration adds `deleted_at`, the hard
+// delete of old.
 describe('pushHabitCompletion — un-marking a day', () => {
-  it('removes the day even when the server knows it under another id', async () => {
+  const live = () => holder.client.tables.habit_completions.filter((r: any) => !r.deleted_at);
+
+  it('clears the day even when the server knows it under another id', async () => {
     const [deviceA, deviceB] = [crypto.randomUUID(), crypto.randomUUID()];
     holder.client = fakeClient({ habit_completions: [serverCompletion(deviceA)] }, { uniques });
     await queue('delete', deviceB, { id: deviceB, habitId: HABIT, date: DAY });
     await pushQueue(USER);
-    expect(holder.client.tables.habit_completions).toEqual([]);
+    expect(live()).toEqual([]);
+    expect(holder.client.tables.habit_completions[0]).toMatchObject({ id: deviceA, deleted_at: expect.any(String) });
   });
 
-  it('only removes that day, not the habit\'s other days', async () => {
+  it('only clears that day, not the habit\'s other days', async () => {
     const other = crypto.randomUUID();
     const target = crypto.randomUUID();
     holder.client = fakeClient(
@@ -103,7 +109,7 @@ describe('pushHabitCompletion — un-marking a day', () => {
     );
     await queue('delete', target, { id: target, habitId: HABIT, date: DAY });
     await pushQueue(USER);
-    expect(holder.client.tables.habit_completions.map((r: any) => r.id)).toEqual([other]);
+    expect(live().map((r: any) => r.id)).toEqual([other]);
   });
 
   it('still honours a delete queued by an older build, which carries only the id', async () => {
@@ -111,8 +117,74 @@ describe('pushHabitCompletion — un-marking a day', () => {
     holder.client = fakeClient({ habit_completions: [serverCompletion(id)] }, { uniques });
     await queue('delete', id, { id });
     await pushQueue(USER);
-    expect(holder.client.tables.habit_completions).toEqual([]);
+    expect(live()).toEqual([]);
     expect(holder.client.writes[0].filters).toEqual([['eq', 'id', id]]);
+  });
+
+  it('hard-deletes before the migration adds the column', async () => {
+    const id = crypto.randomUUID();
+    holder.client = fakeClient({ habit_completions: [serverCompletion(id)] },
+      { uniques, unknownColumns: { habit_completions: ['deleted_at'] } });
+    await queue('delete', id, { id, habitId: HABIT, date: DAY });
+    await pushQueue(USER);
+    expect(holder.client.tables.habit_completions).toEqual([]);
+  });
+});
+
+describe('pushHabitCompletion — re-marking a cleared day (v1.20, NCC#92)', () => {
+  it('revives the cleared row, under the server\'s id', async () => {
+    const [server, local] = [crypto.randomUUID(), crypto.randomUUID()];
+    holder.client = fakeClient({ habit_completions: [{ ...serverCompletion(server), deleted_at: T0 }] }, { uniques });
+    await queue('insert', local, localCompletion(local, 1));
+    await pushQueue(USER);
+    expect(holder.client.tables.habit_completions).toHaveLength(1);
+    expect(holder.client.tables.habit_completions[0]).toMatchObject({ id: server, deleted_at: null, amount: 1 });
+  });
+
+  it('marks normally before the migration adds the column', async () => {
+    const id = crypto.randomUUID();
+    holder.client = fakeClient({ habit_completions: [] },
+      { uniques, unknownColumns: { habit_completions: ['deleted_at'] } });
+    await queue('insert', id, localCompletion(id, 2));
+    await pushQueue(USER);
+    expect(holder.client.tables.habit_completions).toEqual([expect.objectContaining({ id, amount: 2 })]);
+    expect(holder.client.tables.habit_completions[0]).not.toHaveProperty('deleted_at');
+  });
+});
+
+describe('pushHabit — deleting a habit (v1.20, NCC#92)', () => {
+  async function queueHabitDelete(id: string) {
+    await db.syncQueue.add({
+      id: crypto.randomUUID(), entityType: 'habit', entityId: id, operation: 'delete',
+      payload: JSON.stringify({ id }), createdAt: T0,
+    });
+  }
+
+  it('tombstones the habit and its days, leaving other habits alone', async () => {
+    const otherHabit = crypto.randomUUID();
+    holder.client = fakeClient({
+      habits: [{ id: HABIT, user_id: USER, title: 'Read' }, { id: otherHabit, user_id: USER, title: 'Run' }],
+      habit_completions: [serverCompletion(crypto.randomUUID()), { ...serverCompletion(crypto.randomUUID()), habit_id: otherHabit }],
+    }, { uniques });
+    await queueHabitDelete(HABIT);
+    await pushQueue(USER);
+    const habits = holder.client.tables.habits;
+    expect(habits.find((h: any) => h.id === HABIT).deleted_at).toEqual(expect.any(String));
+    expect(habits.find((h: any) => h.id === otherHabit).deleted_at).toBeUndefined();
+    const days = holder.client.tables.habit_completions;
+    expect(days.find((c: any) => c.habit_id === HABIT).deleted_at).toEqual(expect.any(String));
+    expect(days.find((c: any) => c.habit_id === otherHabit).deleted_at).toBeUndefined();
+  });
+
+  it('hard-deletes both before the migration adds the column', async () => {
+    holder.client = fakeClient({
+      habits: [{ id: HABIT, user_id: USER, title: 'Read' }],
+      habit_completions: [serverCompletion(crypto.randomUUID())],
+    }, { uniques, unknownColumns: { habits: ['deleted_at'], habit_completions: ['deleted_at'] } });
+    await queueHabitDelete(HABIT);
+    await pushQueue(USER);
+    expect(holder.client.tables.habits).toEqual([]);
+    expect(holder.client.tables.habit_completions).toEqual([]);
   });
 });
 
@@ -153,5 +225,36 @@ describe('hydrateHabitsFromCloud — one local row per (habit, day)', () => {
     expect((await db.habitCompletions.toArray()).map((c) => c.id).sort()).toEqual(
       [server, otherDay, unpushed].sort(),
     );
+  });
+});
+
+describe('hydrateHabitsFromCloud — tombstones (v1.20, NCC#92)', () => {
+  it('a habit deleted elsewhere leaves this device', async () => {
+    await db.habits.put({ id: HABIT, title: 'Read', type: 'binary', frequencyKind: 'daily', syncStatus: 'synced', createdAt: T0 } as any);
+    holder.client = fakeClient({
+      habits: [{ id: HABIT, user_id: USER, title: 'Read', type: 'binary', frequency_kind: 'daily', created_at: T0, updated_at: T0, deleted_at: T0 }],
+      habit_completions: [],
+    });
+    await hydrateHabitsFromCloud(USER);
+    expect(await db.habits.toArray()).toEqual([]);
+  });
+
+  it('a day cleared elsewhere leaves this device, under either id', async () => {
+    const [server, mine] = [crypto.randomUUID(), crypto.randomUUID()];
+    await db.habitCompletions.bulkPut([localCompletion(server), localCompletion(mine, 1, DAY, 'synced', crypto.randomUUID())] as any);
+    // `mine` is the same day for the same habit, held under this device's id.
+    await db.habitCompletions.put(localCompletion(mine) as any);
+    holder.client = fakeClient({ habits: [], habit_completions: [{ ...serverCompletion(server), deleted_at: T0 }] });
+    await hydrateHabitsFromCloud(USER);
+    expect(await db.habitCompletions.toArray()).toEqual([]);
+  });
+
+  it('keeps a day re-marked here that has not been pushed yet', async () => {
+    const [server, mine] = [crypto.randomUUID(), crypto.randomUUID()];
+    await db.habitCompletions.put(localCompletion(mine, 2, DAY, 'pending') as any);
+    await queue('insert', mine, localCompletion(mine, 2));
+    holder.client = fakeClient({ habits: [], habit_completions: [{ ...serverCompletion(server), deleted_at: T0 }] });
+    await hydrateHabitsFromCloud(USER);
+    expect((await db.habitCompletions.toArray()).map((c) => c.id)).toEqual([mine]);
   });
 });

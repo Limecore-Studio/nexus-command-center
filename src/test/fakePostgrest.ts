@@ -30,6 +30,9 @@ export interface FakeOptions {
    *  duplicate one fails with 23505, as Postgres does. */
   uniques?: Record<string, string[][]>;
   failWhen?: (req: FakeRequest, n: number) => { code: string; message: string } | null;
+  /** Columns a table does not have yet (a migration not applied): a write
+   *  naming one fails with PGRST204, as PostgREST does. */
+  unknownColumns?: Record<string, string[]>;
 }
 
 export function makeUuids(n: number): string[] {
@@ -37,7 +40,7 @@ export function makeUuids(n: number): string[] {
 }
 
 export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}) {
-  const { maxRows = 1000, withCount = true, ignoreGt = false, missing = [], uniques = {}, failWhen } = opts;
+  const { maxRows = 1000, withCount = true, ignoreGt = false, missing = [], uniques = {}, failWhen, unknownColumns = {} } = opts;
   const requests: FakeRequest[] = [];
   /** Every write, in order, for assertions. */
   const writes: { op: 'upsert' | 'update' | 'delete'; table: string; row?: any; filters: FakeRequest['filters'] }[] = [];
@@ -47,6 +50,13 @@ export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}
     (uniques[table] ?? []).some((cols) =>
       rowsOf(table).some((r) => r.id !== exceptId && cols.every((c) => r[c] === row[c])),
     );
+  const unknownIn = (table: string, row: any) =>
+    row ? (unknownColumns[table] ?? []).find((c) => Object.prototype.hasOwnProperty.call(row, c)) : undefined;
+  const noColumn = (table: string, col: string) => ({
+    data: null,
+    error: { code: 'PGRST204', message: `Could not find the '${col}' column of '${table}' in the schema cache` },
+    count: null,
+  });
   const dup = (table: string) => ({
     data: null,
     error: { code: '23505', message: `duplicate key value violates unique constraint on ${table}` },
@@ -63,6 +73,10 @@ export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}
         filters.push(['eq', col, val]);
         return wb;
       },
+      is(col: string, val: unknown) {
+        filters.push(['is', col, val]);
+        return wb;
+      },
       select() {
         returning = true;
         return wb;
@@ -70,6 +84,8 @@ export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}
       then(resolve: (v: any) => any, reject?: (e: any) => any) {
         return Promise.resolve()
           .then(() => {
+            const unknown = unknownIn(table, patch);
+            if (unknown) return noColumn(table, unknown);
             writes.push({ op, table, row: patch, filters });
             const hit = rowsOf(table).filter((r) => filters.every((f) => matches(r, f)));
             const data = returning ? hit.map((r) => ({ ...r, ...(op === 'update' ? patch : {}) })) : null;
@@ -99,6 +115,8 @@ export function fakeClient(tables: Record<string, any[]>, opts: FakeOptions = {}
           then(resolve: (v: any) => any, reject?: (e: any) => any) {
             return Promise.resolve()
               .then(() => {
+                const unknown = unknownIn(table, row);
+                if (unknown) return noColumn(table, unknown);
                 writes.push({ op: 'upsert', table, row, filters: [] });
                 const existing = rowsOf(table).find((r) => r.id === row.id);
                 if (collides(table, row, row.id)) return dup(table);

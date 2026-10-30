@@ -1,6 +1,6 @@
 -- v1.20 — NCC#92, the rest: tombstones for habits, habit completions, work
 -- logs and braindump.
--- NOT YET APPLIED to production: the owner applies it.
+-- APPLIED to production 2026-10-30 with the owner's OK (history version 20261030062556).
 --
 -- NCC hard-DELETEd these, so a second device never learned of a delete and
 -- its next edit re-created the row upstream (the defect of NCC#56). v1.19 did

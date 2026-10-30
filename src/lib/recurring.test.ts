@@ -183,3 +183,91 @@ describe('forecast', () => {
     expect(p.projectedExpenses + p.projectedIncome).toBe(0);
   });
 });
+
+// v1.20 (NCC#203) — staking yield: one cost-0 lot per month, compounding,
+// worked out from scratch each run so two devices write the same number.
+describe('staking yield', () => {
+  const H = 'h-sol';
+  const holding = { id: H, assetType: 'crypto', ticker: 'SOL', quantity: 10, costCurrency: 'EUR', syncStatus: 'synced', createdAt: '2026-01-01T00:00:00Z' };
+  const bought = { id: 'lot-buy', holdingId: H, quantity: 10, costPerUnit: 100, costCurrency: 'EUR', purchaseDate: '2026-09-15', syncStatus: 'synced', createdAt: '2026-09-15T00:00:00Z' };
+  const yieldRule = (over: Partial<Rule> = {}) =>
+    rule({ kind: 'yield', template: { holdingId: H, apyPct: 10, currency: 'EUR' }, every: 1, unit: 'day', startDate: '2026-10-01', ...over } as any);
+  const r = Math.pow(1.1, 1 / 365) - 1;
+  const grown = (units: number, days: number) => units * (Math.pow(1 + r, days) - 1);
+
+  beforeEach(async () => {
+    await db.portfolioHoldings.put(holding as any);
+    await db.portfolioLots.put(bought as any);
+  });
+
+  it('accrues the month into one cost-0 lot, compounding daily', async () => {
+    await db.recurringRules.put(yieldRule());
+    await materializeDue(deps({ today: '2026-10-10' }));
+    const lot = await db.portfolioLots.get(await occurrenceId(yieldRule().id, '2026-10', 'lot'));
+    expect(lot).toMatchObject({ holdingId: H, costPerUnit: 0, costCurrency: 'EUR', purchaseDate: '2026-10-10', recurringRuleId: yieldRule().id });
+    expect(lot!.quantity).toBeCloseTo(grown(10, 10), 12);
+    expect(await db.portfolioLots.count()).toBe(2);
+    expect((await db.syncQueue.toArray()).filter((q) => q.entityType === 'portfolio_lot')).toHaveLength(1);
+  });
+
+  it('a later day brings the same lot up to date; a rerun the same day writes nothing', async () => {
+    await db.recurringRules.put(yieldRule());
+    await materializeDue(deps({ today: '2026-10-10' }));
+    await materializeDue(deps({ today: '2026-10-10' }));
+    expect(await db.syncQueue.count()).toBe(2); // the lot insert + the rule's progress
+    await materializeDue(deps({ today: '2026-10-12' }));
+    const lot = await db.portfolioLots.get(await occurrenceId(yieldRule().id, '2026-10', 'lot'));
+    expect(lot!.quantity).toBeCloseTo(grown(10, 12), 12);
+    const lotWrites = (await db.syncQueue.toArray())
+      .filter((q) => q.entityType === 'portfolio_lot')
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    expect(lotWrites.map((q) => q.operation)).toEqual(['insert', 'update']);
+  });
+
+  it('a new month opens a new lot, and last month\'s rewards earn too', async () => {
+    await db.recurringRules.put(yieldRule());
+    await materializeDue(deps({ today: '2026-11-02' }));
+    const oct = await db.portfolioLots.get(await occurrenceId(yieldRule().id, '2026-10', 'lot'));
+    const nov = await db.portfolioLots.get(await occurrenceId(yieldRule().id, '2026-11', 'lot'));
+    expect(oct!.quantity).toBeCloseTo(grown(10, 31), 12);
+    expect(nov!.quantity).toBeCloseTo(grown(10 + oct!.quantity, 2), 12);
+    // October is over: a later run leaves its lot alone.
+    await materializeDue(deps({ today: '2026-11-05' }));
+    expect((await db.portfolioLots.get(oct!.id))!.quantity).toBe(oct!.quantity);
+  });
+
+  it('another device that already wrote the same days is matched, not added to', async () => {
+    await db.recurringRules.put(yieldRule());
+    const id = await occurrenceId(yieldRule().id, '2026-10', 'lot');
+    await db.portfolioLots.put({ id, holdingId: H, quantity: grown(10, 10), costPerUnit: 0, costCurrency: 'EUR', purchaseDate: '2026-10-10', recurringRuleId: yieldRule().id, syncStatus: 'synced', createdAt: 'x' } as any);
+    await materializeDue(deps({ today: '2026-10-10' }));
+    expect((await db.syncQueue.toArray()).filter((q) => q.entityType === 'portfolio_lot')).toEqual([]);
+    expect((await db.portfolioLots.get(id))!.quantity).toBeCloseTo(grown(10, 10), 12);
+  });
+
+  it('nothing accrues on units not yet held, and it waits for a missing holding', async () => {
+    await db.recurringRules.put(yieldRule({ startDate: '2026-09-10' } as any));
+    await materializeDue(deps({ today: '2026-09-15' }));
+    // Bought on the 15th: held from the 16th, so nothing for 10–15 September.
+    expect(await db.portfolioLots.count()).toBe(1);
+    await db.portfolioHoldings.clear();
+    const res = await materializeDue(deps({ today: '2026-09-20' }));
+    expect(res.created).toBe(0);
+    // A catch-up tries each month once, on its last due day (see materializeDue).
+    expect((await db.recurringRules.toArray())[0].waitingSince).toBe('2026-09-20');
+  });
+
+  it('a holding with no recorded purchases waits, so its typed quantity is never replaced', async () => {
+    await db.portfolioLots.clear();
+    await db.recurringRules.put(yieldRule());
+    const res = await materializeDue(deps({ today: '2026-10-10' }));
+    expect(res).toEqual({ created: 0, touchedHoldings: [] });
+    expect(await db.portfolioLots.count()).toBe(0);
+    expect((await db.recurringRules.toArray())[0].waitingSince).toBe('2026-10-10');
+  });
+
+  it('the template carries no amount or quantity, so NCC 1.19 (which reads it as a buy) waits instead of buying', () => {
+    const t = yieldRule().template as unknown as Record<string, unknown>;
+    expect(Object.keys(t).sort()).toEqual(['apyPct', 'currency', 'holdingId']);
+  });
+});

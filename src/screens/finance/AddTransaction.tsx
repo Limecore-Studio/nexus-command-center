@@ -11,7 +11,8 @@ import type { TransactionTemplate } from '../../types/templates';
 import { TransactionType } from '../../types/finance';
 // v1.18.1 (NCC#144): typed amounts accept a decimal comma.
 import { numberInput } from '@/lib/numberInput';
-import { localDateKey } from '@/utils/formatters';
+import { useSettingsStore } from '../../store/useSettingsStore';
+import { formatCurrency, localDateKey } from '@/utils/formatters';
 
 const types: { key: TransactionType; labelKey: string }[] = [
   { key: 'expense', labelKey: 'fin.tx.expense' },
@@ -28,6 +29,7 @@ export default function AddTransaction() {
 
   const transactions = useFinanceStore((s) => s.transactions);
   const categories = useFinanceStore((s) => s.budgetCategories);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   const updateTransaction = useFinanceStore((s) => s.updateTransaction);
   const deleteTransaction = useFinanceStore((s) => s.deleteTransaction);
@@ -175,7 +177,7 @@ export default function AddTransaction() {
                 <span className="opacity-60">·</span>
                 <span className="font-medium">
                   {t.type === 'income' ? '+' : t.type === 'expense' ? '−' : ''}
-                  {t.amount.toFixed(2)}€
+                  {formatCurrency(t.amount, baseCurrency)}
                 </span>
               </>
             )}

@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import Meter from './Meter';
 import { formatCurrency } from '../utils/formatters';
+import { useSettingsStore } from '../store/useSettingsStore';
 
 interface Props {
   spent: number;
@@ -19,6 +20,7 @@ interface Props {
 const RED_ZONE_FROM = 90;
 
 export default function RackBudgetMeter({ spent, limit, lastMonthSpent }: Props) {
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const { t } = useTranslation();
   const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
   const now = new Date();
@@ -47,7 +49,7 @@ export default function RackBudgetMeter({ spent, limit, lastMonthSpent }: Props)
         />
         <div className="flex items-baseline justify-between gap-2 mt-1.5">
           <div className="meter-readout text-xl">
-            {formatCurrency(Math.max(0, limit - spent))}
+            {formatCurrency(Math.max(0, limit - spent), baseCurrency)}
             <span className="meter-readout__unit">{t('rack.left')}</span>
           </div>
           {peakPct != null && (

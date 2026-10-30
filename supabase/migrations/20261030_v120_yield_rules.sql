@@ -1,6 +1,6 @@
 -- v1.20 — NCC#203: staking yield as a recurring rule kind.
--- NOT YET APPLIED to production: the owner applies it, and it must be live
--- before an NCC with yield rules ships. Until then the server refuses a yield
+-- APPLIED to production 2026-10-30 with the owner's OK (history version 20261030062610).
+-- It must be live before an NCC with yield rules ships. Until then the server refuses a yield
 -- rule's push (23514), which NCC treats as permanent and drops.
 --
 -- A `yield` rule accrues a holding's staking rewards from its APY: every day,

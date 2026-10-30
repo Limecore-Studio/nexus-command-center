@@ -73,9 +73,26 @@ async function softDeleteOrHard(table: string, entityId: string, stamped: boolea
     .update(stamped ? { deleted_at: stamp, updated_at: stamp } : { deleted_at: stamp })
     .eq('id', id);
   if (!error) return;
-  if (error.code !== 'PGRST204' && error.code !== '42703') throw error;
+  if (!missingDeletedAt(error)) throw error;
   const hard = await supabase.from(table).delete().eq('id', id);
   if (hard.error) throw hard.error;
+}
+
+/** The column `deleted_at` does not exist yet: the v1.20 migration is not
+ *  applied (PostgREST PGRST204, Postgres 42703). */
+const missingDeletedAt = (e: { code?: string } | null | undefined) => e?.code === 'PGRST204' || e?.code === '42703';
+
+/**
+ * v1.20 (NCC#92) — a write to a one-row-per-day table (habit completions, work
+ * logs) that also brings the day back if it had been cleared: re-marking a day
+ * is the same fact again. Sent without `deleted_at` until the migration adds
+ * the column.
+ */
+async function reviving<R extends { error: { code?: string } | null }>(
+  write: (revive: { deleted_at: null } | Record<string, never>) => PromiseLike<R>,
+): Promise<R> {
+  const res = await write({ deleted_at: null });
+  return missingDeletedAt(res.error) ? write({}) : res;
 }
 
 /**
@@ -575,11 +592,9 @@ async function pushAppOpen(item: SyncQueueItem, ctx: PushContext): Promise<void>
 // `purge_soft_deleted()`, so its tombstones would never be cleaned up.)
 async function pushBraindumpEntry(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('braindump_entries')
-      .delete()
-      .eq('id', item.entityId);
-    if (error) throw error;
+    // v1.20 (NCC#92): a tombstone, so the user's other devices drop it too.
+    // The column has existed since v1.12; NCC just never wrote it.
+    await softDelete('braindump_entries', item.entityId);
     return;
   }
   const local: BraindumpEntry = JSON.parse(item.payload);
@@ -620,11 +635,19 @@ async function pushFeedback(item: SyncQueueItem, ctx: PushContext): Promise<void
 async function pushHabit(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
     const uuid = legacyIdToUuid(item.entityId);
-    // Cascade-delete completions first (the DB cascade does this too, but
-    // doing it here keeps the queue tidy if the parent delete races).
-    await supabase.from('habit_completions').delete().eq('habit_id', uuid);
-    const { error } = await supabase.from('habits').delete().eq('id', uuid);
-    if (error) throw error;
+    // v1.20 (NCC#92): tombstones, so the user's other devices drop the habit
+    // and its days (and its reminder). Its days first, as the hard delete did:
+    // they mean nothing without it. The 90-day purge removes both. Until the
+    // migration adds the column, the hard deletes of old.
+    const stamp = new Date().toISOString();
+    const days = await supabase.from('habit_completions').update({ deleted_at: stamp })
+      .eq('habit_id', uuid).is('deleted_at', null);
+    if (missingDeletedAt(days.error)) {
+      await supabase.from('habit_completions').delete().eq('habit_id', uuid);
+    } else if (days.error) {
+      throw days.error;
+    }
+    await softDeleteOrHard('habits', item.entityId, true);
     return;
   }
   const local: Habit = JSON.parse(item.payload);
@@ -668,11 +691,15 @@ async function pushHabitCompletion(item: SyncQueueItem, ctx: PushContext): Promi
     // completion whatever id the server knows it by. Items queued by an older
     // build carry only `{ id }` and still delete by id.
     const target = JSON.parse(item.payload) as { habitId?: string; date?: string };
-    let del = supabase.from('habit_completions').delete();
-    del = target.habitId && target.date
-      ? del.eq('habit_id', legacyIdToUuid(target.habitId)).eq('date', target.date)
-      : del.eq('id', legacyIdToUuid(item.entityId));
-    const { error } = await del;
+    const byKey = <Q extends { eq: (c: string, v: string) => Q }>(q: Q): Q => (target.habitId && target.date
+      ? q.eq('habit_id', legacyIdToUuid(target.habitId)).eq('date', target.date)
+      : q.eq('id', legacyIdToUuid(item.entityId)));
+    // v1.20 (NCC#92): the day is cleared with a tombstone, so the user's other
+    // devices clear it too. Re-marking it later revives the same row.
+    const soft = await byKey(supabase.from('habit_completions').update({ deleted_at: new Date().toISOString() }));
+    if (!soft.error) return;
+    if (!missingDeletedAt(soft.error)) throw soft.error;
+    const { error } = await byKey(supabase.from('habit_completions').delete());
     if (error) throw error;
     return;
   }
@@ -684,13 +711,14 @@ async function pushHabitCompletion(item: SyncQueueItem, ctx: PushContext): Promi
     date: local.date,
     amount: local.amount,
   };
-  const { error } = await supabase.from('habit_completions').upsert(row);
+  // v1.20 (NCC#92): both writes also revive a day another device had cleared.
+  const { error } = await reviving((revive) => supabase.from('habit_completions').upsert({ ...row, ...revive }));
   if (error?.code === '23505') {
-    const { error: sameDayErr } = await supabase
+    const { error: sameDayErr } = await reviving((revive) => supabase
       .from('habit_completions')
-      .update({ amount: row.amount })
+      .update({ amount: row.amount, ...revive })
       .eq('habit_id', row.habit_id)
-      .eq('date', row.date);
+      .eq('date', row.date));
     if (sameDayErr) throw sameDayErr;
     return;
   }
@@ -703,11 +731,8 @@ async function pushHabitCompletion(item: SyncQueueItem, ctx: PushContext): Promi
 // has UNIQUE (user_id, log_date) as a backstop. updated_at drives LWW.
 async function pushWorkQualityLog(item: SyncQueueItem, ctx: PushContext): Promise<void> {
   if (item.operation === 'delete') {
-    const { error } = await supabase
-      .from('work_quality_logs')
-      .delete()
-      .eq('id', legacyIdToUuid(item.entityId));
-    if (error) throw error;
+    // v1.20 (NCC#92): a tombstone ("delete wins" in set_updated_at).
+    await softDeleteOrHard('work_quality_logs', item.entityId, true);
     return;
   }
   const local: WorkQualityLog = JSON.parse(item.payload);
@@ -720,19 +745,21 @@ async function pushWorkQualityLog(item: SyncQueueItem, ctx: PushContext): Promis
     note: local.note ?? null,
     updated_at: updatedAt,
   };
-  const { error } = await supabase.from('work_quality_logs').upsert(row);
+  // v1.20 (NCC#92): both writes also revive a cleared day, if this rating is
+  // the newer one (set_updated_at keeps last-writer-wins on the stamp).
+  const { error } = await reviving((revive) => supabase.from('work_quality_logs').upsert({ ...row, ...revive }));
   // v1.18.1 (NCC#154): another device already holds this day under its own
   // id (the local store makes a random id per device), and UNIQUE (user_id,
   // log_date) refuses ours. It is the same fact, so write it onto that row,
   // as pushHabitCompletion does; the server's updated_at trigger keeps the
   // newer of the two.
   if (error?.code === '23505') {
-    const { data: hit, error: sameDayErr } = await supabase
+    const { data: hit, error: sameDayErr } = await reviving((revive) => supabase
       .from('work_quality_logs')
-      .update({ rating: row.rating, note: row.note, updated_at: row.updated_at })
+      .update({ rating: row.rating, note: row.note, updated_at: row.updated_at, ...revive })
       .eq('user_id', ctx.userId)
       .eq('log_date', row.log_date)
-      .select('id');
+      .select('id'));
     if (sameDayErr) throw sameDayErr;
     // The day's row went away between the two calls (deleted elsewhere).
     // Not a success: stay queued, and the next drain's upsert inserts it.

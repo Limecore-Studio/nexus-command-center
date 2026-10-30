@@ -14,6 +14,7 @@ import RowActions from '../../components/RowActions';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { computeSale, totalRemainingShares, saleCostBasisInCurrency } from '../../lib/stockSaleFifo';
 import { convertSync } from '../../api/fxRates';
+import { isRewardLot } from '../../lib/recurringMaterialize';
 import type { PortfolioLot } from '../../types/finance';
 import Glyph from '../../components/Glyph';
 // v1.18.1 (NCC#144): typed amounts accept a decimal comma.
@@ -46,6 +47,12 @@ export default function ManageLots() {
         .sort((a, b) => (b.purchaseDate ?? b.createdAt).localeCompare(a.purchaseDate ?? a.createdAt)),
     [allLots, holdingId],
   );
+
+  // v1.20 (NCC#203): staking rewards, shown apart from what was bought. A
+  // reward lot is one a rule wrote at cost 0; a recurring buy always has a
+  // price, and this still holds after the yield rule itself is deleted.
+  const isReward = isRewardLot;
+  const rewardUnits = useMemo(() => lots.filter(isRewardLot).reduce((s, l) => s + l.quantity, 0), [lots]);
 
   // Per-currency totals for the summary card. Hoisted above the `!holding`
   // early return (HYG-2 — react-hooks/rules-of-hooks flagged this as
@@ -243,6 +250,17 @@ export default function ManageLots() {
               >
                 <Glyph name="refresh" size={13} />
               </button>
+              {/* v1.20 — NCC#203: staking yield on this holding. */}
+              {holding.assetType === 'crypto' && (
+                <button
+                  onClick={() => navigate(`/finance/recurring?new=yield&holding=${encodeURIComponent(holding.id)}`)}
+                  className="text-xs px-2 py-1 rounded-sm border border-border text-text-muted active:text-text active:border-border"
+                  aria-label={t('recurring.addYield')}
+                  title={t('recurring.addYield')}
+                >
+                  %
+                </button>
+              )}
               <button
                 onClick={startAdd}
                 className="chip press-spring"
@@ -276,6 +294,12 @@ export default function ManageLots() {
           </div>
           {totalsByCurrency.length === 0 && (
             <div className="text-xs text-text-muted">{t('fin.ml.noPurchasesYet')}</div>
+          )}
+          {rewardUnits > 0 && (
+            <div className="flex items-center justify-between text-xs py-1 border-t border-border/40 pt-1">
+              <span className="text-text-muted">{t('fin.ml.yieldAccrued')}</span>
+              <span className="text-success font-medium">+{formatNumber(rewardUnits)}</span>
+            </div>
           )}
           {totalsByCurrency.map((row) => (
             <div key={row.currency} className="flex items-center justify-between text-xs py-1 border-t border-border/40 first:border-t-0 pt-1">
@@ -430,8 +454,17 @@ export default function ManageLots() {
           {lots.map((lot) => (
             <div key={lot.id} className="flex items-center gap-2 py-2 border-b border-border/40 last:border-0">
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium">
-                  {t('fin.ml.unitsAt', { qty: formatNumber(lot.quantity), price: formatNumber(lot.costPerUnit), cur: lot.costCurrency })}
+                <div className="text-sm font-medium flex items-center gap-1.5">
+                  <span className="truncate">
+                    {isReward(lot)
+                      ? t('fin.ml.rewardUnits', { qty: formatNumber(lot.quantity) })
+                      : t('fin.ml.unitsAt', { qty: formatNumber(lot.quantity), price: formatNumber(lot.costPerUnit), cur: lot.costCurrency })}
+                  </span>
+                  {isReward(lot) && (
+                    <span className="text-[0.5625rem] px-1.5 py-0.5 rounded-sm border border-success/30 text-success whitespace-nowrap">
+                      {t('fin.ml.yieldTag')}
+                    </span>
+                  )}
                 </div>
                 <div className="text-[0.625rem] text-text-muted">
                   {lot.purchaseDate ?? lot.createdAt.slice(0, 10)}

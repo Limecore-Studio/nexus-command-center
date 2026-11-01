@@ -23,6 +23,7 @@
 //
 // This is enough for our usage pattern (occasional cross-device edits, no
 // real concurrent collaboration). Full CRDT is overkill.
+import { readBaseCurrency } from '../store/useSettingsStore';
 import { supabase } from './supabase';
 import { selectAll } from './selectAll';
 import type { Table } from 'dexie';
@@ -148,6 +149,7 @@ export async function pushQueue(userId: string): Promise<PushResult> {
   });
 
   const result: PushResult = { attempted: 0, succeeded: 0, failed: 0, errors: [] };
+  const baseCurrency = await readBaseCurrency();
   const pushedTables = new Set<string>();
   const now = new Date().toISOString();
   // v1.18.1 (NCC#147): the lowest priority (a parent tier) that failed in this
@@ -167,7 +169,7 @@ export async function pushQueue(userId: string): Promise<PushResult> {
       continue;
     }
     try {
-      await handler(item, { userId });
+      await handler(item, { userId, baseCurrency });
       await db.syncQueue.update(item.id, { syncedAt: now, lastError: undefined });
       result.succeeded++;
       const table = ENTITY_TABLES[item.entityType];

@@ -31,6 +31,9 @@ function mapTaskStatus(completed: boolean): 'open' | 'done' {
 
 interface PushContext {
   userId: string;
+  /** v1.20 (NCC#228): what `transactions` and `budget_categories` rows are
+   *  labelled with. Their amounts are in the base currency, not always EUR. */
+  baseCurrency: string;
 }
 
 /**
@@ -136,7 +139,7 @@ async function pushTransaction(item: SyncQueueItem, ctx: PushContext): Promise<v
     id: legacyIdToUuid(local.id),
     user_id: ctx.userId,
     amount: local.amount,
-    currency: 'EUR',
+    currency: ctx.baseCurrency,
     type,
     category_id: local.categoryId ? legacyIdToUuid(local.categoryId) : null,
     // v1.3.3 — account assignment is now persisted to the cloud (was local-only),
@@ -161,7 +164,7 @@ async function pushBudgetCategory(item: SyncQueueItem, ctx: PushContext): Promis
     user_id: ctx.userId,
     name: local.name,
     monthly_limit: local.monthlyLimit,
-    currency: 'EUR',
+    currency: ctx.baseCurrency,
     color: local.icon ?? null,
     updated_at: stampOf(item),
   };

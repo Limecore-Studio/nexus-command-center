@@ -147,6 +147,18 @@ async function readPref(key: string): Promise<string | null> {
   return null;
 }
 
+/** v1.20 (NCC#228): the stored base currency, read directly. The push uses this
+ *  rather than the store: until `load` has run, the store holds the default
+ *  'EUR', and a drain early in a launch would label rows with it. */
+export async function readBaseCurrency(): Promise<BaseCurrency> {
+  try {
+    const stored = await readPref(CURRENCY_KEY);
+    return stored && isSupportedCurrency(stored) ? stored : 'EUR';
+  } catch {
+    return useSettingsStore.getState().baseCurrency;
+  }
+}
+
 async function writePref(key: string, value: string): Promise<void> {
   try {
     await Preferences.set({ key, value });

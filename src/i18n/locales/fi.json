@@ -1480,5 +1480,11 @@
       "highPriority": "Korkea prioriteetti",
       "markDone": "Merkitse tehdyksi"
     }
+  },
+  "reportPrompt": {
+    "title": "Lähetetäänkö virheraportteja?",
+    "body": "Jos jokin menee rikki, NCC voi lähettää meille tekniset tiedot: sovelluksen version, virheen ja näkymän, jossa se tapahtui. Ei koskaan sitä, mitä kirjoitat. Voit muuttaa tätä asetuksista.",
+    "yes": "Kyllä, lähetä",
+    "notNow": "Ei nyt"
   }
 }

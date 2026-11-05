@@ -16,6 +16,25 @@
 // (e.g. the network failures fetch throws before Supabase sees them).
 
 import type { TFunction } from 'i18next';
+import { PASSWORD_MIN_LENGTH, weakPasswordReasons } from './passwordPolicy';
+
+// v1.20 (limecore#73) — say WHAT is wrong with a refused password; the one
+// generic line this replaced sent a visitor round five times in 40 s. The
+// auth.pw* strings load with the sign-up screen (i18n/passwordStrings.ts), the
+// only screen that sets a password; this module is also on the startup path
+// (Login), so it does not import them itself.
+const REASON_KEYS: Record<string, string> = {
+  length: 'auth.pwReasonLength',
+  characters: 'auth.pwReasonCharacters',
+  pwned: 'auth.pwReasonPwned',
+};
+
+function weakPasswordMessage(err: { reasons?: unknown; message?: string }, t: TFunction): string {
+  let reasons = weakPasswordReasons(err);
+  // No reason given: state the whole rule rather than "choose a stronger one".
+  if (!reasons.length) reasons = ['length', 'characters'];
+  return reasons.map((r) => t(REASON_KEYS[r], { n: PASSWORD_MIN_LENGTH })).join(' ');
+}
 
 /** Supabase auth error codes → `auth.*` i18n keys. */
 const CODE_KEYS: Record<string, string> = {
@@ -35,8 +54,6 @@ const MESSAGE_KEYS: [string, string][] = [
   ['already registered', 'auth.errAlreadyRegistered'],
   ['already been registered', 'auth.errAlreadyRegistered'],
   ['user already exists', 'auth.errAlreadyRegistered'],
-  ['password should be', 'auth.errWeakPassword'],
-  ['weak password', 'auth.errWeakPassword'],
   ['email not confirmed', 'auth.errEmailNotConfirmed'],
   ['rate limit', 'auth.errRateLimited'],
   ['too many requests', 'auth.errRateLimited'],
@@ -45,7 +62,7 @@ const MESSAGE_KEYS: [string, string][] = [
   ['networkerror', 'auth.errNetwork'],
 ];
 
-type MaybeAuthError = { code?: string; message?: string } | null | undefined;
+type MaybeAuthError = { code?: string; message?: string; reasons?: unknown } | null | undefined;
 
 /**
  * Translate a Supabase auth error, falling back to its raw (English) message.
@@ -53,6 +70,14 @@ type MaybeAuthError = { code?: string; message?: string } | null | undefined;
  */
 export function translateAuthError(err: MaybeAuthError, t: TFunction): string | null {
   if (!err) return null;
+
+  // The message arm only for code-less errors: GoTrue's same_password text
+  // ("New password should be different…") also contains "password should".
+  const weakMsg = (err.message ?? '').toLowerCase();
+  if (err.code === 'weak_password'
+    || (!err.code && (weakMsg.includes('password should') || weakMsg.includes('weak password')))) {
+    return weakPasswordMessage(err, t);
+  }
 
   const key = err.code ? CODE_KEYS[err.code] : undefined;
   if (key) return t(key);

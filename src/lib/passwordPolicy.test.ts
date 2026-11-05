@@ -35,6 +35,14 @@ describe('password rule', () => {
       expect(src).not.toMatch(/minLength=\{6\}|MIN_LENGTH = 6/);
     }
   });
+
+  it('the sign-in field has no minimum (NCC#233)', () => {
+    // The rule applies when a password is SET; the server never re-checks it
+    // at sign-in. A minimum here stops an older, shorter password before the
+    // request is even sent, so the account cannot sign in to NCC at all.
+    const src = readFileSync(new URL('../screens/auth/Login.tsx', import.meta.url), 'utf8');
+    expect(src).not.toMatch(/minLength/);
+  });
 });
 
 describe('weak_password from the server', () => {

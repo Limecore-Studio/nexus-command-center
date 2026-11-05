@@ -36,33 +36,30 @@
 //      reaches step 3 has already demonstrated a live session for that user.
 //      The exchange converts one valid credential into another for the same
 //      user — it is not a privilege boundary being crossed.
+//   5. Abuse bounds (policy.ts): at most MINT_CAP mints per user per window
+//      (429 above it), and CORS only for the sibling apps' WebView origin.
 //
 // Deploy:  supabase functions deploy suite-session
 // Secrets: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by the
 //          platform; nothing needs to be set by hand.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+import { capBucket, capDecision, corsHeaders, MINT_CAP, MINT_WINDOW } from './policy.ts';
 
 // Logged only, never trusted for anything. Anything outside the list is
 // recorded as 'unknown' rather than rejected: this string has no authority, so
 // validating it would imply it did.
 const KNOWN_APPS = ['limelog', 'studydesk', 'nexus'];
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}
-
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+  const cors = corsHeaders(req.headers.get('Origin'));
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    });
+
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
@@ -89,6 +86,23 @@ Deno.serve(async (req: Request) => {
     if (typeof body?.app === 'string' && KNOWN_APPS.includes(body.app)) app = body.app;
   } catch {
     // A missing or unparseable body is fine — `app` is diagnostic only.
+  }
+
+  // Per-user cap, keyed on the JWT-resolved user (see policy.ts). Checked
+  // before minting; a rejected call still counts, so hammering stays blocked.
+  const cap = capDecision(
+    await admin.rpc('check_ai_rate_limit', {
+      p_bucket: capBucket(user.id),
+      p_limit: MINT_CAP,
+      p_window: MINT_WINDOW,
+    }),
+  );
+  if (cap === 'deny') {
+    console.warn('suite-session cap hit', { userId: user.id, app, at: new Date().toISOString() });
+    return json({ error: 'try again later' }, 429);
+  }
+  if (cap === 'allow-unchecked') {
+    console.error('suite-session cap check failed, allowing', { userId: user.id, app });
   }
 
   // generateLink does NOT send mail; it returns the credential for us to hand

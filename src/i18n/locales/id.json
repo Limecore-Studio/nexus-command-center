@@ -1460,5 +1460,11 @@
       "highPriority": "Prioritas tinggi",
       "markDone": "Tandai selesai"
     }
+  },
+  "reportPrompt": {
+    "title": "Kirim laporan galat?",
+    "body": "Jika ada yang rusak, NCC dapat mengirimi kami detail teknisnya: versi aplikasi, galatnya, dan layar tempat terjadinya. Tidak pernah apa yang kamu ketik. Kamu bisa mengubahnya di Pengaturan.",
+    "yes": "Ya, kirim",
+    "notNow": "Nanti saja"
   }
 }

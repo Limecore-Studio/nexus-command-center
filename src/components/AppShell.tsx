@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import PolicyUpdatedNote from './PolicyUpdatedNote';
+import { useSessionStore } from '../store/useSessionStore';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -66,7 +67,11 @@ export class SheetBoundary extends Component<{ onFail: () => void; children: Rea
 // app doesn't burn the Finnhub free-tier quota on every tab-out.
 const RESUME_REFRESH_THRESHOLD_MS = 20 * 60 * 1000;
 
+// v1.20 (limecore#71): almost every launch never shows it.
+const ReportPromptCard = lazy(() => import('./ReportPromptCard'));
+
 export default function AppShell() {
+  const signedIn = useSessionStore((s) => !!s.session);
   const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [quickLogMounted, setQuickLogMounted] = useState(false);
@@ -363,6 +368,9 @@ export default function AppShell() {
         <OfflineBanner />
         {/* v1.16 (limecore#16) — once, for people who used the app under the old policy. */}
         <PolicyUpdatedNote />
+        {/* v1.20 (limecore#71) — offers error reports once, on the second
+            signed-in launch; never to a guest (no session). It decides itself. */}
+        {signedIn && <Suspense fallback={null}><ReportPromptCard /></Suspense>}
         {/* pb-32 (128px) gives clear space below the last card so it isn't clipped
           * by the fixed BottomTabBar (which is ~80px + its own safe-bottom inset). */}
         {/* v1.2 follow-up — pb-32 → pb-44. The floating panel tab bar sits

@@ -11,7 +11,7 @@ import { seedIfEmpty } from './db/seed';
 import { clearAllLocalData } from './db/database';
 import { supabase } from './lib/supabase';
 import { useTranslation } from 'react-i18next';
-import { startRealtime, stopRealtime } from './lib/realtime';
+import { startLive, stopLive } from './lib/liveSync';
 import { hydrateStudiesFromCloud, hydrateHabitsFromCloud, hydrateBodyMetricsFromCloud, hydrateWorkQualityFromCloud, hydrateBraindumpFromCloud } from './lib/cloudSync';
 import { watchAppOpens } from './lib/appOpens';
 import { refreshEntitlement } from './lib/entitlement';
@@ -270,7 +270,7 @@ export default function App() {
     // device's data as it was, before any of this account's rows arrive).
     // Closing again (a re-check that asks) stops the realtime deltas too.
     if (!session || !adoptionClear) {
-      stopRealtime();
+      stopLive();
       return;
     }
     const userId = session.user.id;
@@ -382,7 +382,7 @@ export default function App() {
       // Now open the realtime channel for future deltas.
       // v1.2.1 — AUDIT-FSG-5: pass userId so per-table subscriptions can
       // scope to `user_id=eq.<uid>` on tables without a sharing surface.
-      startRealtime(userId);
+      startLive(userId);
       // Fire-and-forget the full sync for everything else (push pending
       // queue + pull transactions/portfolio/tasks/etc.).
       void syncNow();

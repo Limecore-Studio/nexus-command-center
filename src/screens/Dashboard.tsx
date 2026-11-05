@@ -207,7 +207,7 @@ export default function Dashboard() {
           ) : (
           <div className="grid grid-cols-2 gap-2">
             <StatCard
-              value={formatCurrency(Math.max(0, monthBudget - monthExpenses))}
+              value={formatCurrency(Math.max(0, monthBudget - monthExpenses), baseCurrency)}
               label={t('dash.budgetLeft')}
               sub={monthBudget > 0 ? t('dash.pctUsed', { pct: budgetPct }) : t('dash.noBudgets')}
               tone={budgetPct > 90 ? 'danger' : budgetPct > 70 ? 'warning' : 'success'}

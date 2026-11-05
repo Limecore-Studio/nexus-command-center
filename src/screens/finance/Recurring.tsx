@@ -8,6 +8,7 @@ import { useRecurringStore, type RecurringRuleInput } from '../../store/useRecur
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { formatMoney, type BaseCurrency } from '../../lib/currencies';
 import { nextOccurrence } from '../../lib/recurring';
+import { isRewardLot } from '../../lib/recurringMaterialize';
 import { formatLocale, formatShortDate, localDateKey, parseDateLocal } from '../../utils/formatters';
 import { numberInput } from '@/lib/numberInput';
 import type { RecurringKind, RecurringRule, RecurringUnit } from '../../types/recurring';
@@ -17,10 +18,13 @@ import type { TransactionType } from '../../types/finance';
 // ManageBudgets pattern). Rows a rule has already written are ordinary rows:
 // editing a rule changes what comes next, never what is already there.
 //
-// Opened with ?new=transaction|cash_deposit|buy (and &holding=<id>) from Add
-// Transaction, the portfolio cash card and a holding's lots screen.
+// Opened with ?new=transaction|cash_deposit|buy|yield (and &holding=<id>) from
+// Add Transaction, the portfolio cash card and a holding's lots screen.
+//
+// v1.20 (NCC#203): `yield` accrues a holding's staking rewards from its APY.
+// It always runs daily, so the editor shows no cadence for it.
 
-const KINDS: Exclude<RecurringKind, 'coupon'>[] = ['transaction', 'cash_deposit', 'buy'];
+const KINDS: Exclude<RecurringKind, 'coupon'>[] = ['transaction', 'cash_deposit', 'buy', 'yield'];
 const UNITS: RecurringUnit[] = ['day', 'week', 'month'];
 const TX_TYPES: TransactionType[] = ['expense', 'income', 'transfer'];
 
@@ -37,6 +41,8 @@ interface Draft {
   priceMode: 'market' | 'fixed';
   price: string;
   currency: string;
+  /** v1.20 (NCC#203): yield, annual % */
+  apy: string;
   every: string;
   unit: RecurringUnit;
   startDate: string;
@@ -49,7 +55,7 @@ function emptyDraft(kind: RecurringKind, baseCurrency: string, holdingId = ''): 
   return {
     kind, txType: 'expense', amount: '', description: '', accountId: '', destinationAccountId: '',
     categoryId: '', holdingId, buyBy: 'amount', priceMode: 'market', price: '', currency: baseCurrency,
-    every: '1', unit: 'month', startDate: today(), endDate: '',
+    apy: '', every: '1', unit: 'month', startDate: today(), endDate: '',
   };
 }
 
@@ -69,6 +75,8 @@ function draftOf(r: EditableRule, baseCurrency: string): Draft {
     });
   } else if (r.kind === 'cash_deposit') {
     Object.assign(d, { accountId: r.template.accountId, amount: String(r.template.amount), description: r.template.note ?? '' });
+  } else if (r.kind === 'yield') {
+    Object.assign(d, { holdingId: r.template.holdingId, apy: String(r.template.apyPct), currency: r.template.currency });
   } else {
     const t = r.template;
     Object.assign(d, {
@@ -82,6 +90,15 @@ function draftOf(r: EditableRule, baseCurrency: string): Draft {
 
 /** The rule the draft describes, or null while it is incomplete. */
 function inputOf(d: Draft): RecurringRuleInput | null {
+  if (!d.startDate || (d.endDate && d.endDate < d.startDate)) return null;
+  if (d.kind === 'yield') {
+    const apyPct = numberInput(d.apy);
+    if (!d.holdingId || !d.currency || !(apyPct > 0 && apyPct <= 1000)) return null;
+    return {
+      every: 1, unit: 'day', startDate: d.startDate, endDate: d.endDate || undefined,
+      kind: 'yield', template: { holdingId: d.holdingId, apyPct, currency: d.currency },
+    };
+  }
   const every = Math.round(Number(d.every));
   const amount = numberInput(d.amount);
   if (!(every >= 1 && every <= 366) || !d.startDate || !(amount && amount > 0)) return null;
@@ -151,6 +168,7 @@ export default function Recurring() {
   const accounts = useFinanceStore((s) => s.manualAssets);
   const categories = useFinanceStore((s) => s.budgetCategories);
   const holdings = useFinanceStore((s) => s.holdings);
+  const lots = useFinanceStore((s) => s.portfolioLots);
   const rules = useRecurringStore((s) => s.rules);
   const { add, update, pause, resume, remove, countGenerated, load } = useRecurringStore();
 
@@ -176,7 +194,11 @@ export default function Recurring() {
   }, [params, setParams, baseCurrency, holdings]);
 
   const set = (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d));
-  const ready = draft ? inputOf(draft) : null;
+  // v1.20 (NCC#203): yield accrues on recorded purchases, so it needs at
+  // least one (see writeYield for why a holding without lots must wait).
+  const yieldNeedsLots = draft?.kind === 'yield' && Boolean(draft.holdingId)
+    && !lots.some((l) => l.holdingId === draft.holdingId && !isRewardLot(l));
+  const ready = draft && !yieldNeedsLots ? inputOf(draft) : null;
   const preview = ready ? nextOccurrence(ready, undefined) : undefined;
   const firstDue = preview && preview <= today();
 
@@ -218,6 +240,12 @@ export default function Recurring() {
           title = t('recurring.depositFrom', { name: a?.name ?? '—' });
           amount = money(r.template.amount);
           icon = 'investment';
+        } else if (r.kind === 'yield') {
+          const h = holdings.find((x) => x.id === r.template.holdingId);
+          title = t('recurring.yieldOn', { name: h?.ticker ?? '—' });
+          amount = t('recurring.apyValue', { pct: new Intl.NumberFormat(formatLocale(), { maximumFractionDigits: 2 }).format(r.template.apyPct) });
+          sign = '+';
+          icon = 'lots';
         } else {
           const h = holdings.find((x) => x.id === r.template.holdingId);
           title = t('recurring.buyOf', { name: h?.ticker ?? '—' });
@@ -337,9 +365,8 @@ export default function Recurring() {
               </>
             )}
 
-            {draft.kind === 'buy' && (
-              <>
-                <label className="block">
+            {(draft.kind === 'buy' || draft.kind === 'yield') && (
+              <label className="block">
                   <span className="sec mb-1 block">{t('recurring.holding')}</span>
                   <select className="input w-full" value={draft.holdingId}
                     onChange={(e) => {
@@ -351,7 +378,28 @@ export default function Recurring() {
                       <option key={h.id} value={h.id}>{h.ticker}{h.name && h.name !== h.ticker ? ` · ${h.name}` : ''}</option>
                     ))}
                   </select>
+              </label>
+            )}
+
+            {draft.kind === 'yield' && (
+              <>
+                <label className="block">
+                  <span className="sec mb-1 block">{t('recurring.apyLabel')}</span>
+                  <div className="flex items-center gap-2">
+                    <input className="input flex-1 min-w-0" inputMode="decimal" value={draft.apy}
+                      placeholder="5" onChange={(e) => set({ apy: e.target.value })} />
+                    <span className="text-xs text-text-muted">%</span>
+                  </div>
                 </label>
+                {yieldNeedsLots && (
+                  <p className="text-[0.6875rem] text-warning">{t('recurring.yieldNeedsLots')}</p>
+                )}
+                <p className="text-[0.625rem] text-text-muted">{t('recurring.yieldHint')}</p>
+              </>
+            )}
+
+            {draft.kind === 'buy' && (
+              <>
                 <Segmented
                   value={draft.buyBy}
                   options={['amount', 'quantity'] as const as ('amount' | 'quantity')[]}
@@ -381,9 +429,9 @@ export default function Recurring() {
               </>
             )}
 
-            {/* Cadence: "Every [n] [unit]", then the dates. */}
+            {/* Cadence: "Every [n] [unit]", then the dates. Yield accrues daily. */}
             <div className="h-px bg-border/50" />
-            <div className="flex items-center gap-2">
+            {draft.kind !== 'yield' && <div className="flex items-center gap-2">
               <span className="text-xs text-text-muted">{t('recurring.everyLabel')}</span>
               <input className="input w-16 text-center" inputMode="numeric" value={draft.every}
                 aria-label={t('recurring.everyLabel')} onChange={(e) => set({ every: e.target.value.replace(/\D/g, '') })} />
@@ -395,7 +443,7 @@ export default function Recurring() {
                   onChange={(unit) => set({ unit })}
                 />
               </div>
-            </div>
+            </div>}
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="sec mb-1 block">{t('recurring.starts')}</span>

@@ -1,0 +1,3 @@
+Ajantasalla ja omassa valuutassasi.
+
+Muutokset näkyvät muilla laitteilla sekunneissa, ja yhteys palautuu itsestään. Staking-omistuksille kertyy tuottoa APY:n mukaan. Jokainen summa käyttää perusvaluuttaasi eikä oletuseuroa, myös synkronoinnissa. Poistetut tavat, merkinnät, työlokit ja braindump-merkinnät pysyvät poistettuina kaikilla laitteilla. Rekisteröinti kertoo salasanasäännön, ja sinulta kysytään kerran, lähetetäänkö virheraportteja.

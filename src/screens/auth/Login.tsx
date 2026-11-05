@@ -218,7 +218,6 @@ export default function Login() {
                   type="password"
                   autoComplete="current-password"
                   required
-                  minLength={10}
                   className="input w-full"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

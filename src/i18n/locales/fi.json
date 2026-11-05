@@ -124,7 +124,6 @@
     "fullNameLabel": "Koko nimi",
     "fullNamePlaceholder": "Nimesi",
     "passwordPlaceholder": "Vähintään 10 merkkiä",
-    "passwordHint": "Tarvitaan isoja ja pieniä kirjaimia, numero ja erikoismerkki.",
     "confirmPasswordLabel": "Vahvista salasana",
     "createAccount": "Luo tili",
     "creatingAccount": "Luodaan tiliä…",
@@ -133,8 +132,6 @@
     "checkEmailBody": "Lähetimme vahvistuslinkin osoitteeseen <1>{{email}}</1>. Klikkaa sitä ja palaa sitten tänne kirjautumaan.",
     "backToSignIn": "Takaisin kirjautumiseen",
     "errNameRequired": "Syötä nimesi.",
-    "errPasswordShort": "Salasanassa on oltava vähintään 10 merkkiä.",
-    "errPasswordWeak": "Salasanassa tarvitaan isoja ja pieniä kirjaimia, numero ja erikoismerkki.",
     "errPasswordMismatch": "Salasanat eivät täsmää.",
     "errGoogleStart": "Google-kirjautumista ei voitu aloittaa.",
     "desktopBrowser": "Viimeistele kirjautuminen selaimessa ja palaa tänne.",
@@ -228,6 +225,13 @@
     "lockNow": "Lukitse nyt",
     "dataSync": "Tiedot ja synkronointi",
     "cloudSync": "Pilvisynkronointi",
+    "liveUpdates": "Reaaliaikaiset päivitykset",
+    "liveState": {
+      "live": "Käynnissä",
+      "connecting": "Yhdistetään",
+      "down": "Yhdistetään uudelleen",
+      "off": "Pois"
+    },
     "active": "Aktiivinen",
     "offline": "Offline",
     "notSignedIn": "Ei kirjautunut",
@@ -936,6 +940,9 @@
       "purchaseHistory": "Ostohistoria",
       "noPurchases": "Ei vielä ostoja — napauta + Osto kirjataksesi",
       "unitsAt": "{{qty}} yksikköä @ {{price}} {{cur}}",
+      "yieldAccrued": "Kertynyt staking-tuotto",
+      "rewardUnits": "{{qty}} yksikköä, staking-palkkio",
+      "yieldTag": "Tuotto",
       "totalCost": "{{amount}} {{cur}} yhteensä",
       "deletePurchase": "Poistetaanko tämä osto?"
     },
@@ -1356,6 +1363,13 @@
     "kind_transaction": "Tapahtuma",
     "kind_cash_deposit": "Salkkuun",
     "kind_buy": "Osto",
+    "kind_yield": "Staking",
+    "yieldOn": "Staking-tuotto · {{name}}",
+    "apyValue": "{{pct}} % APY",
+    "apyLabel": "Vuosituotto (APY)",
+    "yieldHint": "Tuotot kertyvät päivittäin nollahintaan, yhteen erään kuukaudessa. Staking-tuotot voivat olla verotettavaa tuloa; tämä ei ole veroneuvontaa.",
+    "yieldNeedsLots": "Kirjaa ensin tämän omistuksen ostot: tuotto kertyy erien yksiköille.",
+    "addYield": "Lisää staking-tuotto",
     "type_expense": "Meno",
     "type_income": "Tulo",
     "type_transfer": "Siirto",
@@ -1463,5 +1477,11 @@
       "highPriority": "Korkea prioriteetti",
       "markDone": "Merkitse tehdyksi"
     }
+  },
+  "reportPrompt": {
+    "title": "Lähetetäänkö virheraportteja?",
+    "body": "Jos jokin menee rikki, NCC voi lähettää meille tekniset tiedot: sovelluksen version, virheen ja näkymän, jossa se tapahtui. Ei koskaan sitä, mitä kirjoitat. Voit muuttaa tätä asetuksista.",
+    "yes": "Kyllä, lähetä",
+    "notNow": "Ei nyt"
   }
 }

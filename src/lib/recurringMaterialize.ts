@@ -12,6 +12,8 @@
 //                   would make the statement and net-worth history count the
 //                   move a second time (portfolioCash.isPortfolioMove)
 //   buy           → a PortfolioLot plus its `buy` cash entry (as addLot)
+//   yield         → the day's staking reward, added to the month's cost-0 lot
+//                   (v1.20, NCC#203; see writeYield)
 //
 // Every generated id is uuidv5(rule:date:part), so two devices produce the
 // same rows; a row already on this device is never written again, and the
@@ -28,6 +30,7 @@ import { enqueue } from '../db/syncQueue';
 import type { PortfolioCashEntry, PortfolioHolding, PortfolioLot, StockSale, Transaction } from '../types/finance';
 import type { RecurringRule } from '../types/recurring';
 import { occurrenceId, occurrencesBetween } from './recurring';
+import { localDateKey } from '@/utils/formatters';
 import { reconcileCouponRules } from './bondCoupons';
 import { couponPerUnit, unitsHeldOn } from './manualValuation';
 import { applySoldShares, computeSale, saleCostBasisInCurrency, totalRemainingShares } from './stockSaleFifo';
@@ -119,6 +122,7 @@ async function writeOccurrence(rule: RecurringRule, date: string, deps: Material
   }
 
   if (rule.kind === 'coupon') return writeCoupon(rule, date, out);
+  if (rule.kind === 'yield') return writeYield(rule, date, out);
 
   const t = rule.template;
   const holding = await db.portfolioHoldings.get(t.holdingId);
@@ -251,6 +255,88 @@ async function writeCoupon(rule: Extract<RecurringRule, { kind: 'coupon' }>, dat
   return true;
 }
 
+/** v1.20 (NCC#203): a lot a rule wrote at cost 0, i.e. a staking reward. A
+ *  recurring buy always has a price. */
+export function isRewardLot(l: Pick<PortfolioLot, 'recurringRuleId' | 'costPerUnit'>): boolean {
+  return Boolean(l.recurringRuleId) && l.costPerUnit === 0;
+}
+
+/** The daily rate that compounds to `apyPct` over a year. */
+export function dailyYieldRate(apyPct: number): number {
+  return Math.pow(1 + apyPct / 100, 1 / 365) - 1;
+}
+
+const addDay = (date: string) => {
+  const [y, m, d] = date.split('-').map(Number);
+  return localDateKey(new Date(y, m - 1, d + 1));
+};
+
+/**
+ * v1.20 (NCC#203): staking yield. Each day earns `units held × r` more units
+ * at cost 0, where r compounds to the APY over a year and "units held" are
+ * those at the start of the day, rewards so far included (so it compounds).
+ *
+ * One lot per calendar month, id `rule:YYYY-MM:lot`, not one per day: a daily
+ * lot would be 365 rows a year. The month's quantity is worked out again from
+ * the 1st (or the rule's start) each time, rather than added to: two devices
+ * materialising the same days then write the same number instead of counting
+ * a day twice, and a lot the server already has is simply brought up to date.
+ * Once the month is over, nothing writes its lot again.
+ *
+ * Waits while the holding is not on this device.
+ */
+async function writeYield(rule: Extract<RecurringRule, { kind: 'yield' }>, date: string, out: MaterializeResult): Promise<boolean> {
+  const t = rule.template;
+  const holding = await db.portfolioHoldings.get(t.holdingId);
+  if (!holding) return false;
+  if (!(t.apyPct > 0)) return true;
+  const month = date.slice(0, 7);
+  const lotId = await occurrenceId(rule.id, month, 'lot');
+  const [lots, sales, existing] = await Promise.all([
+    db.portfolioLots.where('holdingId').equals(holding.id).toArray(),
+    db.stockSales.filter((x) => x.holdingId === holding.id).toArray(),
+    db.portfolioLots.get(lotId),
+  ]);
+  const others = lots.filter((l) => l.id !== lotId);
+  // A holding with no purchases recorded keeps the quantity the user typed,
+  // and the first lot it gets makes its quantity the sum of its lots
+  // (useFinanceStore.recomputeHoldingAggregates). A reward lot there would
+  // replace "10 SOL" with a fraction of a coin, so the rule waits until the
+  // holding has a real purchase lot. The editor says so.
+  if (!others.some((l) => !isRewardLot(l))) return false;
+  const r = dailyYieldRate(t.apyPct);
+  const first = rule.startDate > `${month}-01` ? rule.startDate : `${month}-01`;
+  let accrued = 0;
+  for (let d = first; d <= date; d = addDay(d)) {
+    accrued += (unitsHeldOn(holding.id, others, sales, d) + accrued) * r;
+  }
+  if (!(accrued > 0)) return true;
+
+  const lot: PortfolioLot = {
+    ...(existing ?? {}),
+    id: lotId,
+    holdingId: holding.id,
+    quantity: accrued,
+    costPerUnit: 0,
+    costCurrency: t.currency,
+    // Accrued through this day; the next month's days count it as held.
+    purchaseDate: date,
+    recurringRuleId: rule.id,
+    syncStatus: 'pending',
+    createdAt: existing?.createdAt ?? now(),
+  };
+  if (!existing) {
+    if (await put(db.portfolioLots, 'portfolio_lot', lot)) out.created++;
+  } else if (Math.abs(existing.quantity - accrued) > 1e-12 || existing.purchaseDate !== date) {
+    await db.portfolioLots.put(lot);
+    await enqueue('portfolio_lot', lot.id, 'update', lot);
+  } else {
+    return true;
+  }
+  if (!out.touchedHoldings.includes(holding.id)) out.touchedHoldings.push(holding.id);
+  return true;
+}
+
 /** Materialise every due occurrence of every active rule. */
 export async function materializeDue(deps: MaterializeDeps): Promise<MaterializeResult> {
   const out: MaterializeResult = { created: 0, touchedHoldings: [] };
@@ -260,7 +346,14 @@ export async function materializeDue(deps: MaterializeDeps): Promise<Materialize
     if (rule.pausedAt) continue;
     let last = rule.lastMaterializedDate;
     let waitingSince: string | undefined;
-    for (const date of occurrencesBetween(rule, last, deps.today)) {
+    let dates = occurrencesBetween(rule, last, deps.today);
+    // v1.20 (NCC#203): a yield lot is worked out from the 1st through the day
+    // it is written for, so a catch-up writes each month once, on its last
+    // due day, instead of once a day with the month's lot growing in steps.
+    if (rule.kind === 'yield') {
+      dates = dates.filter((d, i) => i === dates.length - 1 || dates[i + 1].slice(0, 7) !== d.slice(0, 7));
+    }
+    for (const date of dates) {
       if (!(await writeOccurrence(rule, date, deps, out))) {
         waitingSince = date;
         break;

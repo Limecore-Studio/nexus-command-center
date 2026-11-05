@@ -3,7 +3,7 @@
 // occurrence; see lib/recurringMaterialize.ts.
 import type { SyncStatus, TransactionType } from './finance';
 
-export type RecurringKind = 'transaction' | 'cash_deposit' | 'buy' | 'coupon';
+export type RecurringKind = 'transaction' | 'cash_deposit' | 'buy' | 'coupon' | 'yield';
 export type RecurringUnit = 'day' | 'week' | 'month';
 
 /** One transaction per occurrence. Amount in the base currency, as every
@@ -63,7 +63,23 @@ export type RecurringRule =
   | (RuleBase & { kind: 'transaction'; template: TransactionTemplate })
   | (RuleBase & { kind: 'cash_deposit'; template: CashDepositTemplate })
   | (RuleBase & { kind: 'buy'; template: BuyTemplate })
-  | (RuleBase & { kind: 'coupon'; template: CouponTemplate });
+  | (RuleBase & { kind: 'coupon'; template: CouponTemplate })
+  | (RuleBase & { kind: 'yield'; template: YieldTemplate });
+
+/** v1.20 (NCC#203): staking rewards accrued from an APY. Every day the units
+ *  held earn `(1 + apy)^(1/365) − 1` more, at cost 0, into one lot per
+ *  calendar month (recurringMaterialize.ts writeYield). The rule runs daily.
+ *
+ *  No `amount` or `quantity`, on purpose: NCC 1.19 reads a kind it does not
+ *  know as a buy, and without either it waits instead of buying. */
+export interface YieldTemplate {
+  holdingId: string;
+  /** Annual percentage yield, e.g. 5 for 5 %. */
+  apyPct: number;
+  /** The holding's cost currency, for the cost-0 lots (and so 1.19's buy
+   *  rendering of this rule has a currency to format). */
+  currency: string;
+}
 
 /** v1.19 (NCC#204): a bond's coupons and, on the rule's end date (the
  *  maturity), its redemption at face value. Made and kept in step by

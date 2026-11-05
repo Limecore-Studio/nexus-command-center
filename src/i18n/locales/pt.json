@@ -40,7 +40,6 @@
     "fullNameLabel": "Nome completo",
     "fullNamePlaceholder": "Seu nome",
     "passwordPlaceholder": "No mínimo 10 caracteres",
-    "passwordHint": "Precisa de maiúsculas e minúsculas, um número e um símbolo.",
     "confirmPasswordLabel": "Confirmar senha",
     "createAccount": "Criar conta",
     "creatingAccount": "Criando conta…",
@@ -49,8 +48,6 @@
     "checkEmailBody": "Enviamos um link de confirmação para <1>{{email}}</1>. Toque nele para verificar e volte aqui para entrar.",
     "backToSignIn": "Voltar para entrar",
     "errNameRequired": "Digite seu nome.",
-    "errPasswordShort": "A senha precisa ter pelo menos 10 caracteres.",
-    "errPasswordWeak": "A senha precisa de maiúsculas e minúsculas, um número e um símbolo.",
     "errPasswordMismatch": "As senhas não coincidem.",
     "errGoogleStart": "Não foi possível iniciar o login com o Google.",
     "desktopBrowser": "Conclua o login no seu navegador e volte para cá.",
@@ -289,6 +286,13 @@
     "lockNow": "Bloquear agora",
     "dataSync": "Dados e sincronização",
     "cloudSync": "Sincronização na nuvem",
+    "liveUpdates": "Atualizações ao vivo",
+    "liveState": {
+      "live": "Ao vivo",
+      "connecting": "Conectando",
+      "down": "Reconectando",
+      "off": "Desligado"
+    },
     "active": "Ativa",
     "offline": "Offline",
     "notSignedIn": "Não conectado",
@@ -1049,6 +1053,9 @@
       "purchaseHistory": "Histórico de compras",
       "noPurchases": "Nenhuma compra ainda — toque em + Compra para registrar",
       "unitsAt": "{{qty}} unidades a {{price}} {{cur}}",
+      "yieldAccrued": "Rendimento de staking acumulado",
+      "rewardUnits": "{{qty}} unidades, recompensa de staking",
+      "yieldTag": "Rendimento",
       "totalCost": "{{amount}} {{cur}} no total",
       "deletePurchase": "Excluir esta compra?"
     },
@@ -1366,6 +1373,13 @@
     "kind_transaction": "Transação",
     "kind_cash_deposit": "Para a carteira",
     "kind_buy": "Compra",
+    "kind_yield": "Staking",
+    "yieldOn": "Rendimento de staking · {{name}}",
+    "apyValue": "{{pct}} % APY",
+    "apyLabel": "Rendimento anual (APY)",
+    "yieldHint": "As recompensas acumulam-se todos os dias a custo 0, num lote por mês. As recompensas de staking podem ser rendimento tributável; isto não é aconselhamento fiscal.",
+    "yieldNeedsLots": "Registe primeiro as compras desta posição: o rendimento acumula sobre as unidades dos seus lotes.",
+    "addYield": "Adicionar rendimento de staking",
     "type_expense": "Despesa",
     "type_income": "Receita",
     "type_transfer": "Transferência",
@@ -1483,5 +1497,11 @@
       "highPriority": "Prioridade alta",
       "markDone": "Marcar como feita"
     }
+  },
+  "reportPrompt": {
+    "title": "Enviar relatórios de erros?",
+    "body": "Se algo falhar, o NCC pode enviar-nos os detalhes técnicos: a versão da app, o erro e o ecrã onde aconteceu. Nunca o que escreve. Pode alterar isto nas Definições.",
+    "yes": "Sim, enviar",
+    "notNow": "Agora não"
   }
 }

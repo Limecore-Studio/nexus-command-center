@@ -4,6 +4,8 @@ import { Trans, useTranslation } from 'react-i18next';
 import { supabase } from '../../lib/supabase';
 import { translateAuthError } from '../../lib/authErrors';
 import { withCaptcha } from '../../lib/captcha';
+import { meetsPasswordRule, PASSWORD_MIN_LENGTH } from '../../lib/passwordPolicy';
+import { PasswordChecklist } from '../../components/PasswordChecklist';
 
 // AUTH-2 — confirmation-code bounds, ported from StudyDesk's AuthGate.
 //
@@ -24,6 +26,7 @@ export default function Signup() {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [pwFlag, setPwFlag] = useState(false); // limecore#73: a submit failed on the rule
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -79,9 +82,11 @@ export default function Signup() {
 
   const validate = (): string | null => {
     if (!fullName.trim()) return t('auth.errNameRequired');
-    if (password.length < 10) return t('auth.errPasswordShort');
-    if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password) || !/[^A-Za-z0-9]/.test(password)) {
-      return t('auth.errPasswordWeak');
+    // v1.20 (limecore#73) — the server's rule, with its own symbol set: the
+    // old /[^A-Za-z0-9]/ ticked an `ä` or a space the server then refused.
+    if (!meetsPasswordRule(password)) {
+      setPwFlag(true);
+      return t('auth.pwNotYet');
     }
     if (password !== confirm) return t('auth.errPasswordMismatch');
     return null;
@@ -226,13 +231,14 @@ export default function Signup() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={10}
+              minLength={PASSWORD_MIN_LENGTH}
+              aria-describedby="signup-pw-rules"
               className="input w-full"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t('auth.passwordPlaceholder')}
             />
-            <p className="text-[0.625rem] text-text-muted mt-1">{t('auth.passwordHint')}</p>
+            <PasswordChecklist id="signup-pw-rules" password={password} flagMissing={pwFlag} />
           </div>
           <div>
             <label className="block text-[0.625rem] uppercase tracking-wider text-text-muted mb-1">
@@ -242,7 +248,7 @@ export default function Signup() {
               type="password"
               autoComplete="new-password"
               required
-              minLength={10}
+              minLength={PASSWORD_MIN_LENGTH}
               className="input w-full"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}

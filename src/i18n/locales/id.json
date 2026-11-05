@@ -40,7 +40,6 @@
     "fullNameLabel": "Nama lengkap",
     "fullNamePlaceholder": "Nama kamu",
     "passwordPlaceholder": "Minimal 10 karakter",
-    "passwordHint": "Perlu huruf besar dan kecil, satu angka, dan satu simbol.",
     "confirmPasswordLabel": "Konfirmasi kata sandi",
     "createAccount": "Buat akun",
     "creatingAccount": "Membuat akun…",
@@ -49,8 +48,6 @@
     "checkEmailBody": "Kami mengirim tautan konfirmasi ke <1>{{email}}</1>. Ketuk untuk memverifikasi, lalu kembali ke sini untuk masuk.",
     "backToSignIn": "Kembali ke Masuk",
     "errNameRequired": "Masukkan namamu.",
-    "errPasswordShort": "Kata sandi minimal 10 karakter.",
-    "errPasswordWeak": "Kata sandi perlu huruf besar dan kecil, satu angka, dan satu simbol.",
     "errPasswordMismatch": "Kata sandi tidak cocok.",
     "errGoogleStart": "Tidak dapat memulai proses masuk dengan Google.",
     "desktopBrowser": "Selesaikan proses masuk di peramban, lalu kembali ke sini.",
@@ -289,6 +286,13 @@
     "lockNow": "Kunci sekarang",
     "dataSync": "Data & sinkronisasi",
     "cloudSync": "Sinkronisasi awan",
+    "liveUpdates": "Pembaruan langsung",
+    "liveState": {
+      "live": "Langsung",
+      "connecting": "Menyambungkan",
+      "down": "Menyambungkan ulang",
+      "off": "Mati"
+    },
     "active": "Aktif",
     "offline": "Luring",
     "notSignedIn": "Belum masuk",
@@ -1039,6 +1043,9 @@
       "purchaseHistory": "Riwayat pembelian",
       "noPurchases": "Belum ada pembelian — ketuk + Pembelian untuk mencatat",
       "unitsAt": "{{qty}} unit @ {{price}} {{cur}}",
+      "yieldAccrued": "Imbal hasil staking terkumpul",
+      "rewardUnits": "{{qty}} unit, hadiah staking",
+      "yieldTag": "Imbal hasil",
       "totalCost": "total {{amount}} {{cur}}",
       "deletePurchase": "Hapus pembelian ini?"
     },
@@ -1346,6 +1353,13 @@
     "kind_transaction": "Transaksi",
     "kind_cash_deposit": "Ke portofolio",
     "kind_buy": "Beli",
+    "kind_yield": "Staking",
+    "yieldOn": "Imbal hasil staking · {{name}}",
+    "apyValue": "{{pct}}% APY",
+    "apyLabel": "Imbal hasil tahunan (APY)",
+    "yieldHint": "Hadiah bertambah setiap hari dengan biaya 0, ke dalam satu lot per bulan. Hadiah staking bisa dikenai pajak sebagai penghasilan; ini bukan nasihat pajak.",
+    "yieldNeedsLots": "Catat dulu pembelian aset ini: imbal hasil bertambah pada unit di lot-lotnya.",
+    "addYield": "Tambah imbal hasil staking",
     "type_expense": "Pengeluaran",
     "type_income": "Pemasukan",
     "type_transfer": "Transfer",
@@ -1443,5 +1457,11 @@
       "highPriority": "Prioritas tinggi",
       "markDone": "Tandai selesai"
     }
+  },
+  "reportPrompt": {
+    "title": "Kirim laporan galat?",
+    "body": "Jika ada yang rusak, NCC dapat mengirimi kami detail teknisnya: versi aplikasi, galatnya, dan layar tempat terjadinya. Tidak pernah apa yang kamu ketik. Kamu bisa mengubahnya di Pengaturan.",
+    "yes": "Ya, kirim",
+    "notNow": "Nanti saja"
   }
 }

@@ -1,6 +1,6 @@
 import { create, type StoreApi } from 'zustand';
-import { listOwnPending } from '../db/syncQueue';
-import { fullSync, PushResult, PullResult } from '../lib/cloudSync';
+import { listOwnPending, onEnqueued } from '../db/syncQueue';
+import { fullSync, pushQueue, pullAll, PushResult, PullResult } from '../lib/cloudSync';
 import { coalesce } from '../lib/coalesce';
 import { reconcileTaskRemindersIfChanged } from '../lib/taskReminders';
 import { useSessionStore } from './useSessionStore';
@@ -78,6 +78,10 @@ interface SyncStore {
   init: () => void;
   refreshPending: () => Promise<void>;
   syncNow: () => Promise<void>;
+  /** v1.20 (NCC#221): push what is queued, now, without a pull. */
+  pushNow: () => Promise<void>;
+  /** v1.20 (NCC#221): pull just these tables (a live-sync hint). */
+  pullTables: (tables: string[]) => Promise<void>;
 }
 
 // v1.16 (NCC#58). Concurrent `syncNow` calls must neither no-op nor overlap.
@@ -88,6 +92,31 @@ interface SyncStore {
 // `coalesce` runs one sync at a time and folds everyone who asks during it
 // into a single follow-up run. See src/lib/coalesce.ts.
 let requestSync: (() => Promise<void>) | null = null;
+let requestPush: (() => Promise<void>) | null = null;
+
+// v1.20 (NCC#221) — the full sync, the push-only run and the hinted pull all
+// take this lane, one at a time. Each is coalesced on its own, but a push-only
+// run overlapping a full sync would push the same queue twice.
+let lane: Promise<void> = Promise.resolve();
+function exclusive(job: () => Promise<void>): Promise<void> {
+  const run = lane.then(job, job);
+  lane = run.catch(() => undefined);
+  return run;
+}
+
+// v1.20 (NCC#221) — set by the live-sync engine while it runs: tells this
+// user's other devices which tables a push wrote. Null when live sync is off.
+let announcePushed: ((tables: string[]) => void) | null = null;
+export function setPushAnnouncer(fn: ((tables: string[]) => void) | null): void {
+  announcePushed = fn;
+}
+function announce(push: PushResult): void {
+  if (push.pushedTables?.length) announcePushed?.(push.pushedTables);
+}
+
+// How long an edit waits before it is pushed. Long enough to fold a burst of
+// enqueues (a transfer is two rows, an import is hundreds) into one run.
+export const PUSH_DEBOUNCE_MS = 300;
 
 async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
   if (!navigator.onLine) return;
@@ -106,27 +135,13 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
   set({ syncing: true, lastError: null });
   try {
     const { push, pull } = await fullSync(user.id);
+    announce(push);
     // After a successful pull, refresh in-memory state in every data
     // store so the UI reflects rows that just landed in Dexie (whether
     // from another device, Realtime, or an external app writing into
     // the shared Supabase project). Skip the reload if the pull failed
     // hard — nothing new would be there to surface anyway.
-    if (pull.errors.length === 0) {
-      await reloadDataStores();
-      // v1.18.1 (NCC#186) — tasks that arrived with this pull get their
-      // reminders. AppShell's mount reconcile runs before the first pull, so
-      // after a sign-in on a wiped device (or a new account's first sync)
-      // they had none until the next app start. A no-op when the tasks are
-      // the ones already armed. Only while this sync's user is still signed
-      // in: a sign-out in the meantime has cancelled every reminder and must
-      // not see them re-armed.
-      const stillSignedIn = () => useSessionStore.getState().user?.id === user.id;
-      if (stillSignedIn()) {
-        void reconcileTaskRemindersIfChanged(useTaskStore.getState().tasks, stillSignedIn).catch((e) =>
-          console.warn('[sync] task reminder reconcile failed:', (e as Error).message),
-        );
-      }
-    }
+    if (pull.errors.length === 0) await afterPull(user.id);
     const pending = await listOwnPending();
     // Surface up to 5 of the most recent item errors for diagnostics.
     const itemErrors = pending
@@ -158,6 +173,64 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
   }
 }
 
+async function afterPull(userId: string): Promise<void> {
+  await reloadDataStores();
+  // v1.18.1 (NCC#186) — tasks that arrived with this pull get their
+  // reminders. AppShell's mount reconcile runs before the first pull, so
+  // after a sign-in on a wiped device (or a new account's first sync)
+  // they had none until the next app start. A no-op when the tasks are
+  // the ones already armed. Only while this sync's user is still signed
+  // in: a sign-out in the meantime has cancelled every reminder and must
+  // not see them re-armed.
+  const stillSignedIn = () => useSessionStore.getState().user?.id === userId;
+  if (stillSignedIn()) {
+    void reconcileTaskRemindersIfChanged(useTaskStore.getState().tasks, stillSignedIn).catch((e) =>
+      console.warn('[sync] task reminder reconcile failed:', (e as Error).message),
+    );
+  }
+}
+
+/** The signed-in user whose sync may run now, or null. Same gates as runSync,
+ *  without recording "Not signed in." — the quiet paths below are triggered
+ *  by edits and hints, not by the user asking. */
+function syncableUser(): string | null {
+  if (!navigator.onLine) return null;
+  const user = useSessionStore.getState().user;
+  if (!user || !adoptionClearFor(user.id)) return null;
+  return user.id;
+}
+
+// v1.20 (NCC#221) — an edit used to wait for the 30 s flusher, so another
+// device saw it up to half a minute late. Now it goes up a moment after it is
+// made. The flusher stays, as the backstop for offline and failed pushes.
+async function runPush(set: StoreApi<SyncStore>['setState']): Promise<void> {
+  const userId = syncableUser();
+  if (!userId) return;
+  try {
+    const push = await pushQueue(userId);
+    announce(push);
+    const pending = await listOwnPending();
+    set({
+      lastPush: push,
+      pendingCount: pending.length,
+      ...(push.errors.length > 0 ? { lastError: `${push.errors.length} item(s) failed to upload.` } : {}),
+    });
+  } catch (e) {
+    set({ lastError: (e as Error).message });
+  }
+}
+
+async function runPull(tables: string[]): Promise<void> {
+  const userId = syncableUser();
+  if (!userId) return;
+  const pull = await pullAll(userId, new Set(tables));
+  if (pull.errors.length > 0) {
+    console.warn('[sync] hinted pull failed:', pull.errors[0]);
+    return;
+  }
+  await afterPull(userId);
+}
+
 export const useSyncStore = create<SyncStore>((set, get) => ({
   isOnline: navigator.onLine,
   lastSyncedAt: localStorage.getItem('sync.lastSyncedAt'),
@@ -180,6 +253,17 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
     get().refreshPending();
+
+    // v1.20 (NCC#221): push shortly after each edit. Restarted by every
+    // enqueue, so a burst becomes one run.
+    let pushTimer: ReturnType<typeof setTimeout> | null = null;
+    onEnqueued(() => {
+      if (pushTimer) clearTimeout(pushTimer);
+      pushTimer = setTimeout(() => {
+        pushTimer = null;
+        void get().pushNow();
+      }, PUSH_DEBOUNCE_MS);
+    });
 
     // Background flusher: every 30s, if online + signed in + pending > 0 and
     // not currently syncing, try to flush. Catches the case where the user
@@ -229,8 +313,19 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
   },
 
   syncNow() {
-    requestSync ??= coalesce(() => runSync(set));
+    requestSync ??= coalesce(() => exclusive(() => runSync(set)));
     return requestSync();
+  },
+
+  pushNow() {
+    requestPush ??= coalesce(() => exclusive(() => runPush(set)));
+    return requestPush();
+  },
+
+  pullTables(tables) {
+    return exclusive(() => runPull(tables)).catch((e) =>
+      console.warn('[sync] hinted pull failed:', (e as Error).message),
+    );
   },
 }));
 

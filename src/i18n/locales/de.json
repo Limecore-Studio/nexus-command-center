@@ -124,7 +124,6 @@
     "fullNameLabel": "Vollständiger Name",
     "fullNamePlaceholder": "Dein Name",
     "passwordPlaceholder": "Mindestens 10 Zeichen",
-    "passwordHint": "Groß- und Kleinbuchstaben, eine Ziffer und ein Sonderzeichen erforderlich.",
     "confirmPasswordLabel": "Passwort bestätigen",
     "createAccount": "Konto erstellen",
     "creatingAccount": "Konto wird erstellt…",
@@ -133,8 +132,6 @@
     "checkEmailBody": "Wir haben einen Bestätigungslink an <1>{{email}}</1> gesendet. Klicke ihn an und komm dann hierher zurück, um dich anzumelden.",
     "backToSignIn": "Zurück zur Anmeldung",
     "errNameRequired": "Gib deinen Namen ein.",
-    "errPasswordShort": "Das Passwort muss mindestens 10 Zeichen lang sein.",
-    "errPasswordWeak": "Das Passwort braucht Groß- und Kleinbuchstaben, eine Ziffer und ein Sonderzeichen.",
     "errPasswordMismatch": "Die Passwörter stimmen nicht überein.",
     "errGoogleStart": "Google-Anmeldung konnte nicht gestartet werden.",
     "desktopBrowser": "Schließe die Anmeldung im Browser ab und komm dann hierher zurück.",
@@ -228,6 +225,13 @@
     "lockNow": "Jetzt sperren",
     "dataSync": "Daten & Sync",
     "cloudSync": "Cloud-Sync",
+    "liveUpdates": "Live-Updates",
+    "liveState": {
+      "live": "Live",
+      "connecting": "Verbinde",
+      "down": "Neu verbinden",
+      "off": "Aus"
+    },
     "active": "Aktiv",
     "offline": "Offline",
     "notSignedIn": "Nicht angemeldet",
@@ -936,6 +940,9 @@
       "purchaseHistory": "Kaufhistorie",
       "noPurchases": "Noch keine Käufe — tippe auf + Kauf zum Erfassen",
       "unitsAt": "{{qty}} Einheiten @ {{price}} {{cur}}",
+      "yieldAccrued": "Aufgelaufener Staking-Ertrag",
+      "rewardUnits": "{{qty}} Einheiten, Staking-Ertrag",
+      "yieldTag": "Ertrag",
       "totalCost": "{{amount}} {{cur}} gesamt",
       "deletePurchase": "Diesen Kauf löschen?"
     },
@@ -1356,6 +1363,13 @@
     "kind_transaction": "Buchung",
     "kind_cash_deposit": "Ins Portfolio",
     "kind_buy": "Kauf",
+    "kind_yield": "Staking",
+    "yieldOn": "Staking-Ertrag · {{name}}",
+    "apyValue": "{{pct}} % APY",
+    "apyLabel": "Jahresrendite (APY)",
+    "yieldHint": "Erträge wachsen täglich zu Kosten 0 an, in einem Posten pro Monat. Staking-Erträge können steuerpflichtiges Einkommen sein; dies ist keine Steuerberatung.",
+    "yieldNeedsLots": "Erfasse zuerst die Käufe dieser Position: Erträge wachsen auf die Einheiten in ihren Posten.",
+    "addYield": "Staking-Ertrag hinzufügen",
     "type_expense": "Ausgabe",
     "type_income": "Einnahme",
     "type_transfer": "Umbuchung",
@@ -1463,5 +1477,11 @@
       "highPriority": "Hohe Priorität",
       "markDone": "Erledigt"
     }
+  },
+  "reportPrompt": {
+    "title": "Fehlerberichte senden?",
+    "body": "Wenn etwas schiefgeht, kann NCC uns die technischen Details senden: App-Version, Fehler und den Bildschirm, auf dem er auftrat. Nie das, was du eingibst. Du kannst das in den Einstellungen ändern.",
+    "yes": "Ja, senden",
+    "notNow": "Nicht jetzt"
   }
 }

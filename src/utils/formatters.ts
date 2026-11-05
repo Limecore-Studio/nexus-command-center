@@ -34,7 +34,10 @@ export function monthNames(style: 'long' | 'short' | 'narrow'): string[] {
   return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2024, i, 1)));
 }
 
-export function formatCurrency(amount: number, currency = 'EUR'): string {
+// v1.20 (NCC#224): `currency` is required. It defaulted to 'EUR', so every call
+// that left it out rendered euros whatever the base currency was (the home
+// budget showed € to a user on INR). The compiler now names each such call.
+export function formatCurrency(amount: number, currency: string): string {
   return new Intl.NumberFormat(formatLocale(), {
     style: 'currency', currency, minimumFractionDigits: 2,
   }).format(amount);

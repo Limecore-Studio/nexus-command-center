@@ -6,7 +6,8 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useTaskStore } from '../store/useTaskStore';
 import { useTemplatesStore } from '../store/useTemplatesStore';
 import { useWorkQualityStore, todayKey } from '../store/useWorkQualityStore';
-import { localDateKey } from '../utils/formatters';
+import { useSettingsStore } from '../store/useSettingsStore';
+import { formatCurrency, localDateKey } from '../utils/formatters';
 import Glyph from './Glyph';
 // v1.18.1 (NCC#144): typed amounts accept a decimal comma.
 import { numberInput } from '@/lib/numberInput';
@@ -78,6 +79,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
   const [accountId, setAccountId] = useState<string>('');
   const categories = useFinanceStore((s) => s.budgetCategories);
   const accounts = useFinanceStore((s) => s.manualAssets);
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   // Only expense-type templates show on this tab (the tab is hard-coded
   // expense). Filtering here is cheaper than maintaining a separate cache.
@@ -142,7 +144,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
             <>
               <span className="truncate max-w-[110px]">{t.description}</span>
               <span className="opacity-60">·</span>
-              <span className="font-medium">{t.amount.toFixed(2)}€</span>
+              <span className="font-medium">{formatCurrency(t.amount, baseCurrency)}</span>
             </>
           )}
         />

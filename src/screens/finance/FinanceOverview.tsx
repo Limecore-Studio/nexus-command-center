@@ -308,9 +308,9 @@ export default function FinanceOverview() {
               {/* Neither figure is highlighted: income and expenses are a
                   pair, and marking one of them live said the other was not
                   being reported, which is not what the screen means. */}
-              <StatCard value={formatCurrency(income)} label={t('fin.ov.income')} />
+              <StatCard value={formatCurrency(income, baseCurrency)} label={t('fin.ov.income')} />
               <StatCard
-                value={formatCurrency(expenses)}
+                value={formatCurrency(expenses, baseCurrency)}
                 label={t('fin.ov.expenses')}
                 sub={income > 0 ? t('fin.ov.pctOfIncome', { pct: Math.round((expenses / income) * 100) }) : undefined}
                 tone={expenses > income ? 'danger' : 'default'}
@@ -406,7 +406,7 @@ export default function FinanceOverview() {
                     label={`${c.icon ? c.icon + ' ' : ''}${c.name}`}
                     value={spendByCategory.get(c.id) ?? 0}
                     max={c.monthlyLimit}
-                    format={(v, m) => `${formatCurrency(v)} / ${formatCurrency(m)}`}
+                    format={(v, m) => `${formatCurrency(v, baseCurrency)} / ${formatCurrency(m, baseCurrency)}`}
                   />
                 ))}
               </div>
@@ -542,7 +542,7 @@ export default function FinanceOverview() {
                       }`}
                     >
                       {tx.type === 'income' ? '+' : '–'}
-                      {formatCurrency(tx.amount).replace(/[€$]/, '€')}
+                      {formatCurrency(tx.amount, baseCurrency)}
                     </span>
                     <RowActions
                       onEdit={() => navigate(`/finance/add?id=${tx.id}`)}

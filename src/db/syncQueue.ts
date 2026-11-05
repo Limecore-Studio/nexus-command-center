@@ -34,7 +34,38 @@ export function pushableFor(item: Pick<SyncQueueItem, 'owner'>, userId: string):
   return item.owner === undefined || item.owner === userId;
 }
 
+// pushQueue replays items in `createdAt` order within a priority tier. Two
+// edits in the same millisecond (an insert and its delete, say) used to tie,
+// and the tie fell back to the random primary-key order, so the delete could
+// reach the server before the insert. That is what turned main's CI red after
+// v1.19 (cloudSync.recurring.test.ts). Each stamp is now strictly later than
+// the one before it in this session.
+let lastQueuedAt = 0;
+export function nextQueueTime(now = Date.now()): string {
+  lastQueuedAt = Math.max(now, lastQueuedAt + 1);
+  return new Date(lastQueuedAt).toISOString();
+}
+
+// v1.20 (NCC#221): told after every enqueue, so the sync store can push within
+// a moment instead of on the next 30 s flush. A listener rather than an import:
+// the store imports this module.
+const enqueuedListeners = new Set<() => void>();
+export function onEnqueued(listener: () => void): () => void {
+  enqueuedListeners.add(listener);
+  return () => enqueuedListeners.delete(listener);
+}
+
 export async function enqueue(
+  entityType: SyncQueueItem['entityType'],
+  entityId: string,
+  operation: SyncQueueItem['operation'],
+  payload: unknown
+): Promise<void> {
+  await enqueueRow(entityType, entityId, operation, payload);
+  for (const l of enqueuedListeners) l();
+}
+
+async function enqueueRow(
   entityType: SyncQueueItem['entityType'],
   entityId: string,
   operation: SyncQueueItem['operation'],
@@ -46,7 +77,7 @@ export async function enqueue(
     entityId,
     operation,
     payload: JSON.stringify(payload),
-    createdAt: new Date().toISOString(),
+    createdAt: nextQueueTime(),
     // v1.16 (limecore#27, registry P6): stamped here, at the edit — never at
     // push time, when a later pull could lift a stale edit past a newer one.
     stamp: stampFor(entityType, entityId, operation),

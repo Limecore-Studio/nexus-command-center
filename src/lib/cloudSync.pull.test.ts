@@ -136,3 +136,26 @@ describe('pullAll', () => {
     expect(await db.workoutSets.where('sessionId').equals(gone.id).count()).toBe(0);
   });
 });
+
+// v1.20 (NCC#221) — a live-sync hint pulls only the tables it names.
+describe('pullAll with a table filter', () => {
+  const requested = () => new Set((holder.client.requests as { table: string }[]).map((r) => r.table));
+
+  it('selects only the named table', async () => {
+    holder.client = fakeClient({ transactions: [] });
+    await pullAll(USER, new Set(['transactions']));
+    expect(requested()).toEqual(new Set(['transactions']));
+  });
+
+  it('a table read together with others brings its group', async () => {
+    holder.client = fakeClient({ subjects: [], grades: [], study_sessions: [] });
+    await pullAll(USER, new Set(['grades']));
+    expect(requested()).toEqual(new Set(['subjects', 'grades', 'study_sessions']));
+  });
+
+  it('without a filter, every table is read', async () => {
+    holder.client = fakeClient({});
+    await pullAll(USER);
+    expect(requested().size).toBeGreaterThanOrEqual(21);
+  });
+});

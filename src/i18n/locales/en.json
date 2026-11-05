@@ -124,7 +124,6 @@
     "fullNameLabel": "Full Name",
     "fullNamePlaceholder": "Your name",
     "passwordPlaceholder": "At least 10 characters",
-    "passwordHint": "Needs upper + lower case, a digit, and a symbol.",
     "confirmPasswordLabel": "Confirm Password",
     "createAccount": "Create Account",
     "creatingAccount": "Creating account…",
@@ -133,8 +132,6 @@
     "checkEmailBody": "We sent a confirmation link to <1>{{email}}</1>. Click it to verify, then come back here and sign in.",
     "backToSignIn": "Back to Sign In",
     "errNameRequired": "Enter your name.",
-    "errPasswordShort": "Password must be at least 10 characters.",
-    "errPasswordWeak": "Password needs upper + lower case, a digit, and a symbol.",
     "errPasswordMismatch": "Passwords do not match.",
     "errGoogleStart": "Could not start Google sign-in.",
     "desktopBrowser": "Finish signing in in your browser, then come back here.",
@@ -228,6 +225,13 @@
     "lockNow": "Lock Now",
     "dataSync": "Data & Sync",
     "cloudSync": "Cloud Sync",
+    "liveUpdates": "Live updates",
+    "liveState": {
+      "live": "Live",
+      "connecting": "Connecting",
+      "down": "Reconnecting",
+      "off": "Off"
+    },
     "active": "Active",
     "offline": "Offline",
     "notSignedIn": "Not signed in",
@@ -936,6 +940,9 @@
       "purchaseHistory": "Purchase History",
       "noPurchases": "No purchases yet — tap + Purchase to record one",
       "unitsAt": "{{qty}} units @ {{price}} {{cur}}",
+      "yieldAccrued": "Staking yield accrued",
+      "rewardUnits": "{{qty}} units, staking reward",
+      "yieldTag": "Yield",
       "totalCost": "{{amount}} {{cur}} total",
       "deletePurchase": "Delete this purchase?"
     },
@@ -1356,6 +1363,13 @@
     "kind_transaction": "Transaction",
     "kind_cash_deposit": "To portfolio",
     "kind_buy": "Buy",
+    "kind_yield": "Staking",
+    "yieldOn": "Staking yield · {{name}}",
+    "apyValue": "{{pct}} % APY",
+    "apyLabel": "Annual yield (APY)",
+    "yieldHint": "Rewards accrue every day at cost 0, into one lot per month. Staking rewards may count as taxable income where you live; this is not tax advice.",
+    "yieldNeedsLots": "Record this holding's purchases first: yield accrues on the units in its lots.",
+    "addYield": "Add staking yield",
     "type_expense": "Expense",
     "type_income": "Income",
     "type_transfer": "Transfer",
@@ -1463,5 +1477,11 @@
       "highPriority": "High priority",
       "markDone": "Mark done"
     }
+  },
+  "reportPrompt": {
+    "title": "Send error reports?",
+    "body": "If something breaks, NCC can send us the technical details: the app version, the error and the screen it happened on. Never what you type. You can change this in Settings.",
+    "yes": "Yes, send reports",
+    "notNow": "Not now"
   }
 }

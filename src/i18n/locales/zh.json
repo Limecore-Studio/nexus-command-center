@@ -124,7 +124,6 @@
     "fullNameLabel": "姓名",
     "fullNamePlaceholder": "你的姓名",
     "passwordPlaceholder": "至少 10 个字符",
-    "passwordHint": "需包含大小写字母、数字和符号。",
     "confirmPasswordLabel": "确认密码",
     "createAccount": "创建账户",
     "creatingAccount": "正在创建账户…",
@@ -133,8 +132,6 @@
     "checkEmailBody": "我们已向 <1>{{email}}</1> 发送确认链接。点击链接完成验证后，返回此处登录。",
     "backToSignIn": "返回登录",
     "errNameRequired": "请输入你的姓名。",
-    "errPasswordShort": "密码至少需要 10 个字符。",
-    "errPasswordWeak": "密码需包含大小写字母、数字和符号。",
     "errPasswordMismatch": "两次输入的密码不一致。",
     "errGoogleStart": "无法启动 Google 登录。",
     "desktopBrowser": "请在浏览器中完成登录，然后回到这里。",
@@ -228,6 +225,13 @@
     "lockNow": "立即锁定",
     "dataSync": "数据与同步",
     "cloudSync": "云同步",
+    "liveUpdates": "实时更新",
+    "liveState": {
+      "live": "实时",
+      "connecting": "正在连接",
+      "down": "正在重新连接",
+      "off": "关闭"
+    },
     "active": "活动",
     "offline": "离线",
     "notSignedIn": "未登录",
@@ -935,6 +939,9 @@
       "purchaseHistory": "买入历史",
       "noPurchases": "还没有买入 — 点击 + 买入记录一笔",
       "unitsAt": "{{qty}} 个单位 @ {{price}} {{cur}}",
+      "yieldAccrued": "已累计质押收益",
+      "rewardUnits": "{{qty}} 单位，质押奖励",
+      "yieldTag": "收益",
       "totalCost": "共 {{amount}} {{cur}}",
       "deletePurchase": "删除这笔买入？"
     },
@@ -1352,6 +1359,13 @@
     "kind_transaction": "交易",
     "kind_cash_deposit": "转入投资组合",
     "kind_buy": "买入",
+    "kind_yield": "质押",
+    "yieldOn": "质押收益 · {{name}}",
+    "apyValue": "{{pct}}% APY",
+    "apyLabel": "年化收益率 (APY)",
+    "yieldHint": "收益每天以零成本累计，每月合为一个批次。质押收益在部分地区可能属于应税收入；此处不构成税务建议。",
+    "yieldNeedsLots": "请先记录该持仓的买入：收益按其批次中的单位累计。",
+    "addYield": "添加质押收益",
     "type_expense": "支出",
     "type_income": "收入",
     "type_transfer": "转账",
@@ -1449,5 +1463,11 @@
       "highPriority": "高优先级",
       "markDone": "标记完成"
     }
+  },
+  "reportPrompt": {
+    "title": "发送错误报告吗？",
+    "body": "出现问题时，NCC 可以把技术细节发给我们：应用版本、错误本身以及出错时所在的页面。绝不包含你输入的内容。你可以在设置中更改。",
+    "yes": "好，发送",
+    "notNow": "暂不"
   }
 }

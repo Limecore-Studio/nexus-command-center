@@ -1,7 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import en from './locales/en.json';
+import enBase from './locales/en.json';
+import pw from './passwordStrings.json';
+
+// limecore#73 — the auth.pw* strings load on demand (i18n/passwordStrings.ts).
+const en = { ...enBase, auth: { ...enBase.auth, ...pw.en } };
 
 // v1.17 (NCC#111) — every literal key passed to `t()` must exist in en.json.
 // A missing key has no fallback: i18next prints the key itself, in every

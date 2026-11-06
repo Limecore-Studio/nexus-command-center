@@ -22,7 +22,7 @@ package com.limecore.nexus;
 //
 // SERIALIZATION
 // ───────────────────────────────────────────────────────────────────────────
-// IV is 12 bytes (GCM standard) randomly generated per encrypt. Returned
+// IV is 12 bytes (GCM standard), chosen by the keystore per encrypt. Returned
 // alongside ciphertext as base64 strings. Caller's responsibility to
 // persist both together; decrypt requires both.
 //
@@ -49,7 +49,6 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.SecretKeyEntry;
-import java.security.SecureRandom;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -91,8 +90,8 @@ public class LimecoreKeystorePlugin extends Plugin {
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
                 .setKeySize(256)
-                // setRandomizedEncryptionRequired(true) is the default —
-                // requires a fresh IV per encrypt, which we honor.
+                // setRandomizedEncryptionRequired(true) is the default: the
+                // keystore picks a fresh IV per encrypt (see encrypt()).
                 .build();
             kg.init(spec);
             kg.generateKey();
@@ -141,12 +140,21 @@ public class LimecoreKeystorePlugin extends Plugin {
                 call.reject("No key for alias: " + alias);
                 return;
             }
-            // Random 12-byte IV per encrypt — required by GCM and enforced
-            // by the keystore's setRandomizedEncryptionRequired default.
-            byte[] iv = new byte[IV_BYTES];
-            new SecureRandom().nextBytes(iv);
+            // The keystore chooses the IV. Keys are created with
+            // setRandomizedEncryptionRequired(true) (the default), and such a
+            // key REFUSES a caller-provided IV on encrypt ("Caller-provided IV
+            // not permitted"). This method used to pass its own random IV, so
+            // encrypt always failed. Init with no parameter
+            // spec, then read back the fresh 12-byte IV the keystore picked.
+            // Existing keys need no rotation; decrypt is unchanged (passing
+            // the stored IV is allowed when decrypting).
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
-            cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(GCM_TAG_BITS, iv));
+            cipher.init(Cipher.ENCRYPT_MODE, key);
+            byte[] iv = cipher.getIV();
+            if (iv == null || iv.length != IV_BYTES) {
+                call.reject("encrypt failed: unexpected IV length " + (iv == null ? "null" : iv.length));
+                return;
+            }
             byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
             JSObject r = new JSObject();
             r.put("ciphertext", Base64.getEncoder().encodeToString(ct));

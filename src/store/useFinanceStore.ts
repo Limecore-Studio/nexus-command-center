@@ -36,9 +36,11 @@ import { checkBudgetThresholds } from '../lib/budgetAlerts';
 // `startingBalance` from a transaction handler — what the bridge used to
 // do — would now DOUBLE-COUNT, since the derived balance already includes
 // the transaction's signed delta.
-import { runPortfolioEodTick } from '../lib/portfolioEod';
-import { runNewsAlertsTick } from '../lib/newsAlerts';
-import { runWatchlistAlertsTick } from '../lib/watchlistAlerts';
+// v1.21 (NCC#245): the alert ticks run after a refresh, never before the
+// first frame, so they load on first use instead of in the startup bundle.
+const portfolioEod = () => import('../lib/portfolioEod');
+const newsAlerts = () => import('../lib/newsAlerts');
+const watchlistAlerts = () => import('../lib/watchlistAlerts');
 
 interface FinanceStore {
   transactions: Transaction[];
@@ -913,10 +915,10 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // Re-run the EoD tick so the 4:35pm backup notification's body reflects
     // the freshest quotes. Idempotent — runs cancel-or-schedule based on
     // current time-of-day in ET.
-    void runPortfolioEodTick();
+    void portfolioEod().then((m) => m.runPortfolioEodTick());
     // v1.15 Item 9 — quotes (and FX) for watched tickers were just written
     // above, so this is the moment a target can newly be crossed.
-    void runWatchlistAlertsTick();
+    void watchlistAlerts().then((m) => m.runWatchlistAlertsTick());
     // Eagerly populate per-holding news so the News screen renders without
     // each row needing to be opened. Fire-and-forget; failures are logged
     // but don't block the rest of the refresh from settling.
@@ -926,7 +928,7 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
       // Sequencing matters: runNewsAlertsTick reads companyNews directly,
       // so without the await it would see the pre-refresh snapshot and
       // miss alerts for items that just arrived.
-      await runNewsAlertsTick();
+      await (await newsAlerts()).runNewsAlertsTick();
     })();
   },
 

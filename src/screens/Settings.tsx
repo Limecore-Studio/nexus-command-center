@@ -32,7 +32,11 @@ import { useSessionStore, userDisplayName } from '../store/useSessionStore';
 import { listPending } from '../db/syncQueue';
 import { useSettingsStore, BaseCurrency, UI_SCALES } from '../store/useSettingsStore';
 import { useShellTier } from '../lib/useShell';
-import { clearAllLocalData } from '../db/database';
+import { clearAllLocalData, db } from '../db/database';
+import { ensureFxRates } from '../api/fxRates';
+import { useFinanceStore } from '../store/useFinanceStore';
+import { useRecurringStore } from '../store/useRecurringStore';
+import { applyCurrencyRebase, planCurrencyRebase, planSize } from '../lib/currencyRebase';
 import { setErrorReportsEnabled, useErrorReportsEnabled } from '../lib/errorReports';
 import { authenticateBiometric, biometricCapability } from '../utils/biometric';
 import { supabase } from '../lib/supabase';
@@ -70,6 +74,63 @@ export default function Settings() {
 
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const setBaseCurrency = useSettingsStore((s) => s.setBaseCurrency);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
+  const [currencyBusy, setCurrencyBusy] = useState(false);
+
+  // v1.21 (NCC#230): amounts stored in the base currency convert at today's
+  // rate, after a confirmation. Cancel leaves the currency as it was; no
+  // rate means no change at all (see lib/currencyRebase.ts).
+  const changeBaseCurrency = async (to: BaseCurrency) => {
+    const from = baseCurrency;
+    if (to === from || currencyBusy) return;
+    setCurrencyError(null);
+    setCurrencyBusy(true);
+    try {
+      const [transactions, budgets, rules] = await Promise.all([
+        db.transactions.toArray(),
+        db.budgetCategories.toArray(),
+        db.recurringRules.toArray(),
+      ]);
+      const userId = useSessionStore.getState().user?.id ?? null;
+      const probe = planCurrencyRebase({ from, to, rates: { [from]: 1, [to]: 1 }, transactions, budgets, rules, userId });
+      if (!probe || planSize(probe) === 0) {
+        await setBaseCurrency(to);
+        return;
+      }
+      const fx = await ensureFxRates();
+      const plan = planCurrencyRebase({ from, to, rates: fx?.rates ?? null, transactions, budgets, rules, userId });
+      if (!plan) {
+        setCurrencyError(t('settings.currencyRateMissing', { from, to }));
+        return;
+      }
+      const rate = new Intl.NumberFormat(formatLocale(), { maximumSignificantDigits: 6 }).format(plan.rate);
+      const message = [
+        t('settings.currencyConvertBody', { from, to, rate }),
+        t('settings.currencyConvertCounts', {
+          tx: plan.transactions.length,
+          budgets: plan.budgets.length,
+          rules: plan.rules.length,
+        }),
+        plan.sharedSkipped > 0 ? t('settings.currencyConvertShared', { n: plan.sharedSkipped }) : null,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      const ok = await confirm({
+        title: t('settings.currencyConvertTitle', { to }),
+        message,
+        confirmLabel: t('settings.currencyConvertConfirm'),
+        destructive: false,
+      });
+      if (!ok) return;
+      // Currency first, then the rows: a push that picks up the converted
+      // rows must label them with the new currency.
+      await setBaseCurrency(to);
+      await applyCurrencyRebase(plan);
+      await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+    } finally {
+      setCurrencyBusy(false);
+    }
+  };
   // v1.9 — text size. `autoScale` mirrors the tier default in index.css, so
   // the Auto swatch previews what Auto will actually give you here.
   const uiScale = useSettingsStore((s) => s.uiScale);
@@ -372,7 +433,8 @@ export default function Settings() {
             <select
               className="input max-w-[120px] py-2"
               value={baseCurrency}
-              onChange={(e) => setBaseCurrency(e.target.value as BaseCurrency)}
+              disabled={currencyBusy}
+              onChange={(e) => void changeBaseCurrency(e.target.value as BaseCurrency)}
             >
               {currencyOptions(formatLocale()).map((c) => (
                 <option key={c.code} value={c.code}>
@@ -381,6 +443,9 @@ export default function Settings() {
               ))}
             </select>
           </div>
+          {currencyError && (
+            <p role="alert" className="text-[0.625rem] text-danger pb-2">{currencyError}</p>
+          )}
         </Section>
 
         {/* v1.15 (Item 13) — NCC had no Appearance section at all; Rack is

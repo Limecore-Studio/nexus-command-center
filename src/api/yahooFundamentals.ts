@@ -27,6 +27,7 @@ import { shouldFetch, recordCall } from './cache';
 import { lastProviderErrors, readChartMeta } from './yahoo';
 import { buildRelevanceCheck, isNewsRelevant } from '../lib/newsRelevance';
 import type { StockMetric, EarningsEvent, DividendEvent, NewsItem, Recommendation } from './stockDetail';
+import { IS_DESKTOP } from '../lib/isDesktop';
 
 // Native: direct (CapacitorHttp bypasses CORS). Web dev preview: proxied
 // through Vite. quoteSummary + crumb live on query2; search lives on query1.
@@ -76,7 +77,10 @@ async function fetchCrumb(): Promise<string | null> {
   // try. Quote/search endpoints work in dev because they have permissive
   // CORS, but quoteSummary doesn't. Just return null and let callers route
   // around (chart-meta fallback covers most fields on web too).
-  if (!Capacitor.isNativePlatform()) return null;
+  if (!Capacitor.isNativePlatform()) {
+    if (IS_DESKTOP) return fetchCrumbDesktop();
+    return null;
+  }
   try {
     // Step 1: visit consent endpoint to set cookies. Don't care about the
     // body; success or any 3xx redirect both set the cookies.
@@ -112,6 +116,40 @@ async function fetchCrumb(): Promise<string | null> {
     lastProviderErrors.push({ provider: 'yahoo', message: `crumb: ${(e as Error).message}` });
     return null;
   }
+}
+
+// v1.21 (NCC#238) — the desktop gets its crumb through the main process's
+// proxy (electron/marketProxy.cjs), which runs the consent step itself and
+// keeps Yahoo's cookies in the app session, so the quoteSummary calls that
+// follow carry them. Same shape check as the native path.
+async function fetchCrumbDesktop(): Promise<string | null> {
+  try {
+    const axios = await loadAxios();
+    const { data, status } = await axios.get(CRUMB_URL, {
+      headers: WEB_HEADERS,
+      responseType: 'text',
+      transformResponse: (d: unknown) => d,
+      timeout: 10_000,
+      validateStatus: () => true,
+    });
+    if (status !== 200) {
+      lastProviderErrors.push({ provider: 'yahoo', message: `crumb HTTP ${status}` });
+      return null;
+    }
+    return checkCrumbShape(typeof data === 'string' ? data : String(data ?? ''));
+  } catch (e) {
+    lastProviderErrors.push({ provider: 'yahoo', message: `crumb: ${(e as Error).message}` });
+    return null;
+  }
+}
+
+function checkCrumbShape(body: string): string | null {
+  const trimmed = body.trim();
+  if (!trimmed || trimmed.length > 80 || /[<>{\n]/.test(trimmed)) {
+    lastProviderErrors.push({ provider: 'yahoo', message: `crumb shape unexpected (${trimmed.slice(0, 30)}…)` });
+    return null;
+  }
+  return trimmed;
 }
 
 async function getCrumb(force = false): Promise<string | null> {

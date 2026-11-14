@@ -134,6 +134,15 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
 
   set({ syncing: true, lastError: null });
   try {
+    // v1.21 (NCC#248): follow the account's base currency before pushing, so
+    // nothing goes up under a label another device has already converted
+    // away from. A no-op until someone converts; loaded on demand.
+    try {
+      const { adoptCloudBaseCurrency } = await import('../lib/baseCurrencyCloud');
+      await adoptCloudBaseCurrency(user.id);
+    } catch (e) {
+      console.warn('[currency] account currency check failed:', (e as Error).message);
+    }
     const { push, pull } = await fullSync(user.id);
     announce(push);
     // After a successful pull, refresh in-memory state in every data

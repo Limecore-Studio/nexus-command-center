@@ -4,14 +4,9 @@ import { db } from '../db/database';
 import { WorkoutSession, WorkoutSet, WorkoutType } from '../types/fitness';
 import { generateId } from '../utils/uuid';
 import { localDateKey } from '../utils/formatters';
-import {
-  healthCapability,
-  hasHealthPermissions,
-  requestHealthPermissions,
-  readTodaySteps,
-  readWeeklySteps,
-  readLatestWeightKg,
-} from '../utils/healthConnect';
+// v1.21 (NCC#248): Health Connect is Android-only and read after launch, so it
+// loads on first use instead of in the startup bundle.
+const hc = () => import('../utils/healthConnect');
 
 const STEP_GOAL_KEY = 'fitness.stepGoal';
 const MANUAL_WEIGHT_KEY = 'fitness.manualWeightKg';
@@ -187,7 +182,7 @@ export const useFitnessStore = create<FitnessStore>((set, get) => ({
       getPref(HC_CONNECTED_KEY),
     ]);
 
-    const cap = await healthCapability();
+    const cap = await (await hc()).healthCapability();
 
     let source: HealthSource = 'manual';
     let todaySteps: number | null = manualSteps ? Number(manualSteps) : null;
@@ -195,12 +190,12 @@ export const useFitnessStore = create<FitnessStore>((set, get) => ({
     let hcWeekly: number[] | null = null;
     let lastSync: string | null = null;
 
-    if (hcConnected === '1' && cap.available && (await hasHealthPermissions())) {
+    if (hcConnected === '1' && cap.available && (await (await hc()).hasHealthPermissions())) {
       source = 'health-connect';
       const [steps, weight, week] = await Promise.all([
-        readTodaySteps(),
-        readLatestWeightKg(),
-        readWeeklySteps(),
+        (await hc()).readTodaySteps(),
+        (await hc()).readLatestWeightKg(),
+        (await hc()).readWeeklySteps(),
       ]);
       if (steps != null) todaySteps = steps;
       if (weight != null) latestWeight = weight;
@@ -304,12 +299,12 @@ export const useFitnessStore = create<FitnessStore>((set, get) => ({
   },
 
   async connectHealthConnect() {
-    const cap = await healthCapability();
+    const cap = await (await hc()).healthCapability();
     if (!cap.available) {
       set({ hcAvailable: false, hcReason: cap.reason });
       return { ok: false, reason: cap.reason };
     }
-    const result = await requestHealthPermissions();
+    const result = await (await hc()).requestHealthPermissions();
     if (!result.ok) return result;
     await setPref(HC_CONNECTED_KEY, '1');
     set({ source: 'health-connect', hcAvailable: true });
@@ -321,9 +316,9 @@ export const useFitnessStore = create<FitnessStore>((set, get) => ({
     set({ syncing: true });
     try {
       const [steps, weight, week] = await Promise.all([
-        readTodaySteps(),
-        readLatestWeightKg(),
-        readWeeklySteps(),
+        (await hc()).readTodaySteps(),
+        (await hc()).readLatestWeightKg(),
+        (await hc()).readWeeklySteps(),
       ]);
       const todaySteps = steps ?? get().todaySteps;
       const weekly = await buildWeeklyWithHistory(week ?? null, todaySteps);

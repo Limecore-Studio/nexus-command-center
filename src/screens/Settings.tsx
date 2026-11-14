@@ -92,8 +92,28 @@ export default function Settings() {
         db.recurringRules.toArray(),
       ]);
       const userId = useSessionStore.getState().user?.id ?? null;
+      // v1.21 (NCC#248): another device may already have converted the account.
+      // Then this device's own label is the stale one: follow the account and
+      // convert nothing, rather than convert the server's rows a second time.
+      const cloud = userId ? await import('../lib/baseCurrencyCloud') : null;
+      const read = cloud && userId ? await cloud.readCloudBaseCurrency(userId) : null;
+      if (cloud && userId && read?.kind === 'ok' && read.code !== null && read.code !== from) {
+        await cloud.adoptCloudBaseCurrency(userId);
+        await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+        setCurrencyError(t('settings.currencyChangedElsewhere', { to: read.code }));
+        return;
+      }
       const probe = planCurrencyRebase({ from, to, rates: { [from]: 1, [to]: 1 }, transactions, budgets, rules, userId });
       if (!probe || planSize(probe) === 0) {
+        // Nothing to convert. If the account already has a currency, move it
+        // too, or the next sync would switch this device straight back.
+        if (cloud && userId && read?.kind === 'ok' && read.code !== null) {
+          const claim = await cloud.claimCloudBaseCurrency(userId, from, to);
+          if (claim.kind !== 'ok') {
+            setCurrencyError(t('settings.currencyClaimFailed'));
+            return;
+          }
+        }
         await setBaseCurrency(to);
         return;
       }
@@ -112,6 +132,7 @@ export default function Settings() {
           rules: plan.rules.length,
         }),
         plan.sharedSkipped > 0 ? t('settings.currencyConvertShared', { n: plan.sharedSkipped }) : null,
+        userId ? t('settings.currencyConvertOtherDevices', { to }) : null,
       ]
         .filter(Boolean)
         .join('\n\n');
@@ -122,6 +143,24 @@ export default function Settings() {
         destructive: false,
       });
       if (!ok) return;
+      // v1.21 (NCC#248): signed in, the conversion rewrites rows every device
+      // shares, so the account must agree on the currency first. Claim it on
+      // the server (only if nobody changed it meanwhile); the other devices
+      // adopt it on their next sync instead of mislabelling the new amounts.
+      if (userId) {
+        const cloud = await import('../lib/baseCurrencyCloud');
+        const claim = await cloud.claimCloudBaseCurrency(userId, from, to);
+        if (claim.kind === 'conflict') {
+          await cloud.adoptCloudBaseCurrency(userId);
+          await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+          setCurrencyError(t('settings.currencyChangedElsewhere', { to: claim.current }));
+          return;
+        }
+        if (claim.kind !== 'ok') {
+          setCurrencyError(t(claim.kind === 'unsupported' ? 'settings.currencyServerUnsupported' : 'settings.currencyClaimFailed'));
+          return;
+        }
+      }
       // Currency first, then the rows: a push that picks up the converted
       // rows must label them with the new currency.
       await setBaseCurrency(to);

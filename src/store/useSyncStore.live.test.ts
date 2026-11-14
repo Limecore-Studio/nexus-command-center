@@ -48,6 +48,8 @@ vi.mock('../db/syncQueue', () => ({
     return () => {};
   },
 }));
+// v1.21 (NCC#248): the account-currency check before each sync; tested in lib/baseCurrencyCloud.test.ts.
+vi.mock('../lib/baseCurrencyCloud', () => ({ adoptCloudBaseCurrency: async () => null }));
 vi.mock('../lib/taskReminders', () => ({ reconcileTaskRemindersIfChanged: async () => true }));
 vi.mock('./useSessionStore', () => ({ useSessionStore: { getState: () => ({ user: h.user }) } }));
 const loadable = { getState: () => ({ load: async () => {} }) };

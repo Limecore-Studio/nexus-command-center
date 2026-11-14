@@ -31,7 +31,9 @@ import { fileURLToPath } from 'node:url';
 // v1.21 (NCC#245): Login, the once-only prompts and notes, and the finance
 // alert ticks moved out of the startup chunk, 983.1 -> 959.7 KiB. The budget
 // is set at the measured size so that headroom is not spent by default.
-const BUDGET_KIB = 960; // measured 2026-11-06 after NCC#245: 959.7 KiB (was 985 at 983.1)
+// v1.21 (NCC#248): the account-currency check added 0.7 KiB to startup, paid for
+// by loading Health Connect on first use (-2.5 KiB).
+const BUDGET_KIB = 958; // measured 2026-11-14 after NCC#248: 957.9 KiB (was 960 at 959.7)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');

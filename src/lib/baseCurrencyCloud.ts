@@ -1,6 +1,6 @@
 // v1.21 (NCC#248): the base currency is an account setting once anyone has
 // converted. `user_preferences.ncc_base_currency` holds it (migration
-// 20261114_v121_ncc_base_currency.sql).
+// 20261114174926_v121_ncc_base_currency.sql, applied to production 2026-11-14).
 //
 // Why: the conversion (lib/currencyRebase.ts, NCC#244) rewrites the synced
 // amounts on the server, but the base currency label lived only on the device.

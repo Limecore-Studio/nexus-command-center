@@ -5,7 +5,26 @@ import enBase from './locales/en.json';
 import pw from './passwordStrings.json';
 
 // limecore#73 — the auth.pw* strings load on demand (i18n/passwordStrings.ts).
-const en = { ...enBase, auth: { ...enBase.auth, ...pw.en } };
+const enWithPw = { ...enBase, auth: { ...enBase.auth, ...pw.en } };
+
+// v1.21.1 — so do the i18n/lazy/*.json strings (i18n/lazyStrings.ts).
+const deepMerge = (a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> => {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    const prev = out[k];
+    out[k] = prev && typeof prev === 'object' && v && typeof v === 'object'
+      ? deepMerge(prev as Record<string, unknown>, v as Record<string, unknown>)
+      : v;
+  }
+  return out;
+};
+const LAZY = join(__dirname, 'lazy');
+const en = readdirSync(LAZY)
+  .filter((f) => f.endsWith('.json'))
+  .reduce<Record<string, unknown>>(
+    (acc, f) => deepMerge(acc, JSON.parse(readFileSync(join(LAZY, f), 'utf8')).en),
+    enWithPw,
+  ) as typeof enWithPw;
 
 // v1.17 (NCC#111) — every literal key passed to `t()` must exist in en.json.
 // A missing key has no fallback: i18next prints the key itself, in every

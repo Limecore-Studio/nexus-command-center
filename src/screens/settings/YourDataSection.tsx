@@ -5,6 +5,7 @@ import { useSessionStore } from '../../store/useSessionStore';
 import { clearAllLocalData } from '../../db/database';
 import { downloadExport, deleteAccount } from '../../lib/dataRights';
 import { Section } from './parts';
+import '../../i18n/lazy/dataRights'; // settings.delete* (loaded with this screen)
 
 // Settings > Your data (GDPR Art. 17 / 20). Split out of Settings.tsx with
 // its state (limecore#12).
@@ -40,12 +41,21 @@ export default function YourDataSection() {
     setDataMsg(null);
     setDeleting(true);
     try {
-      await deleteAccount({
+      const result = await deleteAccount({
         clearLocal: async () => {
           await clearAllLocalData();
           localStorage.clear();
         },
       });
+      // v1.21.1 (limecore#102): each outcome says what actually happened.
+      if (result.deleted === 'nothing') {
+        setDataMsg(t('settings.deleteNeedsSignIn'));
+        setDeleting(false);
+        return;
+      }
+      if (result.deleted === 'local') {
+        await confirm({ message: t('settings.deleteGuestDone'), confirmLabel: t('settings.deleteOk'), destructive: false, alert: true });
+      }
       location.reload();
     } catch (e) {
       setDataMsg(t('settings.deleteAccountFailed', { msg: (e as Error).message }));

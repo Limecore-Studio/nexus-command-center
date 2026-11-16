@@ -1,0 +1,192 @@
+{
+  "en": {
+    "settings": {
+      "deleteNeedsSignIn": "You need to be online and signed in to delete your account. Nothing was deleted.",
+      "deleteGuestDone": "This device's data was erased. There was no account to delete.",
+      "deleteOk": "OK",
+      "yourData": "Your data",
+      "yourDataNote": "Take a copy of everything, or erase it. One account covers Nexus Command Center, LimeLog and StudyDesk.",
+      "exportData": "Export my data",
+      "exporting": "Preparing…",
+      "exportDone": "Saved {{name}}",
+      "exportFailed": "Export failed: {{msg}}",
+      "deleteAccount": "Delete my account",
+      "deletingAccount": "Deleting…",
+      "deleteAccountNote": "Erases your account and all its data, in all three apps, immediately and irreversibly. There is no recovery window.",
+      "deleteAccountConfirm1": "Delete your account and everything in it? This cannot be undone.",
+      "deleteAccountConfirm2": "Last check — this also erases your LimeLog and StudyDesk data. Continue?",
+      "deleteAccountFailed": "Deletion failed: {{msg}}"
+    }
+  },
+  "fi": {
+    "settings": {
+      "deleteNeedsSignIn": "Tilin poistaminen vaatii verkkoyhteyden ja sisäänkirjautumisen. Mitään ei poistettu.",
+      "deleteGuestDone": "Tämän laitteen tiedot poistettiin. Poistettavaa tiliä ei ollut.",
+      "deleteOk": "OK",
+      "yourData": "Omat tietosi",
+      "yourDataNote": "Ota kopio kaikesta tai poista se. Yksi tili kattaa Nexus Command Centerin, LimeLogin ja StudyDeskin.",
+      "exportData": "Vie tietoni",
+      "exporting": "Valmistellaan…",
+      "exportDone": "{{name}} tallennettu",
+      "exportFailed": "Vienti epäonnistui: {{msg}}",
+      "deleteAccount": "Poista tilini",
+      "deletingAccount": "Poistetaan…",
+      "deleteAccountNote": "Poistaa tilisi ja kaikki sen tiedot kaikista kolmesta sovelluksesta välittömästi ja peruuttamattomasti. Palautusaikaa ei ole.",
+      "deleteAccountConfirm1": "Poistetaanko tilisi ja kaikki sen sisältö? Tätä ei voi perua.",
+      "deleteAccountConfirm2": "Viimeinen varmistus — tämä poistaa myös LimeLog- ja StudyDesk-tietosi. Jatketaanko?",
+      "deleteAccountFailed": "Poisto epäonnistui: {{msg}}"
+    }
+  },
+  "fr": {
+    "settings": {
+      "deleteNeedsSignIn": "Vous devez être en ligne et connecté pour supprimer votre compte. Rien n'a été supprimé.",
+      "deleteGuestDone": "Les données de cet appareil ont été effacées. Il n'y avait aucun compte à supprimer.",
+      "deleteOk": "OK",
+      "yourData": "Vos données",
+      "yourDataNote": "Emportez une copie de tout, ou effacez-le. Un seul compte couvre Nexus Command Center, LimeLog et StudyDesk.",
+      "exportData": "Exporter mes données",
+      "exporting": "Préparation…",
+      "exportDone": "{{name}} enregistré",
+      "exportFailed": "Échec de l'export : {{msg}}",
+      "deleteAccount": "Supprimer mon compte",
+      "deletingAccount": "Suppression…",
+      "deleteAccountNote": "Efface votre compte et toutes ses données, dans les trois applications, immédiatement et irréversiblement. Aucun délai de récupération.",
+      "deleteAccountConfirm1": "Supprimer votre compte et tout son contenu ? C'est irréversible.",
+      "deleteAccountConfirm2": "Dernière vérification — cela efface aussi vos données LimeLog et StudyDesk. Continuer ?",
+      "deleteAccountFailed": "Échec de la suppression : {{msg}}"
+    }
+  },
+  "de": {
+    "settings": {
+      "deleteNeedsSignIn": "Zum Löschen deines Kontos musst du online und angemeldet sein. Es wurde nichts gelöscht.",
+      "deleteGuestDone": "Die Daten auf diesem Gerät wurden gelöscht. Es gab kein Konto zum Löschen.",
+      "deleteOk": "OK",
+      "yourData": "Deine Daten",
+      "yourDataNote": "Nimm eine Kopie von allem mit oder lösche es. Ein Konto gilt für Nexus Command Center, LimeLog und StudyDesk.",
+      "exportData": "Meine Daten exportieren",
+      "exporting": "Wird vorbereitet…",
+      "exportDone": "{{name}} gespeichert",
+      "exportFailed": "Export fehlgeschlagen: {{msg}}",
+      "deleteAccount": "Konto löschen",
+      "deletingAccount": "Wird gelöscht…",
+      "deleteAccountNote": "Löscht dein Konto und alle Daten in allen drei Apps, sofort und unwiderruflich. Es gibt keine Wiederherstellungsfrist.",
+      "deleteAccountConfirm1": "Konto und alle Inhalte löschen? Das lässt sich nicht rückgängig machen.",
+      "deleteAccountConfirm2": "Letzte Prüfung — dies löscht auch deine LimeLog- und StudyDesk-Daten. Fortfahren?",
+      "deleteAccountFailed": "Löschen fehlgeschlagen: {{msg}}"
+    }
+  },
+  "es": {
+    "settings": {
+      "deleteNeedsSignIn": "Necesitas estar en línea y con la sesión iniciada para eliminar tu cuenta. No se eliminó nada.",
+      "deleteGuestDone": "Se borraron los datos de este dispositivo. No había ninguna cuenta que eliminar.",
+      "deleteOk": "Aceptar",
+      "yourData": "Tus datos",
+      "yourDataNote": "Llévate una copia de todo o bórralo. Una sola cuenta cubre Nexus Command Center, LimeLog y StudyDesk.",
+      "exportData": "Exportar mis datos",
+      "exporting": "Preparando…",
+      "exportDone": "{{name}} guardado",
+      "exportFailed": "Error al exportar: {{msg}}",
+      "deleteAccount": "Eliminar mi cuenta",
+      "deletingAccount": "Eliminando…",
+      "deleteAccountNote": "Borra tu cuenta y todos sus datos, en las tres apps, de forma inmediata e irreversible. No hay periodo de recuperación.",
+      "deleteAccountConfirm1": "¿Eliminar tu cuenta y todo su contenido? Esto no se puede deshacer.",
+      "deleteAccountConfirm2": "Última comprobación: esto también borra tus datos de LimeLog y StudyDesk. ¿Continuar?",
+      "deleteAccountFailed": "Error al eliminar: {{msg}}"
+    }
+  },
+  "zh": {
+    "settings": {
+      "deleteNeedsSignIn": "删除账户需要联网并登录。未删除任何内容。",
+      "deleteGuestDone": "已清除此设备上的数据。没有可删除的账户。",
+      "deleteOk": "确定",
+      "yourData": "你的数据",
+      "yourDataNote": "带走一份完整副本，或将其抹除。一个账户涵盖 Nexus Command Center、LimeLog 和 StudyDesk。",
+      "exportData": "导出我的数据",
+      "exporting": "正在准备…",
+      "exportDone": "已保存 {{name}}",
+      "exportFailed": "导出失败：{{msg}}",
+      "deleteAccount": "删除我的账户",
+      "deletingAccount": "正在删除…",
+      "deleteAccountNote": "立即且不可逆地抹除你的账户及其全部数据，涵盖三款应用。没有恢复期。",
+      "deleteAccountConfirm1": "删除你的账户及其中所有内容？此操作无法撤销。",
+      "deleteAccountConfirm2": "最后确认 — 这同时会抹除你的 LimeLog 和 StudyDesk 数据。继续吗？",
+      "deleteAccountFailed": "删除失败：{{msg}}"
+    }
+  },
+  "hi": {
+    "settings": {
+      "deleteNeedsSignIn": "अपना खाता हटाने के लिए आपको ऑनलाइन और साइन इन होना होगा। कुछ भी नहीं हटाया गया।",
+      "deleteGuestDone": "इस डिवाइस का डेटा मिटा दिया गया। हटाने के लिए कोई खाता नहीं था।",
+      "deleteOk": "ठीक है",
+      "yourData": "आपका डेटा",
+      "yourDataNote": "सब कुछ की एक प्रति लें, या उसे मिटा दें। एक ही खाता Nexus Command Center, LimeLog और StudyDesk को कवर करता है।",
+      "exportData": "मेरा डेटा निर्यात करें",
+      "exporting": "तैयार किया जा रहा है…",
+      "exportDone": "{{name}} सहेजा गया",
+      "exportFailed": "निर्यात विफल: {{msg}}",
+      "deleteAccount": "मेरा खाता हटाएँ",
+      "deletingAccount": "हटाया जा रहा है…",
+      "deleteAccountNote": "आपका खाता और उसका सारा डेटा तीनों ऐप्स में तुरंत और स्थायी रूप से मिटा देता है। पुनर्प्राप्ति की कोई अवधि नहीं है।",
+      "deleteAccountConfirm1": "अपना खाता और उसमें मौजूद सब कुछ हटाएँ? यह पूर्ववत नहीं किया जा सकता।",
+      "deleteAccountConfirm2": "अंतिम पुष्टि — इससे आपका LimeLog और StudyDesk डेटा भी मिट जाएगा। जारी रखें?",
+      "deleteAccountFailed": "हटाना विफल: {{msg}}"
+    }
+  },
+  "pt": {
+    "settings": {
+      "deleteNeedsSignIn": "Você precisa estar online e conectado para excluir sua conta. Nada foi excluído.",
+      "deleteGuestDone": "Os dados deste dispositivo foram apagados. Não havia conta para excluir.",
+      "deleteOk": "OK",
+      "yourData": "Seus dados",
+      "yourDataNote": "Leve uma cópia de tudo ou apague. Uma conta cobre o Nexus Command Center, o LimeLog e o StudyDesk.",
+      "exportData": "Exportar meus dados",
+      "exporting": "Preparando…",
+      "exportDone": "{{name}} salvo",
+      "exportFailed": "Falha na exportação: {{msg}}",
+      "deleteAccount": "Excluir minha conta",
+      "deletingAccount": "Excluindo…",
+      "deleteAccountNote": "Apaga sua conta e todos os dados dela, nos três aplicativos, de forma imediata e irreversível. Não há período de recuperação.",
+      "deleteAccountConfirm1": "Excluir sua conta e tudo o que há nela? Isso não pode ser desfeito.",
+      "deleteAccountConfirm2": "Última verificação — isso também apaga seus dados do LimeLog e do StudyDesk. Continuar?",
+      "deleteAccountFailed": "Falha na exclusão: {{msg}}"
+    }
+  },
+  "id": {
+    "settings": {
+      "deleteNeedsSignIn": "Anda harus online dan masuk untuk menghapus akun. Tidak ada yang dihapus.",
+      "deleteGuestDone": "Data perangkat ini telah dihapus. Tidak ada akun untuk dihapus.",
+      "deleteOk": "OK",
+      "yourData": "Data Anda",
+      "yourDataNote": "Ambil salinan semuanya, atau hapus. Satu akun mencakup Nexus Command Center, LimeLog, dan StudyDesk.",
+      "exportData": "Ekspor data saya",
+      "exporting": "Menyiapkan…",
+      "exportDone": "{{name}} tersimpan",
+      "exportFailed": "Ekspor gagal: {{msg}}",
+      "deleteAccount": "Hapus akun saya",
+      "deletingAccount": "Menghapus…",
+      "deleteAccountNote": "Menghapus akun Anda dan seluruh datanya, di ketiga aplikasi, secara langsung dan permanen. Tidak ada masa pemulihan.",
+      "deleteAccountConfirm1": "Hapus akun Anda beserta seluruh isinya? Tindakan ini tidak dapat dibatalkan.",
+      "deleteAccountConfirm2": "Pemeriksaan terakhir — ini juga menghapus data LimeLog dan StudyDesk Anda. Lanjutkan?",
+      "deleteAccountFailed": "Penghapusan gagal: {{msg}}"
+    }
+  },
+  "ar": {
+    "settings": {
+      "deleteNeedsSignIn": "يجب أن تكون متصلاً بالإنترنت ومسجّلاً الدخول لحذف حسابك. لم يُحذف أي شيء.",
+      "deleteGuestDone": "تم مسح بيانات هذا الجهاز. لم يكن هناك حساب لحذفه.",
+      "deleteOk": "حسنًا",
+      "yourData": "بياناتك",
+      "yourDataNote": "خُذ نسخة من كل شيء، أو امحُه. حساب واحد يغطّي Nexus Command Center وLimeLog وStudyDesk.",
+      "exportData": "تصدير بياناتي",
+      "exporting": "جارٍ التحضير…",
+      "exportDone": "تم حفظ {{name}}",
+      "exportFailed": "فشل التصدير: {{msg}}",
+      "deleteAccount": "حذف حسابي",
+      "deletingAccount": "جارٍ الحذف…",
+      "deleteAccountNote": "يمحو حسابك وكل بياناته في التطبيقات الثلاثة فورًا وبلا رجعة. لا توجد مهلة للاسترجاع.",
+      "deleteAccountConfirm1": "حذف حسابك وكل ما فيه؟ لا يمكن التراجع عن هذا.",
+      "deleteAccountConfirm2": "تأكيد أخير — سيمحو هذا أيضًا بيانات LimeLog وStudyDesk. المتابعة؟",
+      "deleteAccountFailed": "فشل الحذف: {{msg}}"
+    }
+  }
+}

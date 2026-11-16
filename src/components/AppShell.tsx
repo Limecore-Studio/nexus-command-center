@@ -1,5 +1,4 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import PolicyUpdatedNote from './PolicyUpdatedNote';
 import { useSessionStore } from '../store/useSessionStore';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -7,7 +6,6 @@ import { Capacitor } from '@capacitor/core';
 import BottomTabBar from './BottomTabBar';
 import SideNav from './SideNav';
 import OfflineBanner from './OfflineBanner';
-import FdroidUpdateNote from './FdroidUpdateNote';
 import { useShellTier, useSidebarRail } from '../lib/useShell';
 import QuickLogFAB from './QuickLogFAB';
 import PageTransition from './ui/PageTransition';
@@ -25,13 +23,16 @@ import { useInsightsStore } from '../store/useInsightsStore';
 import { useSavingsGoalsStore } from '../store/useSavingsGoalsStore';
 import { useHabitsStore } from '../store/useHabitsStore';
 
+// v1.21 (NCC#245): once-only notes, usually rendering nothing, load as
+// chunks after the first frame instead of in the startup bundle.
+const PolicyUpdatedNote = lazy(() => import('./PolicyUpdatedNote'));
+const FdroidUpdateNote = lazy(() => import('./FdroidUpdateNote'));
+
 // v1.19 (NCC#202): the recurring engine loads on demand, outside the startup
 // bundle.
 const recurringStore = () => import('../store/useRecurringStore').then((m) => m.useRecurringStore.getState());
 import { checkBudgetThresholds } from '../lib/budgetAlerts';
 import { reconcileTaskReminders } from '../lib/taskReminders';
-import { runPortfolioEodTick } from '../lib/portfolioEod';
-import { runNewsAlertsTick } from '../lib/newsAlerts';
 
 // v1.18.1 (NCC#173) — the two quick-entry sheets open only on a tap or a
 // shortcut, so they are lazy chunks like the screens, kept out of the startup
@@ -201,12 +202,12 @@ export default function AppShell() {
       // ET alarms based on trading-day check + current holdings + Settings
       // toggle. Re-runs on every portfolio refresh too so the backup body
       // stays close to truth.
-      void runPortfolioEodTick();
+      void import('../lib/portfolioEod').then((m) => m.runPortfolioEodTick());
       // News alerts — fires for any unseen owned-ticker headlines or
       // index ±1.5% move detected since last run. On cold start there's
       // usually no fresh news yet (refresh hasn't run), so this is mostly
       // a safety net; the heavier work happens after refreshPortfolio.
-      void runNewsAlertsTick();
+      void import('../lib/newsAlerts').then((m) => m.runNewsAlertsTick());
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberate mount-only cold-start hydration sequence; all referenced load*/refresh* are stable Zustand actions, adding them wouldn't change behavior but the `[]` documents the "runs once per AppShell mount" intent
   }, []);
@@ -367,7 +368,7 @@ export default function AppShell() {
       <div className="flex flex-1 min-w-0 flex-col">
         <OfflineBanner />
         {/* v1.16 (limecore#16) — once, for people who used the app under the old policy. */}
-        <PolicyUpdatedNote />
+        <Suspense fallback={null}><PolicyUpdatedNote /></Suspense>
         {/* v1.20 (limecore#71) — offers error reports once, on the second
             signed-in launch; never to a guest (no session). It decides itself. */}
         {signedIn && <Suspense fallback={null}><ReportPromptCard /></Suspense>}
@@ -408,7 +409,7 @@ export default function AppShell() {
                 motion meaningful per the v1.2 design brief. */}
             {/* v1.16 (#48) — Android only, once a day, off in Settings. Renders
                 nothing unless F-Droid has a newer build than this one. */}
-            <FdroidUpdateNote />
+            <Suspense fallback={null}><FdroidUpdateNote /></Suspense>
             <PageTransition>
               {/* v1.17 (limecore#13) — screens are lazy chunks. The boundary
                   sits here, inside the shell, so the tab bar and side nav

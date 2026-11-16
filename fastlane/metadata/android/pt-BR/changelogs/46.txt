@@ -1,0 +1,3 @@
+Mude de moeda e mantenha seus números.
+
+Ao mudar sua moeda base, suas transações, orçamentos e valores recorrentes são convertidos pela cotação do dia, depois que você confirma. Todos os dispositivos conectados acompanham a mudança. As metas de patrimônio líquido ainda não são convertidas. No app para desktop, os dados de mercado voltam a carregar. O app também abre um pouco mais rápido.

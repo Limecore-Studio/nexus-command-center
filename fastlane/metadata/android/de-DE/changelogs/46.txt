@@ -1,0 +1,3 @@
+Währung wechseln, Zahlen behalten.
+
+Wenn du deine Basiswährung änderst, werden Buchungen, Budgets und wiederkehrende Beträge nach deiner Bestätigung zum heutigen Kurs umgerechnet. Alle angemeldeten Geräte übernehmen die Änderung. Ziele für das Nettovermögen werden noch nicht umgerechnet. In der Desktop-App laden Marktdaten wieder. Die App startet außerdem etwas schneller.

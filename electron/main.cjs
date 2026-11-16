@@ -48,6 +48,7 @@ const http = require('node:http');
 const { pathToFileURL } = require('node:url');
 const { setupUpdates } = require('./updater.cjs');
 const { createAuthState } = require('./authState.cjs');
+const { mapProxyRequest, upstreamHeaders, YAHOO_CONSENT_URL } = require('./marketProxy.cjs');
 
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 const ICON_PATH = path.join(__dirname, '..', 'resources', 'icon.ico');
@@ -115,8 +116,46 @@ function resolveRequest(requestUrl) {
   return path.join(DIST_DIR, 'index.html');
 }
 
+// v1.21 (NCC#238) — market data. The finance clients ask for the web edition's
+// same-origin proxy paths; see electron/marketProxy.cjs for why, and for the
+// allow-list. `credentials: 'include'` makes net.fetch use the default
+// session's cookie jar, so the Yahoo consent cookies set by the crumb
+// handshake persist and are sent with the quoteSummary calls that need them.
+const PROXY_TIMEOUT_MS = 15_000;
+
+async function proxyMarketRequest(request, mapped) {
+  if (request.method !== 'GET') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+  const headers = upstreamHeaders(request.headers, mapped.yahoo);
+  const fetchOpts = { headers, credentials: 'include', signal: AbortSignal.timeout(PROXY_TIMEOUT_MS) };
+  try {
+    if (mapped.crumb) {
+      // The native path's step 1: visit the consent endpoint so Yahoo sets the
+      // cookies the crumb is tied to. Its body and status do not matter.
+      await net.fetch(YAHOO_CONSENT_URL, { ...fetchOpts, redirect: 'follow' }).catch(() => {});
+    }
+    const upstream = await net.fetch(mapped.target, fetchOpts);
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: { 'Content-Type': upstream.headers.get('content-type') ?? 'application/octet-stream' },
+    });
+  } catch (err) {
+    log(`market proxy failed: ${new URL(mapped.target).host} ${err && err.message}`);
+    return new Response(JSON.stringify({ error: 'upstream unreachable' }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
+
 function registerProtocolHandler() {
   protocol.handle(SCHEME, async (request) => {
+    // Before the SPA fallback: an allow-listed proxy path must never be
+    // answered with index.html (that was the NCC#238 bug).
+    const mapped = mapProxyRequest(request.url, APP_ORIGIN);
+    if (mapped) return proxyMarketRequest(request, mapped);
+
     const filePath = resolveRequest(request.url);
     if (!filePath) return new Response('Forbidden', { status: 403 });
 

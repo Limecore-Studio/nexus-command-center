@@ -20,10 +20,7 @@ import { useBraindumpStore } from './store/useBraindumpStore';
 import { isGuestMode } from './lib/guestMode';
 import { GUEST_ID, setAdoptionStatus, useAdoptionGate } from './lib/adoptionGate';
 import { evaluateAdoption, evaluateGuestAdoption } from './lib/adoptionChoice';
-import ReferralPrompt from './components/ReferralPrompt';
-import NotificationsExplainerModal from './components/NotificationsExplainerModal';
 import LockScreen from './screens/LockScreen';
-import Login from './screens/auth/Login';
 import AppShell, { SheetBoundary } from './components/AppShell';
 import Dashboard from './screens/Dashboard';
 import { onNotificationTap, scheduleWeeklyReview } from './lib/weeklyNotification';
@@ -41,9 +38,15 @@ import { desktop } from './lib/desktop';
 import { checkForDesktopUpdate } from './lib/desktopUpdate';
 
 // v1.17 (limecore#13): every screen a launch cannot open on is its own chunk,
-// loaded the first time it is visited. Login, the lock screen and the
-// Dashboard stay in the entry chunk because one of them is always the first
-// thing a launch shows.
+// loaded the first time it is visited. The lock screen and the Dashboard stay
+// in the entry chunk because one of them is the first thing almost every launch
+// shows. v1.21 (NCC#245): Login joins Signup as a chunk (as in StudyDesk
+// and LimeLog): only a signed-out launch shows it, and it loads from local
+// assets in a frame. So do the once-only prompts, which decide for themselves
+// whether to render and usually render nothing.
+const Login = lazy(() => import('./screens/auth/Login'));
+const ReferralPrompt = lazy(() => import('./components/ReferralPrompt'));
+const NotificationsExplainerModal = lazy(() => import('./components/NotificationsExplainerModal'));
 const Signup = lazy(() => import('./screens/auth/Signup'));
 const Onboarding = lazy(() => import('./screens/Onboarding'));
 const FinanceOverview = lazy(() => import('./screens/finance/FinanceOverview'));
@@ -556,12 +559,16 @@ export default function App() {
     <>
       {/* Item 8 — asks once per account, inside the account-age window only.
           Non-blocking by design; see the component. */}
-      <ReferralPrompt />
+      <Suspense fallback={null}>
+        <ReferralPrompt />
+      </Suspense>
       {/* First-launch (post-upgrade) explainer for notifications. Renders
           nothing once the user has dismissed it once via either path
           ("Enable Notifications" or "Not Now"). Native-only — see the
           component for the rationale. */}
-      <NotificationsExplainerModal />
+      <Suspense fallback={null}>
+        <NotificationsExplainerModal />
+      </Suspense>
       <NotificationBridge />
       <Routes>
         <Route element={<AppShell />}>

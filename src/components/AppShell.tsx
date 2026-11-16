@@ -70,6 +70,7 @@ const RESUME_REFRESH_THRESHOLD_MS = 20 * 60 * 1000;
 
 // v1.20 (limecore#71): almost every launch never shows it.
 const ReportPromptCard = lazy(() => import('./ReportPromptCard'));
+const ConsentPromptCard = lazy(() => import('./ConsentPromptCard'));
 
 export default function AppShell() {
   const signedIn = useSessionStore((s) => !!s.session);
@@ -372,6 +373,9 @@ export default function AppShell() {
         {/* v1.20 (limecore#71) — offers error reports once, on the second
             signed-in launch; never to a guest (no session). It decides itself. */}
         {signedIn && <Suspense fallback={null}><ReportPromptCard /></Suspense>}
+        {/* v1.21.1 (limecore#87) — the opt-in question, once per owner; keyed
+            so signing in asks the account's own question. It decides itself. */}
+        <Suspense fallback={null}><ConsentPromptCard key={signedIn ? 'account' : 'guest'} /></Suspense>
         {/* pb-32 (128px) gives clear space below the last card so it isn't clipped
           * by the fixed BottomTabBar (which is ~80px + its own safe-bottom inset). */}
         {/* v1.2 follow-up — pb-32 → pb-44. The floating panel tab bar sits

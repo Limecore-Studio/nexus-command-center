@@ -1,0 +1,152 @@
+{
+  "en": {
+    "consent": {
+      "updateTitle": "Check F-Droid for updates?",
+      "updateBody": "Once a day, NCC can ask f-droid.org whether a newer version is out. Nothing about you is sent. It stays off unless you say yes, and you can change it in Settings.",
+      "opensTitle": "Note the days you open NCC?",
+      "opensBody": "Once a day, NCC can record that you opened it: the date, the app version and the platform, linked to your account. It helps us see whether the app is useful enough to come back to. It stays off unless you say yes, and you can change it in Settings.",
+      "yes": "Yes",
+      "no": "No thanks",
+      "step": "Optional · {{n}} of {{total}}"
+    },
+    "settings": {
+      "appOpens": "Note the days I open NCC",
+      "appOpensNote": "Once a day: the date, the app version and the platform, linked to your account. Nothing else."
+    }
+  },
+  "fi": {
+    "consent": {
+      "updateTitle": "Tarkistetaanko päivitykset F-Droidista?",
+      "updateBody": "NCC voi kerran päivässä kysyä f-droid.orgista, onko uudempi versio saatavilla. Sinusta ei lähetetä mitään. Tämä on pois päältä, ellet sano kyllä, ja voit muuttaa sen asetuksissa.",
+      "opensTitle": "Kirjataanko päivät, joina avaat NCC:n?",
+      "opensBody": "NCC voi kerran päivässä kirjata, että avasit sen: päivämäärän, sovelluksen version ja alustan tiliisi liitettynä. Näin näemme, palataanko sovellukseen. Tämä on pois päältä, ellet sano kyllä, ja voit muuttaa sen asetuksissa.",
+      "yes": "Kyllä",
+      "no": "Ei kiitos",
+      "step": "Valinnainen · {{n}}/{{total}}"
+    },
+    "settings": {
+      "appOpens": "Kirjaa päivät, joina avaan NCC:n",
+      "appOpensNote": "Kerran päivässä: päivämäärä, sovelluksen versio ja alusta tiliisi liitettynä. Ei muuta."
+    }
+  },
+  "fr": {
+    "consent": {
+      "updateTitle": "Vérifier les mises à jour sur F-Droid ?",
+      "updateBody": "Une fois par jour, NCC peut demander à f-droid.org si une nouvelle version existe. Rien vous concernant n’est envoyé. C’est désactivé tant que vous ne dites pas oui, et modifiable dans les Réglages.",
+      "opensTitle": "Noter les jours où vous ouvrez NCC ?",
+      "opensBody": "Une fois par jour, NCC peut enregistrer que vous l’avez ouvert : la date, la version de l’app et la plateforme, liées à votre compte. Cela nous aide à savoir si l’app donne envie d’y revenir. C’est désactivé tant que vous ne dites pas oui, et modifiable dans les Réglages.",
+      "yes": "Oui",
+      "no": "Non merci",
+      "step": "Facultatif · {{n}} sur {{total}}"
+    },
+    "settings": {
+      "appOpens": "Noter les jours où j’ouvre NCC",
+      "appOpensNote": "Une fois par jour : la date, la version de l’app et la plateforme, liées à votre compte. Rien d’autre."
+    }
+  },
+  "de": {
+    "consent": {
+      "updateTitle": "Bei F-Droid nach Updates suchen?",
+      "updateBody": "Einmal am Tag kann NCC bei f-droid.org nachfragen, ob es eine neuere Version gibt. Dabei wird nichts über dich gesendet. Es bleibt aus, bis du Ja sagst, und du kannst es in den Einstellungen ändern.",
+      "opensTitle": "Die Tage erfassen, an denen du NCC öffnest?",
+      "opensBody": "Einmal am Tag kann NCC festhalten, dass du die App geöffnet hast: Datum, App-Version und Plattform, verknüpft mit deinem Konto. So sehen wir, ob die App nützlich genug ist, um wiederzukommen. Es bleibt aus, bis du Ja sagst, und du kannst es in den Einstellungen ändern.",
+      "yes": "Ja",
+      "no": "Nein, danke",
+      "step": "Optional · {{n}} von {{total}}"
+    },
+    "settings": {
+      "appOpens": "Tage erfassen, an denen ich NCC öffne",
+      "appOpensNote": "Einmal am Tag: Datum, App-Version und Plattform, verknüpft mit deinem Konto. Sonst nichts."
+    }
+  },
+  "es": {
+    "consent": {
+      "updateTitle": "¿Buscar actualizaciones en F-Droid?",
+      "updateBody": "Una vez al día, NCC puede preguntar a f-droid.org si hay una versión nueva. No se envía nada sobre ti. Está desactivado a menos que digas que sí, y puedes cambiarlo en Ajustes.",
+      "opensTitle": "¿Registrar los días en que abres NCC?",
+      "opensBody": "Una vez al día, NCC puede registrar que lo abriste: la fecha, la versión de la app y la plataforma, vinculadas a tu cuenta. Nos ayuda a saber si la app es lo bastante útil como para volver. Está desactivado a menos que digas que sí, y puedes cambiarlo en Ajustes.",
+      "yes": "Sí",
+      "no": "No, gracias",
+      "step": "Opcional · {{n}} de {{total}}"
+    },
+    "settings": {
+      "appOpens": "Registrar los días en que abro NCC",
+      "appOpensNote": "Una vez al día: la fecha, la versión de la app y la plataforma, vinculadas a tu cuenta. Nada más."
+    }
+  },
+  "zh": {
+    "consent": {
+      "updateTitle": "要在 F-Droid 上检查更新吗？",
+      "updateBody": "NCC 每天可以向 f-droid.org 查询一次是否有新版本。不会发送任何关于你的信息。除非你同意，否则保持关闭，你可以在设置中更改。",
+      "opensTitle": "要记录你打开 NCC 的日期吗？",
+      "opensBody": "NCC 每天可以记录一次你打开了它：日期、应用版本和平台，并与你的账户关联。这能帮助我们了解应用是否值得回来使用。除非你同意，否则保持关闭，你可以在设置中更改。",
+      "yes": "是",
+      "no": "不用了",
+      "step": "可选 · 第 {{n}} 项，共 {{total}} 项"
+    },
+    "settings": {
+      "appOpens": "记录我打开 NCC 的日期",
+      "appOpensNote": "每天一次：日期、应用版本和平台，与你的账户关联。不含其他内容。"
+    }
+  },
+  "hi": {
+    "consent": {
+      "updateTitle": "F-Droid पर अपडेट जाँचें?",
+      "updateBody": "दिन में एक बार NCC f-droid.org से पूछ सकता है कि नया संस्करण आया है या नहीं। आपके बारे में कुछ भी नहीं भेजा जाता। जब तक आप हाँ नहीं कहते, यह बंद रहता है, और आप इसे सेटिंग्स में बदल सकते हैं।",
+      "opensTitle": "आप NCC किन दिनों खोलते हैं, यह दर्ज करें?",
+      "opensBody": "दिन में एक बार NCC दर्ज कर सकता है कि आपने इसे खोला: तारीख, ऐप संस्करण और प्लेटफ़ॉर्म, आपके खाते से जुड़े। इससे हमें पता चलता है कि ऐप दोबारा इस्तेमाल करने लायक है या नहीं। जब तक आप हाँ नहीं कहते, यह बंद रहता है, और आप इसे सेटिंग्स में बदल सकते हैं।",
+      "yes": "हाँ",
+      "no": "नहीं, धन्यवाद",
+      "step": "वैकल्पिक · {{total}} में से {{n}}"
+    },
+    "settings": {
+      "appOpens": "मैं NCC किन दिनों खोलता/खोलती हूँ, दर्ज करें",
+      "appOpensNote": "दिन में एक बार: तारीख, ऐप संस्करण और प्लेटफ़ॉर्म, आपके खाते से जुड़े। और कुछ नहीं।"
+    }
+  },
+  "pt": {
+    "consent": {
+      "updateTitle": "Verificar atualizações no F-Droid?",
+      "updateBody": "Uma vez por dia, o NCC pode perguntar ao f-droid.org se há uma versão nova. Nada sobre você é enviado. Fica desativado a menos que você diga sim, e dá para mudar em Configurações.",
+      "opensTitle": "Registrar os dias em que você abre o NCC?",
+      "opensBody": "Uma vez por dia, o NCC pode registrar que você o abriu: a data, a versão do app e a plataforma, vinculadas à sua conta. Isso nos ajuda a saber se o app vale a pena para voltar. Fica desativado a menos que você diga sim, e dá para mudar em Configurações.",
+      "yes": "Sim",
+      "no": "Não, obrigado",
+      "step": "Opcional · {{n}} de {{total}}"
+    },
+    "settings": {
+      "appOpens": "Registrar os dias em que abro o NCC",
+      "appOpensNote": "Uma vez por dia: a data, a versão do app e a plataforma, vinculadas à sua conta. Nada mais."
+    }
+  },
+  "id": {
+    "consent": {
+      "updateTitle": "Periksa pembaruan di F-Droid?",
+      "updateBody": "Sekali sehari, NCC dapat menanyakan ke f-droid.org apakah ada versi baru. Tidak ada data tentang Anda yang dikirim. Fitur ini nonaktif kecuali Anda setuju, dan bisa diubah di Pengaturan.",
+      "opensTitle": "Catat hari-hari Anda membuka NCC?",
+      "opensBody": "Sekali sehari, NCC dapat mencatat bahwa Anda membukanya: tanggal, versi aplikasi, dan platform, terhubung ke akun Anda. Ini membantu kami melihat apakah aplikasi cukup berguna untuk dibuka lagi. Fitur ini nonaktif kecuali Anda setuju, dan bisa diubah di Pengaturan.",
+      "yes": "Ya",
+      "no": "Tidak, terima kasih",
+      "step": "Opsional · {{n}} dari {{total}}"
+    },
+    "settings": {
+      "appOpens": "Catat hari-hari saya membuka NCC",
+      "appOpensNote": "Sekali sehari: tanggal, versi aplikasi, dan platform, terhubung ke akun Anda. Tidak ada yang lain."
+    }
+  },
+  "ar": {
+    "consent": {
+      "updateTitle": "هل تريد التحقق من التحديثات على F-Droid؟",
+      "updateBody": "مرة يوميًا، يمكن لـ NCC أن يسأل f-droid.org عن وجود إصدار أحدث. لا يُرسل أي شيء عنك. يبقى هذا متوقفًا ما لم توافق، ويمكنك تغييره من الإعدادات.",
+      "opensTitle": "هل تريد تسجيل الأيام التي تفتح فيها NCC؟",
+      "opensBody": "مرة يوميًا، يمكن لـ NCC أن يسجّل أنك فتحته: التاريخ وإصدار التطبيق والمنصة، مرتبطة بحسابك. يساعدنا ذلك على معرفة ما إذا كان التطبيق مفيدًا بما يكفي للعودة إليه. يبقى هذا متوقفًا ما لم توافق، ويمكنك تغييره من الإعدادات.",
+      "yes": "نعم",
+      "no": "لا، شكرًا",
+      "step": "اختياري · {{n}} من {{total}}"
+    },
+    "settings": {
+      "appOpens": "سجّل الأيام التي أفتح فيها NCC",
+      "appOpensNote": "مرة يوميًا: التاريخ وإصدار التطبيق والمنصة، مرتبطة بحسابك. لا شيء غير ذلك."
+    }
+  }
+}

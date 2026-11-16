@@ -11,6 +11,7 @@
 
 import { errorReportsEnabled, setErrorReportsEnabled } from './errorReports';
 import { policyNoticeDue } from './policyNotice';
+import { pendingConsent } from './usageConsent';
 
 const ASKED = 'nexus.errorReportsAsked'; // 'yes' | 'no' once answered
 const LAUNCHES = 'nexus.errorReportsLaunches'; // signed-in launches counted so far
@@ -38,6 +39,8 @@ export function shouldAskForReports(): boolean {
       return false;
     }
     if (policyNoticeDue()) return false;
+    // v1.21.1 (limecore#87): never on top of the opt-in question.
+    if (pendingConsent().length > 0) return false;
     return (Number(localStorage.getItem(LAUNCHES)) || 0) >= 2;
   } catch {
     return false;

@@ -10,10 +10,13 @@
 //     package F-Droid does not know all mean "no notice", never an error.
 //   - Never on the startup path: the caller fires it after first paint.
 //   - Dismissing hides that version only; the next one is announced again.
-//   - A Settings switch (default on) that stops the request entirely, as the
-//     privacy policy promises (#50). Off means no network call, not merely no
-//     notice. The request carries nothing about the user: it is a plain GET for
-//     a public package record.
+//   - A Settings switch that stops the request entirely, as the privacy
+//     policy promises (#50). Off means no network call, not merely no notice.
+//     The request carries nothing about the user: it is a plain GET for a
+//     public package record.
+//   - v1.21.1 (limecore#87): opt-in, off until the owner says yes
+//     (lib/usageConsent.ts). The old device-wide "on unless 'off'" key is no
+//     longer read, so existing installs count as not asked.
 //
 // Desktop has its own updater (desktopUpdate.ts) and the web build is always
 // current, so this is Android only. The request goes through CapacitorHttp
@@ -22,15 +25,15 @@
 import { useSyncExternalStore } from 'react';
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { consented, setConsent } from './usageConsent';
 
 const PACKAGE = 'com.limecore.nexus';
 export const FDROID_PAGE = `https://f-droid.org/packages/${PACKAGE}/`;
 const API = `https://f-droid.org/api/v1/packages/${PACKAGE}`;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Device-local, deliberately: whether this phone talks to f-droid.org is a
-// property of the phone, not of the account, so it is not synced.
-const KEY_ENABLED = 'nexus.fdroidCheck'; // 'off' disables; anything else is on
+// The consent is per owner (usageConsent); the cache and the dismissal stay
+// device-local.
 const KEY_LAST = 'nexus.fdroidLast'; // { at, code, name } of the last answer
 const KEY_DISMISSED = 'nexus.fdroidDismissed'; // versionCode the user dismissed
 
@@ -74,7 +77,7 @@ function write(key: string, value: string | null): void {
 }
 
 // ── A tiny store, so the note and the Settings switch agree ───────────────
-let state: State = { enabled: read(KEY_ENABLED) !== 'off', available: null };
+let state: State = { enabled: consented('updateCheck'), available: null };
 const listeners = new Set<() => void>();
 function set(next: Partial<State>): void {
   state = { ...state, ...next };
@@ -89,7 +92,7 @@ export function useFdroidUpdate(): State {
 }
 
 export function setUpdateCheckEnabled(on: boolean): void {
-  write(KEY_ENABLED, on ? null : 'off');
+  setConsent('updateCheck', on);
   // Off also forgets what was known, so turning it back on starts clean
   // rather than resurfacing a stale answer from before.
   if (!on) write(KEY_LAST, null);
@@ -139,6 +142,8 @@ export async function checkFdroidUpdate({
   platform = Capacitor.getPlatform(),
 }: { now?: number; http?: HttpLike; app?: AppLike; platform?: string } = {}): Promise<UpdateAvailable | null> {
   try {
+    // Read now, not at load: the owner may have changed since.
+    if (state.enabled !== consented('updateCheck')) set({ enabled: consented('updateCheck') });
     if (platform !== 'android' || !state.enabled) return null;
     const latest = await latestOnFdroid(now, http);
     if (!latest) return null;
@@ -151,7 +156,7 @@ export async function checkFdroidUpdate({
       latest: { code: latest.code, name: latest.name },
     };
     // The switch may have been turned off while the request was in flight.
-    if (!state.enabled) return null;
+    if (!consented('updateCheck')) return null;
     set({ available });
     return available;
   } catch {
@@ -161,5 +166,5 @@ export async function checkFdroidUpdate({
 
 /** Test-only: forget module state between cases. */
 export function resetFdroidUpdateForTests(): void {
-  state = { enabled: read(KEY_ENABLED) !== 'off', available: null };
+  state = { enabled: consented('updateCheck'), available: null };
 }

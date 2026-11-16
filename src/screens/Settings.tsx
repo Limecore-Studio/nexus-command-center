@@ -18,7 +18,9 @@ import { useAuthStore } from '../store/useAuthStore';
 import { APP_LOCK_APPLIES } from '../lib/isDesktop';
 import { IS_DESKTOP } from '../lib/desktop';
 import { checkForDesktopUpdate, runDesktopUpdateAction, useDesktopUpdate } from '../lib/desktopUpdate';
-import { setUpdateCheckEnabled, useFdroidUpdate } from '../lib/fdroidUpdate';
+import { setUpdateCheckEnabled } from '../lib/fdroidUpdate';
+import { setConsent, useConsent } from '../lib/usageConsent';
+import '../i18n/lazy/consent'; // settings.appOpens* (loaded with this screen)
 import { useSyncStore } from '../store/useSyncStore';
 import { useRealtimeState, type RealtimeState } from '../lib/realtimeState';
 
@@ -551,6 +553,7 @@ export default function Settings() {
           {/* v1.16 (limecore#16) — off by default, accounts only; the note is
               the consent text the privacy policy (#50) relies on. */}
           <ErrorReportsToggle />
+          {user && <AppOpensToggle />}
           <a
             className="py-2 flex items-center justify-between gap-3 active:opacity-80"
             href="https://limecore.dev/privacy"
@@ -804,13 +807,28 @@ function DesktopUpdateRow() {
 // only, because it is the only build F-Droid ships.
 function FdroidUpdateToggle() {
   const { t } = useTranslation();
-  const { enabled } = useFdroidUpdate();
+  // v1.21.1 (limecore#87): opt-in, per owner; off until answered yes.
+  const enabled = useConsent('updateCheck');
   return (
     <Toggle
       label={t('settings.fdroidCheck')}
       sub={t('settings.fdroidCheckNote')}
       value={enabled}
       onChange={setUpdateCheckEnabled}
+    />
+  );
+}
+
+// v1.21.1 (limecore#87) — the daily app-open record, opt-in per account.
+function AppOpensToggle() {
+  const { t } = useTranslation();
+  const on = useConsent('appOpens');
+  return (
+    <Toggle
+      label={t('settings.appOpens')}
+      sub={t('settings.appOpensNote')}
+      value={on}
+      onChange={(v) => setConsent('appOpens', v)}
     />
   );
 }

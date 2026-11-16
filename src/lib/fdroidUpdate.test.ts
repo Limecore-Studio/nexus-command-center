@@ -31,8 +31,16 @@ const app = { getInfo: async () => ({ version: '1.12.1', build: '34' }) };
 const run = (http: ReturnType<typeof fdroid>, over: Record<string, unknown> = {}) =>
   checkFdroidUpdate({ now: NOW, http, app, platform: 'android', ...over });
 
-beforeEach(() => {
+// v1.21.1 (limecore#87): the check is opt-in. Most cases run as an owner
+// (the guest here) who said yes; the consent cases below start unasked.
+const { setConsent } = await import('./usageConsent');
+function clearButConsent() {
   localStorage.clear();
+  setConsent('updateCheck', true);
+}
+
+beforeEach(() => {
+  clearButConsent();
   resetFdroidUpdateForTests();
 });
 
@@ -45,7 +53,7 @@ describe('checkFdroidUpdate', () => {
 
   it('says nothing when this build is current or newer', async () => {
     expect(await run(fdroid(answer(34, '1.12.1')))).toBeNull();
-    localStorage.clear();
+    clearButConsent();
     expect(await run(fdroid(answer(33, '1.12.0')))).toBeNull();
   });
 
@@ -67,9 +75,9 @@ describe('checkFdroidUpdate', () => {
 
   it('is silent on an HTTP error or a malformed answer', async () => {
     expect(await run(fdroid(answer(38, 'x'), { status: 404 }))).toBeNull();
-    localStorage.clear();
+    clearButConsent();
     expect(await run(fdroid({ suggestedVersionCode: 'soon' }))).toBeNull();
-    localStorage.clear();
+    clearButConsent();
     expect(await run(fdroid('not json'))).toBeNull();
   });
 
@@ -122,5 +130,24 @@ describe('dismissal', () => {
       current: { code: 34, name: '1.12.1' },
       latest: { code: 39, name: '1.16.0' },
     });
+  });
+});
+
+describe('consent (limecore#87)', () => {
+  it('not asked means no request: existing installs start off', async () => {
+    localStorage.clear();
+    localStorage.setItem('nexus.fdroidCheck', 'on'); // the old key is ignored
+    resetFdroidUpdateForTests();
+    const http = fdroid(answer(38, '1.15.1'));
+    expect(await run(http)).toBeNull();
+    expect(http.calls).toHaveLength(0);
+  });
+
+  it('is kept per owner: another owner on this device is not covered', async () => {
+    setConsent('updateCheck', true, 'someone-else');
+    localStorage.removeItem('nexus.consent.updateCheck.guest');
+    const http = fdroid(answer(38, '1.15.1'));
+    expect(await run(http)).toBeNull();
+    expect(http.calls).toHaveLength(0);
   });
 });

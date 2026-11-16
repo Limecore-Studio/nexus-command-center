@@ -8,7 +8,24 @@ const h = vi.hoisted(() => ({
   missingColumn: false,
   failRead: false,
   calls: [] as string[],
+  // NCC#266: make the Dexie rewrite throw; optionally go offline as it does.
+  failApply: false,
+  offlineOnApply: false,
 }));
+
+vi.mock('./currencyRebase', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./currencyRebase')>();
+  return {
+    ...real,
+    applyCurrencyRebase: async (plan: Parameters<typeof real.applyCurrencyRebase>[0]) => {
+      if (h.failApply) {
+        if (h.offlineOnApply) h.failRead = true;
+        throw new Error('QuotaExceededError');
+      }
+      return real.applyCurrencyRebase(plan);
+    },
+  };
+});
 
 vi.mock('../lib/entitlement', () => ({ clearEntitlement: vi.fn() }));
 vi.mock('../api/fxRates', () => ({
@@ -70,13 +87,25 @@ vi.mock('./supabase', () => {
 import { db } from '../db/database';
 import { enqueue } from '../db/syncQueue';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { adoptCloudBaseCurrency, claimCloudBaseCurrency, isMissingColumn, readCloudBaseCurrency } from './baseCurrencyCloud';
+import {
+  adoptCloudBaseCurrency,
+  claimCloudBaseCurrency,
+  conversionProbe,
+  convertBaseCurrency,
+  isMissingColumn,
+  readCloudBaseCurrency,
+  resolvePendingConversion,
+} from './baseCurrencyCloud';
+import { planCurrencyRebase } from './currencyRebase';
+import { readConversionMarker, writeConversionMarker } from './currencyConversionMarker';
 
 const U = 'user-1';
 const NOW = '2026-11-14T10:00:00.000Z';
 
 beforeEach(async () => {
   h.row = null; h.missingColumn = false; h.failRead = false; h.calls = [];
+  h.failApply = false; h.offlineOnApply = false;
+  localStorage.removeItem('ncc.currencyConversion');
   await Promise.all([db.transactions.clear(), db.budgetCategories.clear(), db.recurringRules.clear(), db.syncQueue.clear()]);
   useSettingsStore.setState({ baseCurrency: 'EUR' });
 });
@@ -155,5 +184,86 @@ describe('adoptCloudBaseCurrency', () => {
   it('is a no-op when the device already uses the account currency', async () => {
     h.row = { user_id: U, ncc_base_currency: 'EUR' };
     expect(await adoptCloudBaseCurrency(U)).toBeNull();
+  });
+});
+
+describe('convertBaseCurrency (NCC#266)', () => {
+  const RATES = { EUR: 0.9, INR: 81 };
+  async function seedAndPlan() {
+    const tx = [{ id: 't1', amount: 10, description: 'x', date: '2026-11-01', type: 'expense', syncStatus: 'synced', createdAt: NOW }];
+    await db.transactions.bulkPut(tx as never);
+    const originals = { transactions: await db.transactions.toArray(), budgets: [], rules: [] };
+    const plan = planCurrencyRebase({ from: 'EUR', to: 'INR', rates: RATES, ...originals, userId: U })!;
+    return { plan, probe: conversionProbe(plan, originals) };
+  }
+
+  it('converts, claims the account and leaves no marker', async () => {
+    h.row = { user_id: U, ncc_base_currency: null };
+    const { plan, probe } = await seedAndPlan();
+    expect(await convertBaseCurrency({ from: 'EUR', to: 'INR', userId: U, plan, probe })).toEqual({ kind: 'ok' });
+    expect((await db.transactions.get('t1'))!.amount).toBe(900);
+    expect(useSettingsStore.getState().baseCurrency).toBe('INR');
+    expect(h.row!.ncc_base_currency).toBe('INR');
+    expect(readConversionMarker()).toBeNull();
+  });
+
+  it('a rewrite that throws after the claim puts the device and the account back on the old currency', async () => {
+    h.row = { user_id: U, ncc_base_currency: 'EUR' };
+    const { plan, probe } = await seedAndPlan();
+    h.failApply = true;
+    expect(await convertBaseCurrency({ from: 'EUR', to: 'INR', userId: U, plan, probe })).toEqual({ kind: 'failed' });
+    expect((await db.transactions.get('t1'))!.amount).toBe(10);
+    expect(useSettingsStore.getState().baseCurrency).toBe('EUR');
+    expect(h.row!.ncc_base_currency).toBe('EUR');
+    expect(readConversionMarker()).toBeNull();
+  });
+
+  it('when the account cannot be set back (offline), the marker holds every sync until it is', async () => {
+    h.row = { user_id: U, ncc_base_currency: 'EUR' };
+    const { plan, probe } = await seedAndPlan();
+    h.failApply = true; h.offlineOnApply = true;
+    expect(await convertBaseCurrency({ from: 'EUR', to: 'INR', userId: U, plan, probe })).toEqual({ kind: 'failedPending' });
+    expect(useSettingsStore.getState().baseCurrency).toBe('EUR');
+    expect(h.row!.ncc_base_currency).toBe('INR'); // still the claim
+    expect(readConversionMarker()).toMatchObject({ from: 'EUR', to: 'INR', claimed: true });
+
+    // Still offline: the sync must not go ahead.
+    expect(await resolvePendingConversion()).toBe(false);
+    // Back online: the account is set back, and the sync may run.
+    h.failRead = false;
+    expect(await resolvePendingConversion()).toBe(true);
+    expect(h.row!.ncc_base_currency).toBe('EUR');
+    expect(readConversionMarker()).toBeNull();
+    expect((await db.transactions.get('t1'))!.amount).toBe(10);
+  });
+
+  it('a conversion cut off after the rewrite committed is finished, not undone', async () => {
+    h.row = { user_id: U, ncc_base_currency: 'INR' };
+    const { plan, probe } = await seedAndPlan();
+    await db.transactions.put({ ...(await db.transactions.get('t1'))!, amount: 900 });
+    writeConversionMarker({ from: 'EUR', to: 'INR', userId: U, claimed: true, probe });
+    expect(plan.transactions[0].amount).toBe(900);
+    expect(await resolvePendingConversion()).toBe(true);
+    expect(useSettingsStore.getState().baseCurrency).toBe('INR');
+    expect(h.row!.ncc_base_currency).toBe('INR');
+  });
+
+  it('a conversion cut off before the rewrite is undone, including a claim whose reply was lost', async () => {
+    h.row = { user_id: U, ncc_base_currency: 'INR' }; // the claim reached the server
+    const { probe } = await seedAndPlan();
+    useSettingsStore.setState({ baseCurrency: 'INR' });
+    writeConversionMarker({ from: 'EUR', to: 'INR', userId: U, claimed: false, probe });
+    expect(await resolvePendingConversion()).toBe(true);
+    expect(useSettingsStore.getState().baseCurrency).toBe('EUR');
+    expect(h.row!.ncc_base_currency).toBe('EUR');
+    expect((await db.transactions.get('t1'))!.amount).toBe(10);
+  });
+
+  it('a failed claim changes nothing and leaves no marker', async () => {
+    const { plan, probe } = await seedAndPlan();
+    h.failRead = true;
+    expect(await convertBaseCurrency({ from: 'EUR', to: 'INR', userId: U, plan, probe })).toEqual({ kind: 'claimFailed' });
+    expect(useSettingsStore.getState().baseCurrency).toBe('EUR');
+    expect(readConversionMarker()).toBeNull();
   });
 });

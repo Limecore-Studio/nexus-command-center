@@ -5,6 +5,7 @@ import { coalesce } from '../lib/coalesce';
 import { reconcileTaskRemindersIfChanged } from '../lib/taskReminders';
 import { useSessionStore } from './useSessionStore';
 import { adoptionClearFor } from '../lib/adoptionGate';
+import { conversionPending } from '../lib/currencyConversionMarker';
 import { useFinanceStore } from './useFinanceStore';
 import { useStudiesStore } from './useStudiesStore';
 import { useFitnessStore } from './useFitnessStore';
@@ -137,11 +138,12 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     // v1.21 (NCC#248): follow the account's base currency before pushing, so
     // nothing goes up under a label another device has already converted
     // away from. A no-op until someone converts; loaded on demand.
-    try {
-      const { adoptCloudBaseCurrency } = await import('../lib/baseCurrencyCloud');
-      await adoptCloudBaseCurrency(user.id);
-    } catch (e) {
-      console.warn('[currency] account currency check failed:', (e as Error).message);
+    // v1.21 (NCC#248, #266): settle the base currency first: finish or undo
+    // a conversion that is still pending (until then nothing syncs), then
+    // follow the account's currency. Loaded on demand.
+    if (!(await (await import('../lib/baseCurrencyCloud')).beforeSync(user.id))) {
+      set({ syncing: false });
+      return;
     }
     const { push, pull } = await fullSync(user.id);
     announce(push);
@@ -206,6 +208,9 @@ function syncableUser(): string | null {
   if (!navigator.onLine) return null;
   const user = useSessionStore.getState().user;
   if (!user || !adoptionClearFor(user.id)) return null;
+  // v1.21 (NCC#266): held while a base-currency conversion is unresolved;
+  // the next full sync resolves it (runSync).
+  if (conversionPending()) return null;
   return user.id;
 }
 

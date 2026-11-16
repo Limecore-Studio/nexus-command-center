@@ -36,7 +36,8 @@ import { clearAllLocalData, db } from '../db/database';
 import { ensureFxRates } from '../api/fxRates';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useRecurringStore } from '../store/useRecurringStore';
-import { applyCurrencyRebase, planCurrencyRebase, planSize } from '../lib/currencyRebase';
+import { planCurrencyRebase, planSize } from '../lib/currencyRebase';
+import { readConversionMarker } from '../lib/currencyConversionMarker';
 import { setErrorReportsEnabled, useErrorReportsEnabled } from '../lib/errorReports';
 import { authenticateBiometric, biometricCapability } from '../utils/biometric';
 import { supabase } from '../lib/supabase';
@@ -86,6 +87,21 @@ export default function Settings() {
     setCurrencyError(null);
     setCurrencyBusy(true);
     try {
+      // v1.21 (NCC#266): an earlier conversion that could not be undone yet
+      // (offline) is settled first; a new one would overwrite its marker.
+      const pending = readConversionMarker();
+      if (pending) {
+        const { resolvePendingConversion } = await import('../lib/baseCurrencyCloud');
+        const settled = await resolvePendingConversion();
+        await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+        if (!settled) {
+          setCurrencyError(t('settings.currencyConvertUndoPending', { from: pending.from }));
+          return;
+        }
+        // Settled. If that moved this device's currency, the choice was made
+        // from a stale one: stop, and let the user pick again from the new one.
+        if (useSettingsStore.getState().baseCurrency !== from) return;
+      }
       const [transactions, budgets, rules] = await Promise.all([
         db.transactions.toArray(),
         db.budgetCategories.toArray(),
@@ -132,6 +148,8 @@ export default function Settings() {
           rules: plan.rules.length,
         }),
         plan.sharedSkipped > 0 ? t('settings.currencyConvertShared', { n: plan.sharedSkipped }) : null,
+        // v1.21 (NCC#266): net-worth goals are not converted yet (NCC#255).
+        t('settings.currencyConvertGoals'),
         userId ? t('settings.currencyConvertOtherDevices', { to }) : null,
       ]
         .filter(Boolean)
@@ -143,28 +161,50 @@ export default function Settings() {
         destructive: false,
       });
       if (!ok) return;
-      // v1.21 (NCC#248): signed in, the conversion rewrites rows every device
-      // shares, so the account must agree on the currency first. Claim it on
-      // the server (only if nobody changed it meanwhile); the other devices
-      // adopt it on their next sync instead of mislabelling the new amounts.
-      if (userId) {
-        const cloud = await import('../lib/baseCurrencyCloud');
-        const claim = await cloud.claimCloudBaseCurrency(userId, from, to);
-        if (claim.kind === 'conflict') {
-          await cloud.adoptCloudBaseCurrency(userId);
-          await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
-          setCurrencyError(t('settings.currencyChangedElsewhere', { to: claim.current }));
-          return;
-        }
-        if (claim.kind !== 'ok') {
-          setCurrencyError(t(claim.kind === 'unsupported' ? 'settings.currencyServerUnsupported' : 'settings.currencyClaimFailed'));
-          return;
-        }
+      // v1.21 (NCC#266): rows edited or synced in while the dialog was open
+      // must convert too, so the plan is built again from what is stored now,
+      // at the rate the user just confirmed.
+      const [txNow, budgetsNow, rulesNow] = await Promise.all([
+        db.transactions.toArray(),
+        db.budgetCategories.toArray(),
+        db.recurringRules.toArray(),
+      ]);
+      const finalPlan = planCurrencyRebase({
+        from,
+        to,
+        rates: fx?.rates ?? null,
+        transactions: txNow,
+        budgets: budgetsNow,
+        rules: rulesNow,
+        userId,
+      });
+      if (!finalPlan) {
+        setCurrencyError(t('settings.currencyRateMissing', { from, to }));
+        return;
       }
-      // Currency first, then the rows: a push that picks up the converted
-      // rows must label them with the new currency.
-      await setBaseCurrency(to);
-      await applyCurrencyRebase(plan);
+      // v1.21 (NCC#248, #266): signed in, the account claims the currency
+      // first (only if nobody changed it meanwhile), then the device and the
+      // rows follow. A failed rewrite puts the device and the account back.
+      const conv = await import('../lib/baseCurrencyCloud');
+      const result = await conv.convertBaseCurrency({
+        from,
+        to,
+        userId,
+        plan: finalPlan,
+        probe: conv.conversionProbe(finalPlan, { transactions: txNow, budgets: budgetsNow, rules: rulesNow }),
+      });
+      if (result.kind === 'conflict' && userId) {
+        await conv.adoptCloudBaseCurrency(userId);
+        setCurrencyError(t('settings.currencyChangedElsewhere', { to: result.current }));
+      } else if (result.kind === 'unsupported') {
+        setCurrencyError(t('settings.currencyServerUnsupported'));
+      } else if (result.kind === 'claimFailed') {
+        setCurrencyError(t('settings.currencyClaimFailed'));
+      } else if (result.kind === 'failed') {
+        setCurrencyError(t('settings.currencyConvertFailed'));
+      } else if (result.kind === 'failedPending') {
+        setCurrencyError(t('settings.currencyConvertUndoPending', { from }));
+      }
       await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
     } finally {
       setCurrencyBusy(false);

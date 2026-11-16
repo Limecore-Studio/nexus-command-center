@@ -27,29 +27,46 @@
 //   1. The user is taken from the caller's own JWT and never from the request
 //      body. There is no parameter naming a user or an email, so this endpoint
 //      cannot be aimed at somebody else's account no matter what is posted.
-//   2. The JWT is verified by asking Auth to resolve it rather than by decoding
-//      it here — a forged or expired token resolves to no user and is rejected.
+//   2. The JWT is verified here (verify.ts): signature against the project's
+//      JWKS, issuer, audience, and `exp` at most 7 days in the past; then its
+//      `session_id` must still exist in auth.sessions for that user, and the
+//      user must still exist. A forged token, a signed-out or revoked session
+//      and a deleted user are all rejected. (v1.21.1, limecore#101: before,
+//      Auth resolved the token and any expired one got a 401.)
 //   3. Only `hashed_token` is returned, never the generated action link. The
 //      link carries a redirect target and is the half of this that would be
 //      useful in a phishing email; the bare hash is not.
 //   4. This grants the caller nothing it did not already have. A caller who
-//      reaches step 3 has already demonstrated a live session for that user.
+//      reaches step 3 has already demonstrated a live session for that user:
+//      a token that session issued, plus the session still existing. An NCC
+//      sign-out does not end sessions already minted here (owner decision);
+//      each is the sibling app's own, with its own sign-out.
 //      The exchange converts one valid credential into another for the same
 //      user — it is not a privilege boundary being crossed.
 //   5. Abuse bounds (policy.ts): at most MINT_CAP mints per user per window
 //      (429 above it), and CORS only for the sibling apps' WebView origin.
 //
-// Deploy:  supabase functions deploy suite-session
+// Deploy:  supabase functions deploy suite-session --no-verify-jwt
+//          (also set in supabase/config.toml). The platform check would
+//          answer an expired token with its own 401, without CORS headers,
+//          before this code runs. Every 401 here carries CORS headers.
+//          Needs migration 20261116_v1211_suite_session_alive.sql first.
 // Secrets: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by the
-//          platform; nothing needs to be set by hand.
+//          platform. SUITE_SESSION_ISSUER is for the local stack only, where
+//          tokens name the public URL but SUPABASE_URL is the internal one.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createRemoteJWKSet } from 'jsr:@panva/jose@6';
 import { capBucket, capDecision, corsHeaders, MINT_CAP, MINT_WINDOW } from './policy.ts';
+import { verifyCallerToken } from './verify.ts';
 
 // Logged only, never trusted for anything. Anything outside the list is
 // recorded as 'unknown' rather than rejected: this string has no authority, so
 // validating it would imply it did.
 const KNOWN_APPS = ['limelog', 'studydesk', 'nexus'];
+
+// One key set per isolate, so the JWKS is cached between requests.
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 
 Deno.serve(async (req: Request) => {
   const cors = corsHeaders(req.headers.get('Origin'));
@@ -73,10 +90,38 @@ Deno.serve(async (req: Request) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
-  // Resolve the caller from their token. This is the only source of identity.
-  const { data: userData, error: userErr } = await admin.auth.getUser(token);
+  // The caller's token is the only source of identity (verify.ts).
+  jwks ??= createRemoteJWKSet(new URL(`${url}/auth/v1/.well-known/jwks.json`));
+  const verdict = await verifyCallerToken(token, {
+    jwks,
+    issuer: Deno.env.get('SUITE_SESSION_ISSUER') ?? `${url}/auth/v1`,
+  });
+  if (!verdict.ok) {
+    console.log('suite-session rejected', { reason: verdict.reason });
+    return json({ error: 'Invalid or expired session' }, 401);
+  }
+
+  // The session must still exist: signed out or revoked ends it at once.
+  // Fails closed: without the answer nothing is minted.
+  const alive = await admin.rpc('suite_session_alive', {
+    p_session_id: verdict.sessionId,
+    p_user_id: verdict.userId,
+  });
+  if (alive.error) {
+    console.error('suite-session session check failed', { userId: verdict.userId, message: alive.error.message });
+    return json({ error: 'try again later' }, 503);
+  }
+  if (alive.data !== true) {
+    console.log('suite-session rejected', { reason: 'session-ended', userId: verdict.userId });
+    return json({ error: 'Invalid or expired session' }, 401);
+  }
+
+  // And the user must still exist, unbanned. The email comes from here, the
+  // current record, never from the token or the request.
+  const { data: userData, error: userErr } = await admin.auth.admin.getUserById(verdict.userId);
   const user = userData?.user;
-  if (userErr || !user?.email) {
+  const banned = user?.banned_until ? Date.parse(user.banned_until) > Date.now() : false;
+  if (userErr || !user?.email || banned) {
     return json({ error: 'Invalid or expired session' }, 401);
   }
 

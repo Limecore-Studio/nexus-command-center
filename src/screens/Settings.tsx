@@ -32,7 +32,12 @@ import { useSessionStore, userDisplayName } from '../store/useSessionStore';
 import { listPending } from '../db/syncQueue';
 import { useSettingsStore, BaseCurrency, UI_SCALES } from '../store/useSettingsStore';
 import { useShellTier } from '../lib/useShell';
-import { clearAllLocalData } from '../db/database';
+import { clearAllLocalData, db } from '../db/database';
+import { ensureFxRates } from '../api/fxRates';
+import { useFinanceStore } from '../store/useFinanceStore';
+import { useRecurringStore } from '../store/useRecurringStore';
+import { planCurrencyRebase, planSize } from '../lib/currencyRebase';
+import { readConversionMarker } from '../lib/currencyConversionMarker';
 import { setErrorReportsEnabled, useErrorReportsEnabled } from '../lib/errorReports';
 import { authenticateBiometric, biometricCapability } from '../utils/biometric';
 import { supabase } from '../lib/supabase';
@@ -70,6 +75,141 @@ export default function Settings() {
 
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const setBaseCurrency = useSettingsStore((s) => s.setBaseCurrency);
+  const [currencyError, setCurrencyError] = useState<string | null>(null);
+  const [currencyBusy, setCurrencyBusy] = useState(false);
+
+  // v1.21 (NCC#230): amounts stored in the base currency convert at today's
+  // rate, after a confirmation. Cancel leaves the currency as it was; no
+  // rate means no change at all (see lib/currencyRebase.ts).
+  const changeBaseCurrency = async (to: BaseCurrency) => {
+    const from = baseCurrency;
+    if (to === from || currencyBusy) return;
+    setCurrencyError(null);
+    setCurrencyBusy(true);
+    try {
+      // v1.21 (NCC#266): an earlier conversion that could not be undone yet
+      // (offline) is settled first; a new one would overwrite its marker.
+      const pending = readConversionMarker();
+      if (pending) {
+        const { resolvePendingConversion } = await import('../lib/baseCurrencyCloud');
+        const settled = await resolvePendingConversion();
+        await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+        if (!settled) {
+          setCurrencyError(t('settings.currencyConvertUndoPending', { from: pending.from }));
+          return;
+        }
+        // Settled. If that moved this device's currency, the choice was made
+        // from a stale one: stop, and let the user pick again from the new one.
+        if (useSettingsStore.getState().baseCurrency !== from) return;
+      }
+      const [transactions, budgets, rules] = await Promise.all([
+        db.transactions.toArray(),
+        db.budgetCategories.toArray(),
+        db.recurringRules.toArray(),
+      ]);
+      const userId = useSessionStore.getState().user?.id ?? null;
+      // v1.21 (NCC#248): another device may already have converted the account.
+      // Then this device's own label is the stale one: follow the account and
+      // convert nothing, rather than convert the server's rows a second time.
+      const cloud = userId ? await import('../lib/baseCurrencyCloud') : null;
+      const read = cloud && userId ? await cloud.readCloudBaseCurrency(userId) : null;
+      if (cloud && userId && read?.kind === 'ok' && read.code !== null && read.code !== from) {
+        await cloud.adoptCloudBaseCurrency(userId);
+        await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+        setCurrencyError(t('settings.currencyChangedElsewhere', { to: read.code }));
+        return;
+      }
+      const probe = planCurrencyRebase({ from, to, rates: { [from]: 1, [to]: 1 }, transactions, budgets, rules, userId });
+      if (!probe || planSize(probe) === 0) {
+        // Nothing to convert. If the account already has a currency, move it
+        // too, or the next sync would switch this device straight back.
+        if (cloud && userId && read?.kind === 'ok' && read.code !== null) {
+          const claim = await cloud.claimCloudBaseCurrency(userId, from, to);
+          if (claim.kind !== 'ok') {
+            setCurrencyError(t('settings.currencyClaimFailed'));
+            return;
+          }
+        }
+        await setBaseCurrency(to);
+        return;
+      }
+      const fx = await ensureFxRates();
+      const plan = planCurrencyRebase({ from, to, rates: fx?.rates ?? null, transactions, budgets, rules, userId });
+      if (!plan) {
+        setCurrencyError(t('settings.currencyRateMissing', { from, to }));
+        return;
+      }
+      const rate = new Intl.NumberFormat(formatLocale(), { maximumSignificantDigits: 6 }).format(plan.rate);
+      const message = [
+        t('settings.currencyConvertBody', { from, to, rate }),
+        t('settings.currencyConvertCounts', {
+          tx: plan.transactions.length,
+          budgets: plan.budgets.length,
+          rules: plan.rules.length,
+        }),
+        plan.sharedSkipped > 0 ? t('settings.currencyConvertShared', { n: plan.sharedSkipped }) : null,
+        // v1.21 (NCC#266): net-worth goals are not converted yet (NCC#255).
+        t('settings.currencyConvertGoals'),
+        userId ? t('settings.currencyConvertOtherDevices', { to }) : null,
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      const ok = await confirm({
+        title: t('settings.currencyConvertTitle', { to }),
+        message,
+        confirmLabel: t('settings.currencyConvertConfirm'),
+        destructive: false,
+      });
+      if (!ok) return;
+      // v1.21 (NCC#266): rows edited or synced in while the dialog was open
+      // must convert too, so the plan is built again from what is stored now,
+      // at the rate the user just confirmed.
+      const [txNow, budgetsNow, rulesNow] = await Promise.all([
+        db.transactions.toArray(),
+        db.budgetCategories.toArray(),
+        db.recurringRules.toArray(),
+      ]);
+      const finalPlan = planCurrencyRebase({
+        from,
+        to,
+        rates: fx?.rates ?? null,
+        transactions: txNow,
+        budgets: budgetsNow,
+        rules: rulesNow,
+        userId,
+      });
+      if (!finalPlan) {
+        setCurrencyError(t('settings.currencyRateMissing', { from, to }));
+        return;
+      }
+      // v1.21 (NCC#248, #266): signed in, the account claims the currency
+      // first (only if nobody changed it meanwhile), then the device and the
+      // rows follow. A failed rewrite puts the device and the account back.
+      const conv = await import('../lib/baseCurrencyCloud');
+      const result = await conv.convertBaseCurrency({
+        from,
+        to,
+        userId,
+        plan: finalPlan,
+        probe: conv.conversionProbe(finalPlan, { transactions: txNow, budgets: budgetsNow, rules: rulesNow }),
+      });
+      if (result.kind === 'conflict' && userId) {
+        await conv.adoptCloudBaseCurrency(userId);
+        setCurrencyError(t('settings.currencyChangedElsewhere', { to: result.current }));
+      } else if (result.kind === 'unsupported') {
+        setCurrencyError(t('settings.currencyServerUnsupported'));
+      } else if (result.kind === 'claimFailed') {
+        setCurrencyError(t('settings.currencyClaimFailed'));
+      } else if (result.kind === 'failed') {
+        setCurrencyError(t('settings.currencyConvertFailed'));
+      } else if (result.kind === 'failedPending') {
+        setCurrencyError(t('settings.currencyConvertUndoPending', { from }));
+      }
+      await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+    } finally {
+      setCurrencyBusy(false);
+    }
+  };
   // v1.9 — text size. `autoScale` mirrors the tier default in index.css, so
   // the Auto swatch previews what Auto will actually give you here.
   const uiScale = useSettingsStore((s) => s.uiScale);
@@ -372,7 +512,8 @@ export default function Settings() {
             <select
               className="input max-w-[120px] py-2"
               value={baseCurrency}
-              onChange={(e) => setBaseCurrency(e.target.value as BaseCurrency)}
+              disabled={currencyBusy}
+              onChange={(e) => void changeBaseCurrency(e.target.value as BaseCurrency)}
             >
               {currencyOptions(formatLocale()).map((c) => (
                 <option key={c.code} value={c.code}>
@@ -381,6 +522,9 @@ export default function Settings() {
               ))}
             </select>
           </div>
+          {currencyError && (
+            <p role="alert" className="text-[0.625rem] text-danger pb-2">{currencyError}</p>
+          )}
         </Section>
 
         {/* v1.15 (Item 13) — NCC had no Appearance section at all; Rack is

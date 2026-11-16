@@ -1,0 +1,3 @@
+Changez de devise, gardez vos chiffres.
+
+Changer de devise de base convertit désormais vos transactions, budgets et montants récurrents au taux du jour, après votre confirmation. Tous les appareils connectés suivent le changement. Les objectifs de patrimoine net ne sont pas encore convertis. Dans l'app de bureau, les données de marché se chargent de nouveau. L'app démarre aussi un peu plus vite.

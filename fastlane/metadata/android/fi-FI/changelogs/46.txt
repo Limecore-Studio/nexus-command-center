@@ -1,0 +1,3 @@
+Vaihda valuuttaa, pidä lukusi.
+
+Kun vaihdat perusvaluuttaa, tapahtumat, budjetit ja toistuvat summat muunnetaan päivän kurssilla, kun olet vahvistanut. Kaikki kirjautuneet laitteet seuraavat muutosta. Nettovarallisuustavoitteita ei vielä muunneta. Työpöytäsovelluksessa markkinadata latautuu taas. Sovellus myös käynnistyy hieman nopeammin.

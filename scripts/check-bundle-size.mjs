@@ -28,7 +28,14 @@ import { fileURLToPath } from 'node:url';
 // Measured one package at a time on the same commit: react-router 7 +17.3,
 // React 19 +78.3, zustand 5 -3.0 KiB. 915 -> 985 covers that and nothing else;
 // from here the budget only goes down again.
-const BUDGET_KIB = 985; // measured 2026-10-08 after limecore#21 (on top of #22): 980.4 KiB
+// v1.21 (NCC#245): Login, the once-only prompts and notes, and the finance
+// alert ticks moved out of the startup chunk, 983.1 -> 959.7 KiB. The budget
+// is set at the measured size so that headroom is not spent by default.
+// v1.21 (NCC#248): the account-currency check added 0.7 KiB to startup, paid for
+// by loading Health Connect on first use (-2.5 KiB).
+// v1.21 (NCC#266): the conversion rollback added 0.5 KiB, paid for by loading
+// the crash screen's data export on demand (-1.9 KiB).
+const BUDGET_KIB = 957; // measured 2026-11-16 after NCC#266: 956.6 KiB (was 958 at 957.9)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');

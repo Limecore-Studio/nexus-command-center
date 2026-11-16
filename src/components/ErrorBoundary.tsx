@@ -1,7 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import i18n from '../i18n';
 import { buildReport, errorReportsEnabled, sendReport, type ErrorReport, type SendResult } from '../lib/errorReports';
-import { downloadExport } from '../lib/dataRights';
 import { supabase } from '../lib/supabase';
 import { exportAllowed, useAdoptionGate } from '../lib/adoptionGate';
 
@@ -59,6 +58,9 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
     try {
       const { data } = await supabase.auth.getSession();
       const user = data.session?.user ?? null;
+      // v1.21: loaded on demand (startup budget). The app's chunks are local
+      // files in the APK and the desktop build, so this loads after a crash too.
+      const { downloadExport } = await import('../lib/dataRights');
       await downloadExport(user ? { id: user.id, email: user.email } : null);
       this.setState({ exported: true });
     } catch {

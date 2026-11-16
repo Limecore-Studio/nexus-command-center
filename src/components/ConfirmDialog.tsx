@@ -30,6 +30,8 @@ interface ConfirmOptions {
   /** Renders the confirm button in the danger colour. Default true — every
    *  current caller guards a destructive action. */
   destructive?: boolean;
+  /** v1.21.1 — a notice: one button, no cancel. */
+  alert?: boolean;
 }
 
 type Confirm = (opts: ConfirmOptions) => Promise<boolean>;
@@ -83,12 +85,14 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             )}
             <p className="text-sm text-text mb-4 whitespace-pre-line">{pending.message}</p>
             <div className="flex gap-2 justify-end">
-              <button
-                className="btn-ghost px-4 py-2 text-sm"
-                onClick={() => settle(false)}
-              >
-                {pending.cancelLabel ?? t('common.cancel')}
-              </button>
+              {!pending.alert && (
+                <button
+                  className="btn-ghost px-4 py-2 text-sm"
+                  onClick={() => settle(false)}
+                >
+                  {pending.cancelLabel ?? t('common.cancel')}
+                </button>
+              )}
               <button
                 className={`px-4 py-2 text-sm rounded-md font-medium ${
                   pending.destructive === false

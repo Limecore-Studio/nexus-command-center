@@ -1,0 +1,72 @@
+{
+  "en": {
+    "settings": {
+      "deleteNeedsSignIn": "You need to be online and signed in to delete your account. Nothing was deleted.",
+      "deleteGuestDone": "This device's data was erased. There was no account to delete.",
+      "deleteOk": "OK"
+    }
+  },
+  "fi": {
+    "settings": {
+      "deleteNeedsSignIn": "Tilin poistaminen vaatii verkkoyhteyden ja sisäänkirjautumisen. Mitään ei poistettu.",
+      "deleteGuestDone": "Tämän laitteen tiedot poistettiin. Poistettavaa tiliä ei ollut.",
+      "deleteOk": "OK"
+    }
+  },
+  "fr": {
+    "settings": {
+      "deleteNeedsSignIn": "Vous devez être en ligne et connecté pour supprimer votre compte. Rien n'a été supprimé.",
+      "deleteGuestDone": "Les données de cet appareil ont été effacées. Il n'y avait aucun compte à supprimer.",
+      "deleteOk": "OK"
+    }
+  },
+  "de": {
+    "settings": {
+      "deleteNeedsSignIn": "Zum Löschen deines Kontos musst du online und angemeldet sein. Es wurde nichts gelöscht.",
+      "deleteGuestDone": "Die Daten auf diesem Gerät wurden gelöscht. Es gab kein Konto zum Löschen.",
+      "deleteOk": "OK"
+    }
+  },
+  "es": {
+    "settings": {
+      "deleteNeedsSignIn": "Necesitas estar en línea y con la sesión iniciada para eliminar tu cuenta. No se eliminó nada.",
+      "deleteGuestDone": "Se borraron los datos de este dispositivo. No había ninguna cuenta que eliminar.",
+      "deleteOk": "Aceptar"
+    }
+  },
+  "zh": {
+    "settings": {
+      "deleteNeedsSignIn": "删除账户需要联网并登录。未删除任何内容。",
+      "deleteGuestDone": "已清除此设备上的数据。没有可删除的账户。",
+      "deleteOk": "确定"
+    }
+  },
+  "hi": {
+    "settings": {
+      "deleteNeedsSignIn": "अपना खाता हटाने के लिए आपको ऑनलाइन और साइन इन होना होगा। कुछ भी नहीं हटाया गया।",
+      "deleteGuestDone": "इस डिवाइस का डेटा मिटा दिया गया। हटाने के लिए कोई खाता नहीं था।",
+      "deleteOk": "ठीक है"
+    }
+  },
+  "pt": {
+    "settings": {
+      "deleteNeedsSignIn": "Você precisa estar online e conectado para excluir sua conta. Nada foi excluído.",
+      "deleteGuestDone": "Os dados deste dispositivo foram apagados. Não havia conta para excluir.",
+      "deleteOk": "OK"
+    }
+  },
+  "id": {
+    "settings": {
+      "deleteNeedsSignIn": "Anda harus online dan masuk untuk menghapus akun. Tidak ada yang dihapus.",
+      "deleteGuestDone": "Data perangkat ini telah dihapus. Tidak ada akun untuk dihapus.",
+      "deleteOk": "OK"
+    }
+  },
+  "ar": {
+    "settings": {
+      "deleteNeedsSignIn": "يجب أن تكون متصلاً بالإنترنت ومسجّلاً الدخول لحذف حسابك. لم يُحذف أي شيء.",
+      "deleteGuestDone": "تم مسح بيانات هذا الجهاز. لم يكن هناك حساب لحذفه.",
+      "deleteOk": "حسنًا"
+    }
+  }
+}

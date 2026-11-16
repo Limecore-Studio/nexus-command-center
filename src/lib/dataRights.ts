@@ -9,9 +9,10 @@
 // server-side account to delete.
 
 import { db } from '../db/database';
-import { supabase } from './supabase';
+import { readStoredSession, supabase } from './supabase';
 import { selectAll } from './selectAll';
-import { exportAllowed } from './adoptionGate';
+import { exportAllowed, GUEST_ID } from './adoptionGate';
+import { readLastUserId } from './adoptionChoice';
 
 const EXPORT_SCHEMA_VERSION = 1;
 
@@ -166,12 +167,41 @@ export async function downloadExport(user: { id: string; email?: string } | null
  * three apps, so deleting from any of them must erase everything, not just the
  * calling app's tables.
  *
- * Local data is cleared regardless of what the server says. A user who asked to
- * be deleted should not find their data still on the device afterwards.
+ * v1.21.1 (limecore#102): "guest or account" is decided from the device, not
+ * from getSession() alone. An expired session that cannot be refreshed (or a
+ * getSession error) used to look exactly like a guest: the device was wiped,
+ * the server account survived, and the screen said it was done. Now:
+ * - an account is recorded here (a stored session, or a last signed-in user
+ *   that is not the guest) but there is no usable session: refuse, wipe
+ *   nothing, and say why;
+ * - a real guest: wipe the device and say there was no account;
+ * - the server deleted the account: wipe the device, including the stored
+ *   auth session (signOut local scope, so it never needs the network).
  */
-export async function deleteAccount({ clearLocal }: { clearLocal: () => Promise<void> }): Promise<{ deleted: 'local' | 'account' }> {
-  const { data: { session } } = await supabase.auth.getSession();
+export type DeleteResult =
+  | { deleted: 'account' }
+  | { deleted: 'local' }
+  | { deleted: 'nothing'; reason: 'signed-out' };
+
+export async function deleteAccount({ clearLocal }: { clearLocal: () => Promise<void> }): Promise<DeleteResult> {
+  let session = null;
+  let sessionError: boolean;
+  try {
+    const res = await supabase.auth.getSession();
+    session = res.data.session;
+    sessionError = !!res.error;
+  } catch {
+    sessionError = true;
+  }
+
   if (!session) {
+    const last = readLastUserId();
+    const accountHere = sessionError
+      || (await readStoredSession()) !== null
+      || (last !== null && last !== GUEST_ID);
+    // An account exists but cannot be reached right now. Deleting only the
+    // device copy would leave the account alive while saying it was erased.
+    if (accountHere) return { deleted: 'nothing', reason: 'signed-out' };
     // Guest: there is no server-side account. Clearing the device is the whole
     // of the erasure.
     await clearLocal();
@@ -184,9 +214,12 @@ export async function deleteAccount({ clearLocal }: { clearLocal: () => Promise<
   if (error) throw new Error(error.message || 'Account deletion failed');
 
   try {
-    await supabase.auth.signOut();
+    // Local scope: the user row is already gone, so a global sign-out would
+    // only fail; this removes the stored session (Preferences on Android,
+    // which the local wipe does not reach) without a request.
+    await supabase.auth.signOut({ scope: 'local' });
   } catch {
-    // The user row is already gone, so the sign-out call may fail. Not fatal.
+    /* not fatal: the account is deleted either way */
   }
   await clearLocal();
   return { deleted: 'account' };

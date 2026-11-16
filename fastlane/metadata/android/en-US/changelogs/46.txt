@@ -1,0 +1,3 @@
+Change currency, keep your numbers.
+
+Changing your base currency now converts your transactions, budgets and recurring amounts at today's rate, after you confirm. Every signed-in device follows the change. Net-worth goal targets are not converted yet. On the desktop app, market data loads again. The app also starts a little faster.

@@ -1,0 +1,3 @@
+Cambia de divisa sin perder tus cifras.
+
+Al cambiar tu divisa base, tus transacciones, presupuestos e importes recurrentes se convierten al cambio de hoy, después de que lo confirmes. Todos los dispositivos con sesión iniciada siguen el cambio. Los objetivos de patrimonio neto aún no se convierten. En la app de escritorio, los datos de mercado vuelven a cargarse. Además, la app se inicia algo más rápido.

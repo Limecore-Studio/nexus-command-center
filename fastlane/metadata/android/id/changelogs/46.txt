@@ -1,0 +1,3 @@
+Ganti mata uang, angka tetap benar.
+
+Saat Anda mengganti mata uang dasar, transaksi, anggaran, dan jumlah berulang kini dikonversi dengan kurs hari ini setelah Anda konfirmasi. Semua perangkat yang masuk mengikuti perubahan ini. Target kekayaan bersih belum dikonversi. Di aplikasi desktop, data pasar dimuat lagi. Aplikasi juga terbuka sedikit lebih cepat.

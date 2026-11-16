@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { currencyOptions } from '../lib/currencies';
 import { formatLocale } from '../utils/formatters';
@@ -16,6 +16,10 @@ import pkg from '../../package.json';
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/useAuthStore';
 import { APP_LOCK_APPLIES } from '../lib/isDesktop';
+import '../i18n/lazy/pin'; // settings.changePin* (loaded with this screen)
+
+// v1.21.1 (NCC#259) — Change PIN, loaded when opened.
+const ChangePinDialog = lazy(() => import('../components/ChangePinDialog'));
 import { IS_DESKTOP } from '../lib/desktop';
 import { checkForDesktopUpdate, runDesktopUpdateAction, useDesktopUpdate } from '../lib/desktopUpdate';
 import { setUpdateCheckEnabled, useFdroidUpdate } from '../lib/fdroidUpdate';
@@ -69,6 +73,7 @@ export default function Settings() {
   const lock = useAuthStore((s) => s.lock);
   const verifyPin = useAuthStore((s) => s.verifyPin);
   const hasPin = useAuthStore((s) => s.hasPin);
+  const [changePinOpen, setChangePinOpen] = useState(false);
 
   const user = useSessionStore((s) => s.user);
   const signOut = useSessionStore((s) => s.signOut);
@@ -293,6 +298,10 @@ export default function Settings() {
       }
     }
     await clearAllLocalData();
+    // v1.21.1 (NCC#259): the PIN and its counters too. They live in
+    // Preferences, which neither line here reached, so the same PIN was still
+    // asked for after the reload.
+    await useAuthStore.getState().clearPin();
     localStorage.clear();
     location.reload();
   };
@@ -432,6 +441,26 @@ export default function Settings() {
               ))}
             </select>
           </div>
+          {/* v1.21.1 (NCC#259) — LockScreen asks for the current PIN (or
+              biometric), then the new one twice. */}
+          {hasPin && (
+            <button
+              type="button"
+              className="py-2 w-full flex items-center justify-between gap-3 text-left active:opacity-80"
+              onClick={() => setChangePinOpen(true)}
+            >
+              <div>
+                <div className="text-sm">{t('settings.changePin')}</div>
+                <div className="text-[0.625rem] text-text-muted">{t('settings.changePinSub')}</div>
+              </div>
+              <span aria-hidden className="text-text-muted">›</span>
+            </button>
+          )}
+          {changePinOpen && (
+            <Suspense fallback={null}>
+              <ChangePinDialog onClose={() => setChangePinOpen(false)} />
+            </Suspense>
+          )}
           <Toggle
             label={t('settings.encryption')}
             sub={t('settings.encryptionSub')}

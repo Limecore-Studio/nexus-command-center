@@ -21,8 +21,9 @@
 //   10 failures  →   5 min   (kills "let me try a hundred more")
 //   20 failures  →  15 min   (a 6-digit space brute force becomes years)
 //
-// The counter resets only on successful unlock or on `setPin` (e.g. after
-// "Clear All Data" recovery). Lockout is enforced server-of-truth here, BUT
+// The counter resets only on successful unlock, on `setPin`, or on
+// `clearPin` (v1.21.1, NCC#259: Clear All Data and "Forgot PIN?" remove the
+// PIN and its counters). Lockout is enforced server-of-truth here, BUT
 // because all state is local, the threat model is "stolen unlocked device"
 // or "rooted device with adb shell input" — a sufficiently determined
 // adversary can still attack the on-disk hash directly. PBKDF2 + salt makes
@@ -250,6 +251,8 @@ interface AuthStore {
 
   init: () => Promise<void>;
   setPin: (pin: string) => Promise<void>;
+  /** v1.21.1 (NCC#259): remove the PIN and its attempt counters. */
+  clearPin: () => Promise<void>;
   verifyPin: (pin: string) => Promise<VerifyResult>;
   unlock: () => void;
   lock: () => void;
@@ -340,6 +343,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     await removePref(PIN_ATTEMPTS_KEY);
     await removePref(PIN_LAST_FAIL_KEY);
     set({ hasPin: true, pinUnreadable: false, failedAttempts: 0, lockedUntil: 0 });
+  },
+
+  async clearPin() {
+    await removePref(PIN_KEY);
+    await removePref(PIN_ATTEMPTS_KEY);
+    await removePref(PIN_LAST_FAIL_KEY);
+    set({ hasPin: false, pinUnreadable: false, failedAttempts: 0, lockedUntil: 0 });
   },
 
   async verifyPin(pin) {

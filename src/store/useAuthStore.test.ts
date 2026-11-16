@@ -33,6 +33,7 @@ vi.mock('@/lib/keystore', () => ({
 }));
 
 const { useAuthStore } = await import('./useAuthStore');
+const { clearPin } = await import('../lib/clearPin');
 
 beforeEach(() => {
   prefs.clear();
@@ -159,7 +160,7 @@ describe('removing the PIN (Clear All Data, Forgot PIN)', () => {
     await useAuthStore.getState().setPin('123456');
     await useAuthStore.getState().verifyPin('000000');
     expect(prefs.get('auth.pinFailedAttempts')).toBe('1');
-    await useAuthStore.getState().clearPin();
+    await clearPin();
     expect(prefs.has('auth.pin')).toBe(false);
     expect(prefs.has('auth.pinFailedAttempts')).toBe(false);
     expect(prefs.has('auth.pinLastFailAt')).toBe(false);

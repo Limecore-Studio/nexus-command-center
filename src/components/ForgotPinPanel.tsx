@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '../store/useAuthStore';
+import { clearPin } from '../lib/clearPin';
 import { useSessionStore } from '../store/useSessionStore';
 import { authenticateBiometric } from '../utils/biometric';
 import { clearAllLocalData } from '../db/database';
@@ -19,7 +19,6 @@ import '../i18n/lazy/pin'; // lock.forgot* (loaded with this panel)
 //   Two taps, because unsynced changes are lost.
 export default function ForgotPinPanel({ bioReady, onClose }: { bioReady: boolean; onClose: () => void }) {
   const { t } = useTranslation();
-  const clearPin = useAuthStore((s) => s.clearPin);
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -301,7 +301,7 @@ export default function Settings() {
     // v1.21.1 (NCC#259): the PIN and its counters too. They live in
     // Preferences, which neither line here reached, so the same PIN was still
     // asked for after the reload.
-    await useAuthStore.getState().clearPin();
+    await (await import('../lib/clearPin')).clearPin();
     localStorage.clear();
     location.reload();
   };

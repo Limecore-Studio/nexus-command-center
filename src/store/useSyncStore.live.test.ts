@@ -48,8 +48,11 @@ vi.mock('../db/syncQueue', () => ({
     return () => {};
   },
 }));
-// v1.21 (NCC#248): the account-currency check before each sync; tested in lib/baseCurrencyCloud.test.ts.
-vi.mock('../lib/baseCurrencyCloud', () => ({ adoptCloudBaseCurrency: async () => null }));
+// v1.21 (NCC#248, #266): the currency step before each sync; tested in lib/baseCurrencyCloud.test.ts.
+// `held` stands for a conversion that cannot be settled yet.
+const cur = vi.hoisted(() => ({ held: false, pending: false }));
+vi.mock('../lib/baseCurrencyCloud', () => ({ beforeSync: async () => !cur.held }));
+vi.mock('../lib/currencyConversionMarker', () => ({ conversionPending: () => cur.pending }));
 vi.mock('../lib/taskReminders', () => ({ reconcileTaskRemindersIfChanged: async () => true }));
 vi.mock('./useSessionStore', () => ({ useSessionStore: { getState: () => ({ user: h.user }) } }));
 const loadable = { getState: () => ({ load: async () => {} }) };
@@ -83,6 +86,8 @@ beforeEach(() => {
   h.maxInFlight = 0;
   h.pushedTables = ['transactions'];
   h.pushErrors = [];
+  cur.held = false;
+  cur.pending = false;
   announced.length = 0;
   setPushAnnouncer((t) => announced.push(t));
   setAdoptionStatus('u-1', 'clear');
@@ -147,6 +152,30 @@ describe('push right after an edit (NCC#221)', () => {
     h.enqueued!();
     await vi.advanceTimersByTimeAsync(PUSH_DEBOUNCE_MS + 100);
     expect(h.pushes).toBe(0);
+  });
+});
+
+describe('a pending base-currency conversion holds every sync (NCC#266)', () => {
+  it('no push, pull or full sync until it is settled', async () => {
+    cur.pending = true;
+    cur.held = true;
+    h.enqueued!();
+    const full = useSyncStore.getState().syncNow();
+    const pull = useSyncStore.getState().pullTables(['transactions']);
+    await vi.advanceTimersByTimeAsync(PUSH_DEBOUNCE_MS + 200);
+    await Promise.all([full, pull]);
+    expect(h.pushes).toBe(0);
+    expect(h.pulls).toEqual([]);
+    expect(h.fullSyncs).toBe(0);
+    expect(useSyncStore.getState().syncing).toBe(false);
+
+    // Settled (the next full sync resolved it): syncing resumes.
+    cur.pending = false;
+    cur.held = false;
+    const again = useSyncStore.getState().syncNow();
+    await vi.advanceTimersByTimeAsync(200);
+    await again;
+    expect(h.fullSyncs).toBe(1);
   });
 });
 

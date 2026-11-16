@@ -20,6 +20,8 @@ vi.mock('../lib/cloudSync', () => ({
   },
 }));
 vi.mock('../db/syncQueue', () => ({ listOwnPending: async () => [] }));
+// v1.21 (NCC#248, #266): the currency step before each sync; tested in lib/baseCurrencyCloud.test.ts.
+vi.mock('../lib/baseCurrencyCloud', () => ({ beforeSync: async () => true }));
 vi.mock('../lib/taskReminders', () => ({
   reconcileTaskRemindersIfChanged: async (tasks: unknown[], stillCurrent: () => boolean) => {
     h.reconciles.push({ tasks, stillCurrent });

@@ -33,7 +33,9 @@ import { fileURLToPath } from 'node:url';
 // is set at the measured size so that headroom is not spent by default.
 // v1.21 (NCC#248): the account-currency check added 0.7 KiB to startup, paid for
 // by loading Health Connect on first use (-2.5 KiB).
-const BUDGET_KIB = 958; // measured 2026-11-14 after NCC#248: 957.9 KiB (was 960 at 959.7)
+// v1.21 (NCC#266): the conversion rollback added 0.5 KiB, paid for by loading
+// the crash screen's data export on demand (-1.9 KiB).
+const BUDGET_KIB = 957; // measured 2026-11-16 after NCC#266: 956.6 KiB (was 958 at 957.9)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');

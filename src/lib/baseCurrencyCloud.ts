@@ -22,8 +22,17 @@ import { supabase } from './supabase';
 import { db } from '../db/database';
 import { ensureFxRates } from '../api/fxRates';
 import { listPending } from '../db/syncQueue';
-import { applyCurrencyRebase, planCurrencyRebase } from './currencyRebase';
-import { isSupportedCurrency, useSettingsStore } from '../store/useSettingsStore';
+import { applyCurrencyRebase, planCurrencyRebase, type CurrencyRebasePlan } from './currencyRebase';
+import { isSupportedCurrency, useSettingsStore, type BaseCurrency } from '../store/useSettingsStore';
+import {
+  clearConversionMarker,
+  readConversionMarker,
+  writeConversionMarker,
+  type ConversionMarker,
+  type ConversionProbe,
+} from './currencyConversionMarker';
+import type { BudgetCategory, Transaction } from '../types/finance';
+import type { RecurringRule } from '../types/recurring';
 
 export type CloudRead =
   | { kind: 'ok'; code: string | null }
@@ -144,4 +153,172 @@ export async function adoptCloudBaseCurrency(userId: string): Promise<string | n
   }
   await settings.setBaseCurrency(to as Parameters<typeof settings.setBaseCurrency>[0]);
   return to;
+}
+
+// ---------------------------------------------------------------------------
+// v1.21 (NCC#266): the conversion itself, with a way back.
+//
+// The account claim, the device setting and the row rewrite are three writes
+// in three places. The rewrite is one Dexie transaction, so the rows either
+// all convert or none do; the other two need undoing by hand. A marker
+// (currencyConversionMarker.ts) is written first and cleared last, and while
+// it is present no sync runs: resolvePendingConversion finishes or undoes the
+// conversion first, so an unconverted ledger never goes up under the new label.
+
+let running = false;
+
+export type ConvertResult =
+  | { kind: 'ok' }
+  | { kind: 'conflict'; current: string }
+  | { kind: 'unsupported' }
+  | { kind: 'claimFailed' }
+  /** The rewrite failed; the device and the account are back on `from`. */
+  | { kind: 'failed' }
+  /** The rewrite failed and the account could not be set back yet (offline).
+   *  The marker stays, and the next sync sets it back before anything else. */
+  | { kind: 'failedPending' };
+
+/** A row the plan changes, so a later check can tell whether the rewrite
+ *  committed. Null when no row changes (every amount is 0, or the rate rounds
+ *  to 1): then a committed and an uncommitted rewrite look the same. */
+export function conversionProbe(
+  plan: CurrencyRebasePlan,
+  originals: { transactions: Transaction[]; budgets: BudgetCategory[]; rules: RecurringRule[] },
+): ConversionProbe | null {
+  const tx = new Map(originals.transactions.map((t) => [t.id, t.amount]));
+  for (const t of plan.transactions) {
+    const o = tx.get(t.id);
+    if (o !== undefined && o !== t.amount) return { table: 'transactions', id: t.id, original: o, converted: t.amount };
+  }
+  const bu = new Map(originals.budgets.map((b) => [b.id, b.monthlyLimit]));
+  for (const b of plan.budgets) {
+    const o = bu.get(b.id);
+    if (o !== undefined && o !== b.monthlyLimit)
+      return { table: 'budgetCategories', id: b.id, original: o, converted: b.monthlyLimit };
+  }
+  const ru = new Map(originals.rules.map((r) => [r.id, ruleAmount(r)]));
+  for (const r of plan.rules) {
+    const o = ru.get(r.id);
+    const c = ruleAmount(r);
+    if (o !== undefined && c !== undefined && o !== c)
+      return { table: 'recurringRules', id: r.id, original: o, converted: c };
+  }
+  return null;
+}
+
+const asBase = (c: string) => c as BaseCurrency;
+/** Only `transaction` and `cash_deposit` rules carry an amount the
+ *  conversion touches (currencyRebase.ts). */
+const ruleAmount = (r: RecurringRule): number | undefined => (r.template as { amount?: number }).amount;
+
+/** Claim the account, switch the device, rewrite the rows; on a failed
+ *  rewrite, put the device and the account back. */
+export async function convertBaseCurrency(input: {
+  from: string;
+  to: string;
+  userId: string | null;
+  plan: CurrencyRebasePlan;
+  probe: ConversionProbe | null;
+}): Promise<ConvertResult> {
+  const { from, to, userId, plan, probe } = input;
+  running = true;
+  try {
+    const marker: ConversionMarker = { from, to, userId, claimed: false, probe };
+    writeConversionMarker(marker);
+    if (userId) {
+      const claim = await claimCloudBaseCurrency(userId, from, to);
+      if (claim.kind !== 'ok') {
+        // Nothing has changed yet.
+        clearConversionMarker();
+        return claim.kind === 'error' ? { kind: 'claimFailed' } : claim;
+      }
+      marker.claimed = true;
+      writeConversionMarker(marker);
+    }
+    try {
+      // Currency first, then the rows: a push that picks up the converted
+      // rows must label them with the new currency. (No push runs meanwhile:
+      // the marker holds every sync.)
+      await useSettingsStore.getState().setBaseCurrency(asBase(to));
+      await applyCurrencyRebase(plan);
+    } catch (e) {
+      console.warn('[currency] conversion failed, undoing:', (e as Error).message);
+      return (await undoConversion(marker)) ? { kind: 'failed' } : { kind: 'failedPending' };
+    }
+    clearConversionMarker();
+    return { kind: 'ok' };
+  } finally {
+    running = false;
+  }
+}
+
+/** Device back to `from`; account back to `from` if it still says `to`.
+ *  True when nothing is left to undo (the marker is cleared). */
+async function undoConversion(m: ConversionMarker): Promise<boolean> {
+  try {
+    await useSettingsStore.getState().setBaseCurrency(asBase(m.from));
+  } catch {
+    return false;
+  }
+  if (m.userId) {
+    // Checked even when the claim was not confirmed: its request may have
+    // reached the server while the reply was lost.
+    const read = await readCloudBaseCurrency(m.userId);
+    if (read.kind === 'error') return false;
+    if (read.kind === 'ok' && read.code === m.to) {
+      const back = await claimCloudBaseCurrency(m.userId, m.to, m.from);
+      // A conflict means someone has changed it since: theirs stands, and the
+      // adopt step that follows picks it up.
+      if (back.kind === 'error') return false;
+    }
+  }
+  clearConversionMarker();
+  return true;
+}
+
+/** Did the rewrite commit? A row that holds neither value was edited or
+ *  deleted after a crash; it can no longer tell, and is taken as committed,
+ *  because the device's own edits since then were made under the new label. */
+async function rewriteCommitted(p: ConversionProbe | null): Promise<boolean> {
+  if (!p) return true;
+  const row = await db.table(p.table).get(p.id);
+  if (!row) return true;
+  const amount =
+    p.table === 'transactions'
+      ? (row as Transaction).amount
+      : p.table === 'budgetCategories'
+        ? (row as BudgetCategory).monthlyLimit
+        : ruleAmount(row as RecurringRule);
+  return amount !== p.original;
+}
+
+/** The currency step of every full sync (useSyncStore). False holds the sync. */
+export async function beforeSync(userId: string): Promise<boolean> {
+  if (!(await resolvePendingConversion())) return false;
+  try {
+    await adoptCloudBaseCurrency(userId);
+  } catch (e) {
+    console.warn('[currency] account currency check failed:', (e as Error).message);
+  }
+  return true;
+}
+
+/** Run before any sync. True when the sync may go ahead: no conversion is
+ *  pending, or the pending one was finished or undone. False while one is
+ *  running here, or while the account cannot be set back yet. */
+export async function resolvePendingConversion(): Promise<boolean> {
+  if (running) return false;
+  const m = readConversionMarker();
+  if (!m) return true;
+  try {
+    if (await rewriteCommitted(m.probe)) {
+      await useSettingsStore.getState().setBaseCurrency(asBase(m.to));
+      clearConversionMarker();
+      return true;
+    }
+    return await undoConversion(m);
+  } catch (e) {
+    console.warn('[currency] pending conversion not resolved:', (e as Error).message);
+    return false;
+  }
 }

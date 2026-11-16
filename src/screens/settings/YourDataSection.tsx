@@ -5,7 +5,6 @@ import { useSessionStore } from '../../store/useSessionStore';
 import { clearAllLocalData } from '../../db/database';
 import { downloadExport, deleteAccount } from '../../lib/dataRights';
 import { Section } from './parts';
-import '../../i18n/lazy/dataRights'; // settings.delete* (loaded with this screen)
 
 // Settings > Your data (GDPR Art. 17 / 20). Split out of Settings.tsx with
 // its state (limecore#12).
@@ -23,7 +22,9 @@ export default function YourDataSection() {
     setExporting(true);
     try {
       const name = await downloadExport(user ? { id: user.id, email: user.email } : null);
-      setDataMsg(t('settings.exportDone', { name }));
+      // v1.21.1 (limecore#103): "Saved" only once the file is written; a
+      // cancelled picker says nothing.
+      if (name) setDataMsg(t('settings.exportDone', { name }));
     } catch (e) {
       setDataMsg(t('settings.exportFailed', { msg: (e as Error).message }));
     } finally {

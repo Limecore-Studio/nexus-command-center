@@ -27,11 +27,12 @@ interface State {
   error: unknown;
   report: ErrorReport | null;
   status: SendResult | 'sending' | null;
-  exported: boolean;
+  /** v1.21.1 (limecore#103): set only once the file is written. */
+  exported: 'saved' | 'failed' | null;
 }
 
 export default class ErrorBoundary extends Component<{ children: ReactNode }, State> {
-  state: State = { error: null, report: null, status: null, exported: false };
+  state: State = { error: null, report: null, status: null, exported: null };
 
   static getDerivedStateFromError(error: unknown): Partial<State> {
     return { error };
@@ -61,10 +62,12 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
       // v1.21: loaded on demand (startup budget). The app's chunks are local
       // files in the APK and the desktop build, so this loads after a crash too.
       const { downloadExport } = await import('../lib/dataRights');
-      await downloadExport(user ? { id: user.id, email: user.email } : null);
-      this.setState({ exported: true });
+      // Same path as Settings: on Android the system picker writes the file.
+      // A cancelled picker returns null and changes nothing here.
+      const name = await downloadExport(user ? { id: user.id, email: user.email } : null);
+      if (name) this.setState({ exported: 'saved' });
     } catch {
-      /* the export has its own failure surface elsewhere; nothing to add here */
+      this.setState({ exported: 'failed' });
     }
   };
 
@@ -114,7 +117,11 @@ export default class ErrorBoundary extends Component<{ children: ReactNode }, St
                 to make; downloadExport refuses then too (exportAllowed). */}
             {exportAllowed(useAdoptionGate.getState().userId) && (
               <button type="button" className="btn-ghost w-full" onClick={this.exportData}>
-                {exported ? tr('crash.exported', 'Export downloaded') : tr('crash.export', 'Export my data')}
+                {exported === 'saved'
+                  ? tr('crash.exported', 'Export downloaded')
+                  : exported === 'failed'
+                    ? tr('crash.exportFailed', 'Could not save the export. Try again')
+                    : tr('crash.export', 'Export my data')}
               </button>
             )}
           </div>

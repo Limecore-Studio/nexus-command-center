@@ -1,0 +1,202 @@
+{
+  "en": {
+    "lock": {
+      "forgotTitle": "Forgot your PIN?",
+      "forgotBioBody": "Confirm it's you with your fingerprint, then choose a new PIN. Nothing is erased.",
+      "forgotBio": "Use fingerprint",
+      "forgotEraseBody": "Or erase this device: everything stored here is deleted, the PIN is removed and you are signed out. Synced data comes back when you sign in again. Changes not synced yet are lost.",
+      "forgotErase": "Erase this device",
+      "forgotEraseConfirm": "Tap again to erase. This can't be undone.",
+      "forgotErasing": "Erasing…"
+    },
+    "settings": {
+      "changePin": "Change PIN",
+      "changePinSub": "Enter your current PIN or use your fingerprint, then choose a new one.",
+      "newPin": "New PIN (6 digits)",
+      "repeatPin": "Repeat the new PIN",
+      "pinChanged": "PIN changed.",
+      "pinsDiffer": "The new PINs don't match.",
+      "currentPin": "Enter your current PIN"
+    }
+  },
+  "fi": {
+    "lock": {
+      "forgotTitle": "Unohtuiko PIN-koodi?",
+      "forgotBioBody": "Vahvista henkilöllisyytesi sormenjäljellä ja valitse uusi PIN-koodi. Mitään ei poisteta.",
+      "forgotBio": "Käytä sormenjälkeä",
+      "forgotEraseBody": "Tai tyhjennä tämä laite: kaikki tänne tallennettu poistetaan, PIN-koodi poistetaan ja sinut kirjataan ulos. Synkronoidut tiedot palaavat, kun kirjaudut uudelleen. Synkronoimattomat muutokset menetetään.",
+      "forgotErase": "Tyhjennä tämä laite",
+      "forgotEraseConfirm": "Napauta uudelleen tyhjentääksesi. Tätä ei voi perua.",
+      "forgotErasing": "Tyhjennetään…"
+    },
+    "settings": {
+      "changePin": "Vaihda PIN-koodi",
+      "changePinSub": "Anna nykyinen PIN-koodi tai käytä sormenjälkeä ja valitse sitten uusi.",
+      "newPin": "Uusi PIN-koodi (6 numeroa)",
+      "repeatPin": "Toista uusi PIN-koodi",
+      "pinChanged": "PIN-koodi vaihdettu.",
+      "pinsDiffer": "Uudet PIN-koodit eivät täsmää.",
+      "currentPin": "Anna nykyinen PIN-koodisi"
+    }
+  },
+  "fr": {
+    "lock": {
+      "forgotTitle": "Code PIN oublié ?",
+      "forgotBioBody": "Confirmez votre identité avec votre empreinte, puis choisissez un nouveau code PIN. Rien n’est effacé.",
+      "forgotBio": "Utiliser l’empreinte",
+      "forgotEraseBody": "Ou effacez cet appareil : tout ce qui y est stocké est supprimé, le code PIN est retiré et vous êtes déconnecté. Les données synchronisées reviennent à la prochaine connexion. Les modifications non synchronisées sont perdues.",
+      "forgotErase": "Effacer cet appareil",
+      "forgotEraseConfirm": "Touchez à nouveau pour effacer. C’est irréversible.",
+      "forgotErasing": "Effacement…"
+    },
+    "settings": {
+      "changePin": "Changer le code PIN",
+      "changePinSub": "Saisissez votre code PIN actuel ou utilisez votre empreinte, puis choisissez-en un nouveau.",
+      "newPin": "Nouveau code PIN (6 chiffres)",
+      "repeatPin": "Répétez le nouveau code PIN",
+      "pinChanged": "Code PIN modifié.",
+      "pinsDiffer": "Les nouveaux codes PIN ne correspondent pas.",
+      "currentPin": "Saisissez votre code PIN actuel"
+    }
+  },
+  "de": {
+    "lock": {
+      "forgotTitle": "PIN vergessen?",
+      "forgotBioBody": "Bestätige mit deinem Fingerabdruck, dass du es bist, und wähle dann eine neue PIN. Es wird nichts gelöscht.",
+      "forgotBio": "Fingerabdruck verwenden",
+      "forgotEraseBody": "Oder dieses Gerät löschen: Alles, was hier gespeichert ist, wird gelöscht, die PIN entfernt und du wirst abgemeldet. Synchronisierte Daten kommen bei der nächsten Anmeldung zurück. Nicht synchronisierte Änderungen gehen verloren.",
+      "forgotErase": "Dieses Gerät löschen",
+      "forgotEraseConfirm": "Zum Löschen erneut tippen. Das kann nicht rückgängig gemacht werden.",
+      "forgotErasing": "Wird gelöscht…"
+    },
+    "settings": {
+      "changePin": "PIN ändern",
+      "changePinSub": "Gib deine aktuelle PIN ein oder nutze deinen Fingerabdruck und wähle dann eine neue.",
+      "newPin": "Neue PIN (6 Ziffern)",
+      "repeatPin": "Neue PIN wiederholen",
+      "pinChanged": "PIN geändert.",
+      "pinsDiffer": "Die neuen PINs stimmen nicht überein.",
+      "currentPin": "Gib deine aktuelle PIN ein"
+    }
+  },
+  "es": {
+    "lock": {
+      "forgotTitle": "¿Olvidaste tu PIN?",
+      "forgotBioBody": "Confirma que eres tú con tu huella y luego elige un PIN nuevo. No se borra nada.",
+      "forgotBio": "Usar huella",
+      "forgotEraseBody": "O borra este dispositivo: se elimina todo lo guardado aquí, se quita el PIN y se cierra tu sesión. Los datos sincronizados vuelven al iniciar sesión de nuevo. Los cambios sin sincronizar se pierden.",
+      "forgotErase": "Borrar este dispositivo",
+      "forgotEraseConfirm": "Toca de nuevo para borrar. No se puede deshacer.",
+      "forgotErasing": "Borrando…"
+    },
+    "settings": {
+      "changePin": "Cambiar PIN",
+      "changePinSub": "Introduce tu PIN actual o usa tu huella y luego elige uno nuevo.",
+      "newPin": "PIN nuevo (6 dígitos)",
+      "repeatPin": "Repite el PIN nuevo",
+      "pinChanged": "PIN cambiado.",
+      "pinsDiffer": "Los PIN nuevos no coinciden.",
+      "currentPin": "Introduce tu PIN actual"
+    }
+  },
+  "zh": {
+    "lock": {
+      "forgotTitle": "忘记 PIN 码了？",
+      "forgotBioBody": "用指纹确认是你本人，然后设置新的 PIN 码。不会删除任何内容。",
+      "forgotBio": "使用指纹",
+      "forgotEraseBody": "或者清除此设备：删除此处存储的所有内容，移除 PIN 码并退出登录。再次登录后，已同步的数据会恢复。尚未同步的更改将丢失。",
+      "forgotErase": "清除此设备",
+      "forgotEraseConfirm": "再次点按以清除。此操作无法撤销。",
+      "forgotErasing": "正在清除…"
+    },
+    "settings": {
+      "changePin": "更改 PIN 码",
+      "changePinSub": "输入当前 PIN 码或使用指纹，然后设置新的 PIN 码。",
+      "newPin": "新 PIN 码（6 位数字）",
+      "repeatPin": "再次输入新 PIN 码",
+      "pinChanged": "PIN 码已更改。",
+      "pinsDiffer": "两次输入的新 PIN 码不一致。",
+      "currentPin": "输入当前 PIN 码"
+    }
+  },
+  "hi": {
+    "lock": {
+      "forgotTitle": "PIN भूल गए?",
+      "forgotBioBody": "फ़िंगरप्रिंट से पुष्टि करें कि यह आप हैं, फिर नया PIN चुनें। कुछ भी नहीं मिटाया जाता।",
+      "forgotBio": "फ़िंगरप्रिंट इस्तेमाल करें",
+      "forgotEraseBody": "या यह डिवाइस मिटाएँ: यहाँ सहेजा गया सब कुछ हट जाता है, PIN हट जाता है और आप साइन आउट हो जाते हैं। दोबारा साइन इन करने पर सिंक किया गया डेटा वापस आ जाता है। जो बदलाव सिंक नहीं हुए, वे खो जाते हैं।",
+      "forgotErase": "यह डिवाइस मिटाएँ",
+      "forgotEraseConfirm": "मिटाने के लिए फिर से टैप करें। इसे वापस नहीं किया जा सकता।",
+      "forgotErasing": "मिटाया जा रहा है…"
+    },
+    "settings": {
+      "changePin": "PIN बदलें",
+      "changePinSub": "अपना मौजूदा PIN डालें या फ़िंगरप्रिंट इस्तेमाल करें, फिर नया चुनें।",
+      "newPin": "नया PIN (6 अंक)",
+      "repeatPin": "नया PIN दोबारा डालें",
+      "pinChanged": "PIN बदल गया।",
+      "pinsDiffer": "नए PIN मेल नहीं खाते।",
+      "currentPin": "अपना मौजूदा PIN डालें"
+    }
+  },
+  "pt": {
+    "lock": {
+      "forgotTitle": "Esqueceu o PIN?",
+      "forgotBioBody": "Confirme que é você com a impressão digital e escolha um novo PIN. Nada é apagado.",
+      "forgotBio": "Usar impressão digital",
+      "forgotEraseBody": "Ou apague este dispositivo: tudo o que está guardado aqui é excluído, o PIN é removido e você sai da conta. Os dados sincronizados voltam quando você entrar de novo. Alterações não sincronizadas são perdidas.",
+      "forgotErase": "Apagar este dispositivo",
+      "forgotEraseConfirm": "Toque de novo para apagar. Não dá para desfazer.",
+      "forgotErasing": "Apagando…"
+    },
+    "settings": {
+      "changePin": "Alterar PIN",
+      "changePinSub": "Digite seu PIN atual ou use a impressão digital e escolha um novo.",
+      "newPin": "Novo PIN (6 dígitos)",
+      "repeatPin": "Repita o novo PIN",
+      "pinChanged": "PIN alterado.",
+      "pinsDiffer": "Os novos PINs não coincidem.",
+      "currentPin": "Digite seu PIN atual"
+    }
+  },
+  "id": {
+    "lock": {
+      "forgotTitle": "Lupa PIN?",
+      "forgotBioBody": "Konfirmasi bahwa ini Anda dengan sidik jari, lalu pilih PIN baru. Tidak ada yang dihapus.",
+      "forgotBio": "Gunakan sidik jari",
+      "forgotEraseBody": "Atau hapus perangkat ini: semua yang tersimpan di sini dihapus, PIN dihapus, dan Anda keluar. Data yang tersinkron kembali saat Anda masuk lagi. Perubahan yang belum tersinkron akan hilang.",
+      "forgotErase": "Hapus perangkat ini",
+      "forgotEraseConfirm": "Ketuk lagi untuk menghapus. Tindakan ini tidak dapat dibatalkan.",
+      "forgotErasing": "Menghapus…"
+    },
+    "settings": {
+      "changePin": "Ubah PIN",
+      "changePinSub": "Masukkan PIN Anda saat ini atau gunakan sidik jari, lalu pilih yang baru.",
+      "newPin": "PIN baru (6 digit)",
+      "repeatPin": "Ulangi PIN baru",
+      "pinChanged": "PIN diubah.",
+      "pinsDiffer": "PIN baru tidak cocok.",
+      "currentPin": "Masukkan PIN Anda saat ini"
+    }
+  },
+  "ar": {
+    "lock": {
+      "forgotTitle": "نسيت رمز PIN؟",
+      "forgotBioBody": "أكّد هويتك ببصمة الإصبع، ثم اختر رمز PIN جديدًا. لن يُحذف أي شيء.",
+      "forgotBio": "استخدام البصمة",
+      "forgotEraseBody": "أو امسح هذا الجهاز: يُحذف كل ما هو مخزّن هنا، ويُزال رمز PIN، ويُسجَّل خروجك. تعود البيانات المتزامنة عند تسجيل الدخول مجددًا. تُفقد التغييرات غير المتزامنة.",
+      "forgotErase": "مسح هذا الجهاز",
+      "forgotEraseConfirm": "انقر مرة أخرى للمسح. لا يمكن التراجع عن ذلك.",
+      "forgotErasing": "جارٍ المسح…"
+    },
+    "settings": {
+      "changePin": "تغيير رمز PIN",
+      "changePinSub": "أدخل رمز PIN الحالي أو استخدم البصمة، ثم اختر رمزًا جديدًا.",
+      "newPin": "رمز PIN الجديد (6 أرقام)",
+      "repeatPin": "أعد إدخال رمز PIN الجديد",
+      "pinChanged": "تم تغيير رمز PIN.",
+      "pinsDiffer": "رمزا PIN الجديدان غير متطابقين.",
+      "currentPin": "أدخل رمز PIN الحالي"
+    }
+  }
+}

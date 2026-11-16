@@ -86,8 +86,20 @@ function netWorthBase(d: DataSources): number {
 function currentValueFor(goal: Goal, d: DataSources): number {
   const start = parseDateLocal(goal.startDate).getTime();
   switch (goal.goalType) {
-    case 'net_worth':
-      return netWorthBase(d);
+    case 'net_worth': {
+      // v1.21.1 (NCC#255): in the goal's own currency. Its target was typed
+      // in the currency it was created under, and formatGoalValue shows that
+      // currency's symbol; net worth is computed in the current base. After a
+      // base change (one tap since v1.21), or on a device with another base,
+      // comparing the two raw numbers read a 50,000 EUR goal as reached by a
+      // few million INR. The v1.21 rebase leaves goals alone, so convert here.
+      // No rate for the pair means no reading (0), as netWorthBase skips an
+      // asset it cannot convert, never a figure in the wrong currency.
+      const base = netWorthBase(d);
+      const cur = goal.currency;
+      if (!cur || cur === d.baseCurrency) return base;
+      return convertSync(base, d.baseCurrency, cur, d.fxRates) ?? 0;
+    }
 
     case 'task_count':
       return d.tasks.filter(

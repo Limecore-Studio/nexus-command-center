@@ -357,7 +357,10 @@ function GoalForm({
       targetDate: targetDate || undefined,
       startDate,
       exerciseName: needsExercise ? exerciseName.trim() : undefined,
-      currency: goalType === 'net_worth' ? baseCurrency : undefined,
+      // v1.21.1 (NCC#255): editing keeps the currency the target is in.
+      currency: goalType === 'net_worth'
+        ? (initial?.goalType === 'net_worth' && initial.currency) || baseCurrency
+        : undefined,
     });
   };
 

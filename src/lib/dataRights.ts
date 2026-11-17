@@ -210,7 +210,15 @@ export async function downloadExport(user: { id: string; email?: string } | null
  * - a real guest: wipe the device and say there was no account;
  * - the server deleted the account: wipe the device, including the stored
  *   auth session (signOut local scope, so it never needs the network).
+ *
+ * v1.21.1 (limecore#124): the session check is bounded. Offline with an
+ * expired session, getSession() keeps retrying its refresh and never
+ * returns, so the refusal above never showed and the delete stayed pending,
+ * free to go ahead minutes later once the network came back. Offline is now
+ * decided before asking (a guest can still wipe; an account is refused), and
+ * a getSession that takes longer than SESSION_CHECK_MS counts as failed.
  */
+export const SESSION_CHECK_MS = 8_000;
 export type DeleteResult =
   | { deleted: 'account' }
   | { deleted: 'local' }
@@ -218,13 +226,24 @@ export type DeleteResult =
 
 export async function deleteAccount({ clearLocal }: { clearLocal: () => Promise<void> }): Promise<DeleteResult> {
   let session = null;
-  let sessionError: boolean;
-  try {
-    const res = await supabase.auth.getSession();
-    session = res.data.session;
-    sessionError = !!res.error;
-  } catch {
-    sessionError = true;
+  let sessionError = false;
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+  if (!offline) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const res = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error('session check timed out')), SESSION_CHECK_MS);
+        }),
+      ]);
+      session = res.data.session;
+      sessionError = !!res.error;
+    } catch {
+      sessionError = true;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   if (!session) {

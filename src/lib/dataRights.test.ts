@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const h = vi.hoisted(() => ({
   session: null as null | { user: { id: string } },
   sessionError: null as null | { message: string },
+  hang: false,
   stored: null as null | object,
   invokeError: null as null | { message: string },
   invoked: 0,
@@ -18,7 +19,10 @@ vi.mock('./supabase', () => ({
   get supabase() {
     return {
       auth: {
-        getSession: async () => ({ data: { session: h.session }, error: h.sessionError }),
+        getSession: () =>
+          h.hang
+            ? new Promise(() => {}) // offline + expired: the refresh never ends (limecore#124)
+            : Promise.resolve({ data: { session: h.session }, error: h.sessionError }),
         signOut: async (opts: unknown) => {
           h.signOuts.push(opts);
           return { error: null };
@@ -54,8 +58,13 @@ vi.mock('@capacitor/preferences', () => ({
   },
 }));
 
-const { deleteAccount, downloadExport, exportableSetting } = await import('./dataRights');
+const { deleteAccount, downloadExport, exportableSetting, SESSION_CHECK_MS } = await import('./dataRights');
 const { LAST_USER_KEY } = await import('./adoptionChoice');
+
+// navigator.onLine, switchable per test (Node has no navigator by default).
+function setOnline(on: boolean) {
+  Object.defineProperty(globalThis, 'navigator', { value: { onLine: on }, configurable: true, writable: true });
+}
 
 let wiped = 0;
 const clearLocal = async () => {
@@ -64,7 +73,8 @@ const clearLocal = async () => {
 
 beforeEach(() => {
   localStorage.clear();
-  Object.assign(h, { session: null, sessionError: null, stored: null, invokeError: null, invoked: 0, signOuts: [] });
+  Object.assign(h, { session: null, sessionError: null, hang: false, stored: null, invokeError: null, invoked: 0, signOuts: [] });
+  setOnline(true);
   wiped = 0;
 });
 
@@ -116,6 +126,39 @@ describe('deleteAccount', () => {
     await expect(deleteAccount({ clearLocal })).rejects.toThrow('boom');
     expect(wiped).toBe(0);
     expect(h.signOuts).toEqual([]);
+  });
+});
+
+describe('deleteAccount, bounded (limecore#124)', () => {
+  it('a getSession that never returns is refused within the bound: no call, no wipe', async () => {
+    vi.useFakeTimers();
+    try {
+      h.hang = true;
+      h.stored = { user: { id: 'user-1' }, refresh_token: 'r' };
+      const pending = deleteAccount({ clearLocal });
+      await vi.advanceTimersByTimeAsync(SESSION_CHECK_MS);
+      expect(await pending).toEqual({ deleted: 'nothing', reason: 'signed-out' });
+      expect(h.invoked).toBe(0);
+      expect(wiped).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('offline with an account recorded: refused at once, getSession never asked', async () => {
+    setOnline(false);
+    h.hang = true; // would hang if it were asked
+    localStorage.setItem(LAST_USER_KEY, 'user-1');
+    expect(await deleteAccount({ clearLocal })).toEqual({ deleted: 'nothing', reason: 'signed-out' });
+    expect(h.invoked).toBe(0);
+    expect(wiped).toBe(0);
+  });
+
+  it('offline as a real guest: the device is still wiped (no network needed)', async () => {
+    setOnline(false);
+    h.hang = true;
+    expect(await deleteAccount({ clearLocal })).toEqual({ deleted: 'local' });
+    expect(wiped).toBe(1);
   });
 });
 

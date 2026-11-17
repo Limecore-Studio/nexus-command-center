@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type FocusEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { authenticateBiometric } from '../utils/biometric';
@@ -9,6 +10,12 @@ import '../i18n/lazy/pin'; // settings.*Pin* (loaded with this dialog)
 // fingerprint, the same proof the lock screen accepts) comes first, then the
 // new one twice. A wrong current PIN counts toward the lockout, as on the
 // lock screen. Loaded on demand from Settings.
+//
+// v1.21.1 (NCC#274): rendered into document.body. Inside a screen it sat in
+// PageTransition's transformed wrapper, which makes `fixed` relative to that
+// wrapper and caps its z-index below the tab bar, so the nav drew over it.
+// The overlay scrolls, so with the keyboard open (the WebView shrinks) the
+// focused field and Save stay reachable.
 const SIX_DIGITS = /^\d{6}$/;
 
 export default function ChangePinDialog({ onClose }: { onClose: () => void }) {
@@ -51,6 +58,13 @@ export default function ChangePinDialog({ onClose }: { onClose: () => void }) {
     }
   };
 
+  // Once the keyboard has resized the view (about 300 ms), bring the field
+  // into sight; Save is a short scroll below it.
+  const keepInView = (e: FocusEvent<HTMLInputElement>) => {
+    const el = e.currentTarget;
+    setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+  };
+
   const pinInput = (value: string, set: (v: string) => void, label: string, autoFocus = false) => (
     <input
       className="input w-full mt-2 font-mono tracking-[0.3em]"
@@ -63,17 +77,19 @@ export default function ChangePinDialog({ onClose }: { onClose: () => void }) {
       value={value}
       autoFocus={autoFocus}
       onChange={(e) => set(e.target.value.replace(/\D/g, '').slice(0, 6))}
+      onFocus={keepInView}
     />
   );
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-bg/90 z-[60] flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 bg-bg/90 z-[60] overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="cpin-title"
       onClick={busy ? undefined : onClose}
     >
+      <div className="min-h-full flex items-end sm:items-center justify-center p-4 safe-bottom">
       <div className="card-elevated w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
         <h2 id="cpin-title" className="font-heading font-bold text-base">{t('settings.changePin')}</h2>
         {done ? (
@@ -120,6 +136,8 @@ export default function ChangePinDialog({ onClose }: { onClose: () => void }) {
           </>
         )}
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

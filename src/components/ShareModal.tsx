@@ -8,6 +8,7 @@
 // invite-by-email row. All server errors are surfaced inline.
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useConfirm } from './ConfirmDialog';
 import {
@@ -100,8 +101,13 @@ export default function ShareModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-bg/90 z-50 flex items-end sm:items-center justify-center p-4">
+  // v1.21.1 (NCC#274): into document.body, like BottomSheet and the sign-out
+  // dialog. Inside a screen, PageTransition's transform traps a `fixed`
+  // overlay under the tab bar; the overlay scrolls so the email field and
+  // the buttons stay reachable with the keyboard open.
+  return createPortal(
+    <div className="fixed inset-0 bg-bg/90 z-50 overflow-y-auto">
+      <div className="min-h-full flex items-end sm:items-center justify-center p-4 safe-bottom">
       <div className="card-elevated w-full max-w-sm">
         <div className="flex items-start justify-between mb-2">
           <h2 className="font-heading font-bold text-base">{title}</h2>
@@ -203,7 +209,9 @@ export default function ShareModal({
           <div className="text-[0.625rem] text-success mt-2">{success}</div>
         )}
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
 

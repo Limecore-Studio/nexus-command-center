@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useConfirm } from '../components/ConfirmDialog';
 import { currencyOptions } from '../lib/currencies';
 import { formatLocale } from '../utils/formatters';
@@ -16,9 +16,15 @@ import pkg from '../../package.json';
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/useAuthStore';
 import { APP_LOCK_APPLIES } from '../lib/isDesktop';
+import '../i18n/lazy/pin'; // settings.changePin* (loaded with this screen)
+
+// v1.21.1 (NCC#259) — Change PIN, loaded when opened.
+const ChangePinDialog = lazy(() => import('../components/ChangePinDialog'));
 import { IS_DESKTOP } from '../lib/desktop';
 import { checkForDesktopUpdate, runDesktopUpdateAction, useDesktopUpdate } from '../lib/desktopUpdate';
-import { setUpdateCheckEnabled, useFdroidUpdate } from '../lib/fdroidUpdate';
+import { setUpdateCheckEnabled } from '../lib/fdroidUpdate';
+import { setConsent, useConsent } from '../lib/usageConsent';
+import '../i18n/lazy/consent'; // settings.appOpens* (loaded with this screen)
 import { useSyncStore } from '../store/useSyncStore';
 import { useRealtimeState, type RealtimeState } from '../lib/realtimeState';
 
@@ -69,6 +75,7 @@ export default function Settings() {
   const lock = useAuthStore((s) => s.lock);
   const verifyPin = useAuthStore((s) => s.verifyPin);
   const hasPin = useAuthStore((s) => s.hasPin);
+  const [changePinOpen, setChangePinOpen] = useState(false);
 
   const user = useSessionStore((s) => s.user);
   const signOut = useSessionStore((s) => s.signOut);
@@ -293,6 +300,10 @@ export default function Settings() {
       }
     }
     await clearAllLocalData();
+    // v1.21.1 (NCC#259): the PIN and its counters too. They live in
+    // Preferences, which neither line here reached, so the same PIN was still
+    // asked for after the reload.
+    await (await import('../lib/clearPin')).clearPin();
     localStorage.clear();
     location.reload();
   };
@@ -432,6 +443,26 @@ export default function Settings() {
               ))}
             </select>
           </div>
+          {/* v1.21.1 (NCC#259) — LockScreen asks for the current PIN (or
+              biometric), then the new one twice. */}
+          {hasPin && (
+            <button
+              type="button"
+              className="py-2 w-full flex items-center justify-between gap-3 text-left active:opacity-80"
+              onClick={() => setChangePinOpen(true)}
+            >
+              <div>
+                <div className="text-sm">{t('settings.changePin')}</div>
+                <div className="text-[0.625rem] text-text-muted">{t('settings.changePinSub')}</div>
+              </div>
+              <span aria-hidden className="text-text-muted">›</span>
+            </button>
+          )}
+          {changePinOpen && (
+            <Suspense fallback={null}>
+              <ChangePinDialog onClose={() => setChangePinOpen(false)} />
+            </Suspense>
+          )}
           <Toggle
             label={t('settings.encryption')}
             sub={t('settings.encryptionSub')}
@@ -551,6 +582,7 @@ export default function Settings() {
           {/* v1.16 (limecore#16) — off by default, accounts only; the note is
               the consent text the privacy policy (#50) relies on. */}
           <ErrorReportsToggle />
+          {user && <AppOpensToggle />}
           <a
             className="py-2 flex items-center justify-between gap-3 active:opacity-80"
             href="https://limecore.dev/privacy"
@@ -804,13 +836,28 @@ function DesktopUpdateRow() {
 // only, because it is the only build F-Droid ships.
 function FdroidUpdateToggle() {
   const { t } = useTranslation();
-  const { enabled } = useFdroidUpdate();
+  // v1.21.1 (limecore#87): opt-in, per owner; off until answered yes.
+  const enabled = useConsent('updateCheck');
   return (
     <Toggle
       label={t('settings.fdroidCheck')}
       sub={t('settings.fdroidCheckNote')}
       value={enabled}
       onChange={setUpdateCheckEnabled}
+    />
+  );
+}
+
+// v1.21.1 (limecore#87) — the daily app-open record, opt-in per account.
+function AppOpensToggle() {
+  const { t } = useTranslation();
+  const on = useConsent('appOpens');
+  return (
+    <Toggle
+      label={t('settings.appOpens')}
+      sub={t('settings.appOpensNote')}
+      value={on}
+      onChange={(v) => setConsent('appOpens', v)}
     />
   );
 }

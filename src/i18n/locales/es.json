@@ -341,18 +341,6 @@
     "tagFree": "Gratis",
     "tagFreeFallback": "Gratis · respaldo",
     "tagSamsung": "Samsung Android",
-    "yourData": "Tus datos",
-    "yourDataNote": "Llévate una copia de todo o bórralo. Una sola cuenta cubre Nexus Command Center, LimeLog y StudyDesk.",
-    "exportData": "Exportar mis datos",
-    "exporting": "Preparando…",
-    "exportDone": "{{name}} guardado",
-    "exportFailed": "Error al exportar: {{msg}}",
-    "deleteAccount": "Eliminar mi cuenta",
-    "deletingAccount": "Eliminando…",
-    "deleteAccountNote": "Borra tu cuenta y todos sus datos, en las tres apps, de forma inmediata e irreversible. No hay periodo de recuperación.",
-    "deleteAccountConfirm1": "¿Eliminar tu cuenta y todo su contenido? Esto no se puede deshacer.",
-    "deleteAccountConfirm2": "Última comprobación: esto también borra tus datos de LimeLog y StudyDesk. ¿Continuar?",
-    "deleteAccountFailed": "Error al eliminar: {{msg}}",
     "support": "Apoyo",
     "supportDev": "Apoya el desarrollo",
     "supportDevSub": "Invítame a un café en Ko-fi",
@@ -658,8 +646,8 @@
     "bioUnavailable": "Biometría no disponible en este dispositivo",
     "setPinFirst": "Define primero un PIN — la biometría desbloquea DESPUÉS de la configuración inicial",
     "bio": "Bio",
-    "forgotPin": "¿PIN olvidado? Restablece en Ajustes → Borrar todos los datos",
-    "pinUnreadable": "Este teléfono no puede leer tu PIN guardado ahora mismo. Prueba a reiniciar la app. Si el desbloqueo con huella está activado, puedes usarlo, y Ajustes → Borrar todos los datos te permite empezar de nuevo con un PIN nuevo. Si no, borra el almacenamiento de la app en los ajustes de Android. Los datos sincronizados vuelven al iniciar sesión."
+    "forgotPin": "¿Olvidaste el PIN?",
+    "pinUnreadable": "Este teléfono no puede leer tu PIN guardado ahora mismo. Prueba a reiniciar la app. El desbloqueo con huella funciona si está activado. Si no, toca ¿Olvidaste el PIN? abajo."
   },
   "fin": {
     "flow": {

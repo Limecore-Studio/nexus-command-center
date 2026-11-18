@@ -341,18 +341,6 @@
     "tagFree": "Ilmainen",
     "tagFreeFallback": "Ilmainen · varajärjestelmä",
     "tagSamsung": "Samsung Android",
-    "yourData": "Omat tietosi",
-    "yourDataNote": "Ota kopio kaikesta tai poista se. Yksi tili kattaa Nexus Command Centerin, LimeLogin ja StudyDeskin.",
-    "exportData": "Vie tietoni",
-    "exporting": "Valmistellaan…",
-    "exportDone": "{{name}} tallennettu",
-    "exportFailed": "Vienti epäonnistui: {{msg}}",
-    "deleteAccount": "Poista tilini",
-    "deletingAccount": "Poistetaan…",
-    "deleteAccountNote": "Poistaa tilisi ja kaikki sen tiedot kaikista kolmesta sovelluksesta välittömästi ja peruuttamattomasti. Palautusaikaa ei ole.",
-    "deleteAccountConfirm1": "Poistetaanko tilisi ja kaikki sen sisältö? Tätä ei voi perua.",
-    "deleteAccountConfirm2": "Viimeinen varmistus — tämä poistaa myös LimeLog- ja StudyDesk-tietosi. Jatketaanko?",
-    "deleteAccountFailed": "Poisto epäonnistui: {{msg}}",
     "support": "Tuki",
     "supportDev": "Tue kehitystä",
     "supportDevSub": "Tarjoa kahvit Ko-fissa",
@@ -657,8 +645,8 @@
     "bioUnavailable": "Biometria ei käytettävissä tällä laitteella",
     "setPinFirst": "Aseta ensin PIN — biometria avaa vasta alkuasetuksen jälkeen",
     "bio": "Bio",
-    "forgotPin": "Unohtuiko PIN? Nollaa kohdasta Asetukset → Tyhjennä kaikki tiedot",
-    "pinUnreadable": "Puhelin ei juuri nyt pysty lukemaan tallennettua PIN-koodiasi. Kokeile käynnistää sovellus uudelleen. Jos sormenjälkiavaus on käytössä, voit avata lukituksen sormenjäljellä, ja Asetukset → Tyhjennä kaikki tiedot antaa aloittaa alusta uudella PIN-koodilla. Muuten tyhjennä sovelluksen tallennustila Androidin asetuksista. Synkronoidut tiedot palaavat, kun kirjaudut sisään."
+    "forgotPin": "Unohtuiko PIN?",
+    "pinUnreadable": "Puhelin ei juuri nyt pysty lukemaan tallennettua PIN-koodiasi. Kokeile käynnistää sovellus uudelleen. Sormenjälkiavaus toimii, jos se on käytössä. Muuten napauta alla Unohtuiko PIN?"
   },
   "fin": {
     "flow": {

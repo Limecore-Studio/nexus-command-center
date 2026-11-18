@@ -22,7 +22,9 @@ export default function YourDataSection() {
     setExporting(true);
     try {
       const name = await downloadExport(user ? { id: user.id, email: user.email } : null);
-      setDataMsg(t('settings.exportDone', { name }));
+      // v1.21.1 (limecore#103): "Saved" only once the file is written; a
+      // cancelled picker says nothing.
+      if (name) setDataMsg(t('settings.exportDone', { name }));
     } catch (e) {
       setDataMsg(t('settings.exportFailed', { msg: (e as Error).message }));
     } finally {
@@ -40,12 +42,21 @@ export default function YourDataSection() {
     setDataMsg(null);
     setDeleting(true);
     try {
-      await deleteAccount({
+      const result = await deleteAccount({
         clearLocal: async () => {
           await clearAllLocalData();
           localStorage.clear();
         },
       });
+      // v1.21.1 (limecore#102): each outcome says what actually happened.
+      if (result.deleted === 'nothing') {
+        setDataMsg(t('settings.deleteNeedsSignIn'));
+        setDeleting(false);
+        return;
+      }
+      if (result.deleted === 'local') {
+        await confirm({ message: t('settings.deleteGuestDone'), confirmLabel: t('settings.deleteOk'), destructive: false, alert: true });
+      }
       location.reload();
     } catch (e) {
       setDataMsg(t('settings.deleteAccountFailed', { msg: (e as Error).message }));

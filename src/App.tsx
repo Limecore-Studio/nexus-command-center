@@ -13,7 +13,7 @@ import { supabase } from './lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { startLive, stopLive } from './lib/liveSync';
 import { hydrateStudiesFromCloud, hydrateHabitsFromCloud, hydrateBodyMetricsFromCloud, hydrateWorkQualityFromCloud, hydrateBraindumpFromCloud } from './lib/cloudSync';
-import { watchAppOpens } from './lib/appOpens';
+import { setConsentOwner } from './lib/consentOwner';
 import { refreshEntitlement } from './lib/entitlement';
 import { useStudiesStore } from './store/useStudiesStore';
 import { useBraindumpStore } from './store/useBraindumpStore';
@@ -251,10 +251,24 @@ export default function App() {
   // would be skipped. The visibilitychange listener installed here covers the
   // commoner case — the app resumed from the background days later without the
   // process having died.
+  // v1.21.1 (limecore#87): loaded on demand (startup budget); it is opt-in
+  // and records nothing before this account's yes.
   useEffect(() => {
     if (!session) return;
-    return watchAppOpens();
+    let stop: (() => void) | undefined;
+    let cancelled = false;
+    void import('./lib/appOpens').then((m) => {
+      if (!cancelled) stop = m.watchAppOpens();
+    });
+    return () => {
+      cancelled = true;
+      stop?.();
+    };
   }, [session]);
+
+  // v1.21.1 (limecore#87): opt-in answers are kept per owner (account or guest).
+  const consentOwner = session?.user.id ?? null;
+  useEffect(() => setConsentOwner(consentOwner), [consentOwner]);
 
   // v1.12 Item 5 — supporter entitlement. Keyed on the user id rather than the
   // session object so a token refresh does not re-ask; the module additionally

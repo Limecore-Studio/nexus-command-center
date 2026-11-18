@@ -1,0 +1,3 @@
+Sicherere PIN, deine Wahl.
+
+Deine PIN wird jetzt vom Android Keystore geschützt. „PIN vergessen" funktioniert vom Sperrbildschirm aus, „Alle Daten löschen" entfernt die PIN, und in den Einstellungen kannst du sie ändern. App-Öffnungen und die F-Droid-Updateprüfung sind aus, bis du zustimmst. Der Export speichert eine echte Datei ohne Anmeldedaten. Vermögensziele behalten ihre Währung; Konto löschen täuscht nichts vor.

@@ -1,0 +1,12 @@
+# Per-function settings read by `supabase functions deploy` and the local
+# stack. Only what differs from the defaults is listed here. `project_id` is
+# the local stack's container-name prefix (required by the CLI), not the
+# hosted project; deploys take the project from `--project-ref` / `link`.
+project_id = "nexus-dashboard"
+
+# v1.21.1 (limecore#101): suite-session verifies the caller's token itself
+# (signature against the JWKS, issuer, audience, at most 7 days past exp, a
+# live session). The platform check would reject the recently expired tokens
+# it is meant to accept, with a 401 that carries no CORS headers.
+[functions.suite-session]
+verify_jwt = false

@@ -21,8 +21,9 @@
 //   10 failures  →   5 min   (kills "let me try a hundred more")
 //   20 failures  →  15 min   (a 6-digit space brute force becomes years)
 //
-// The counter resets only on successful unlock or on `setPin` (e.g. after
-// "Clear All Data" recovery). Lockout is enforced server-of-truth here, BUT
+// The counter resets only on successful unlock, on `setPin`, or on
+// `clearPin` (v1.21.1, NCC#259, lib/clearPin.ts: Clear All Data and
+// "Forgot PIN?" remove the PIN and its counters). Lockout is enforced server-of-truth here, BUT
 // because all state is local, the threat model is "stolen unlocked device"
 // or "rooted device with adb shell input" — a sufficiently determined
 // adversary can still attack the on-disk hash directly. PBKDF2 + salt makes
@@ -39,11 +40,12 @@ import {
   keystoreAvailable,
 } from '@/lib/keystore';
 
-const PIN_KEY = 'auth.pin';
+// Exported for lib/clearPin.ts, which loads on demand (startup budget).
+export const PIN_KEY = 'auth.pin';
 const AUTOLOCK_KEY = 'auth.autoLockMin';
 const BIOMETRIC_KEY = 'auth.biometricEnabled';
-const PIN_ATTEMPTS_KEY = 'auth.pinFailedAttempts';
-const PIN_LAST_FAIL_KEY = 'auth.pinLastFailAt';
+export const PIN_ATTEMPTS_KEY = 'auth.pinFailedAttempts';
+export const PIN_LAST_FAIL_KEY = 'auth.pinLastFailAt';
 
 const PBKDF2_ITERATIONS = 250_000;
 const SALT_BYTES = 16;
@@ -81,7 +83,7 @@ async function setPref(key: string, value: string): Promise<void> {
     localStorage.setItem(key, value);
   }
 }
-async function removePref(key: string): Promise<void> {
+export async function removePref(key: string): Promise<void> {
   try {
     await Preferences.remove({ key });
   } catch {

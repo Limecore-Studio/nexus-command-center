@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // limit locks rather than restarting the idle clock.
 
 const prefs = vi.hoisted(() => new Map<string, string>());
-const ks = vi.hoisted(() => ({ fail: false, garble: false }));
+const ks = vi.hoisted(() => ({ fail: false, garble: false, encryptFails: false }));
 
 vi.mock('@capacitor/preferences', () => ({
   Preferences: {
@@ -21,7 +21,11 @@ vi.mock('@/lib/keystore', () => ({
   KEYSTORE_ALIAS_PIN: 'auth.pin',
   keystoreAvailable: () => true,
   ensureKey: async () => true,
-  encrypt: async (_alias: string, plaintext: string) => ({ ciphertext: btoa(plaintext), iv: 'iv' }),
+  encrypt: async (_alias: string, plaintext: string) => {
+    // limecore#47: what the broken encrypt did before #240.
+    if (ks.encryptFails) throw new Error('Caller-provided IV not permitted');
+    return { ciphertext: btoa(plaintext), iv: 'iv' };
+  },
   decrypt: async (_alias: string, ciphertext: string) => {
     if (ks.fail) throw new Error('KeyStoreException');
     return ks.garble ? 'garbled' : atob(ciphertext);
@@ -29,11 +33,13 @@ vi.mock('@/lib/keystore', () => ({
 }));
 
 const { useAuthStore } = await import('./useAuthStore');
+const { clearPin } = await import('../lib/clearPin');
 
 beforeEach(() => {
   prefs.clear();
   ks.fail = false;
   ks.garble = false;
+  ks.encryptFails = false;
   useAuthStore.setState({ unlocked: false, hasPin: false, pinUnreadable: false, ready: false, failedAttempts: 0, lockedUntil: 0 });
 });
 
@@ -103,5 +109,74 @@ describe('auto-lock after the idle limit (limecore#58)', () => {
     useAuthStore.getState().bumpActivity();
     expect(useAuthStore.getState().unlocked).toBe(false);
     expect(Date.now() - useAuthStore.getState().lastActivity).toBeLessThan(1000);
+  });
+});
+
+// v1.21.1 — NCC#240 (limecore#47): while encrypt was broken every PIN stayed
+// v2. Updating must upgrade it without locking anyone out.
+describe('upgrading from the broken v3 wrapping (limecore#47)', () => {
+  it('a PIN set while encrypt failed is v2, and still unlocks', async () => {
+    ks.encryptFails = true;
+    await useAuthStore.getState().setPin('123456');
+    expect(prefs.get('auth.pin')!.startsWith('v2:')).toBe(true);
+    expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(true);
+  });
+
+  it('after the fix, the next launch wraps it as v3 and the same PIN unlocks', async () => {
+    ks.encryptFails = true;
+    await useAuthStore.getState().setPin('123456');
+    ks.encryptFails = false;
+    await useAuthStore.getState().init();
+    expect(prefs.get('auth.pin')!.startsWith('v3:')).toBe(true);
+    expect(useAuthStore.getState().pinUnreadable).toBe(false);
+    expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(true);
+    expect((await useAuthStore.getState().verifyPin('654321')).ok).toBe(false);
+  });
+
+  it('a wrap that does not read back keeps v2, so the PIN still works', async () => {
+    ks.encryptFails = true;
+    await useAuthStore.getState().setPin('123456');
+    ks.encryptFails = false;
+    ks.garble = true;
+    await useAuthStore.getState().init();
+    expect(prefs.get('auth.pin')!.startsWith('v2:')).toBe(true);
+    ks.garble = false;
+    expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(true);
+  });
+
+  it('a launch where encrypt still fails changes nothing', async () => {
+    ks.encryptFails = true;
+    await useAuthStore.getState().setPin('123456');
+    const before = prefs.get('auth.pin');
+    await useAuthStore.getState().init();
+    expect(prefs.get('auth.pin')).toBe(before);
+    expect(useAuthStore.getState().hasPin).toBe(true);
+  });
+});
+
+// v1.21.1 — NCC#259.
+describe('removing the PIN (Clear All Data, Forgot PIN)', () => {
+  it('clearPin removes the PIN and its counters, so the next launch asks for a new one', async () => {
+    await useAuthStore.getState().setPin('123456');
+    await useAuthStore.getState().verifyPin('000000');
+    expect(prefs.get('auth.pinFailedAttempts')).toBe('1');
+    await clearPin();
+    expect(prefs.has('auth.pin')).toBe(false);
+    expect(prefs.has('auth.pinFailedAttempts')).toBe(false);
+    expect(prefs.has('auth.pinLastFailAt')).toBe(false);
+    await useAuthStore.getState().init();
+    expect(useAuthStore.getState().hasPin).toBe(false);
+  });
+});
+
+describe('Change PIN (Settings)', () => {
+  it('the new PIN replaces the old one and resets the counters', async () => {
+    await useAuthStore.getState().setPin('123456');
+    await useAuthStore.getState().verifyPin('000000');
+    expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(true);
+    await useAuthStore.getState().setPin('222222');
+    expect(prefs.has('auth.pinFailedAttempts')).toBe(false);
+    expect((await useAuthStore.getState().verifyPin('222222')).ok).toBe(true);
+    expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(false);
   });
 });

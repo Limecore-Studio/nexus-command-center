@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/useAuthStore';
 import { authenticateBiometric, biometricCapability } from '../utils/biometric';
 import Glyph from '../components/Glyph';
+
+// v1.21.1 (NCC#259): the way out of a forgotten PIN, loaded only when asked for.
+const ForgotPinPanel = lazy(() => import('../components/ForgotPinPanel'));
 
 export default function LockScreen() {
   const { t } = useTranslation();
@@ -13,6 +16,7 @@ export default function LockScreen() {
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
   const lockedUntil = useAuthStore((s) => s.lockedUntil);
   const pinUnreadable = useAuthStore((s) => s.pinUnreadable);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const [mode, setMode] = useState<'enter' | 'set' | 'confirm'>(hasPin ? 'enter' : 'set');
   const [code, setCode] = useState('');
@@ -245,12 +249,20 @@ export default function LockScreen() {
           </div>
         </div>
 
-        {pinUnreadable && mode === 'enter' ? (
+        {pinUnreadable && mode === 'enter' && (
           <div role="alert" className="text-xs desktop:tall:text-sm text-danger text-center px-2">
             {t('lock.pinUnreadable')}
           </div>
-        ) : (
-          <div className="text-[0.625rem] desktop:tall:text-xs text-text-muted/60">{t('lock.forgotPin')}</div>
+        )}
+        {hasPin && mode === 'enter' && (
+          <button type="button" className="text-[0.625rem] desktop:tall:text-xs text-text-muted underline" onClick={() => setForgotOpen(true)}>
+            {t('lock.forgotPin')}
+          </button>
+        )}
+        {forgotOpen && (
+          <Suspense fallback={null}>
+            <ForgotPinPanel bioReady={biometricEnabled && bioAvailable} onClose={() => setForgotOpen(false)} />
+          </Suspense>
         )}
       </div>
     </div>

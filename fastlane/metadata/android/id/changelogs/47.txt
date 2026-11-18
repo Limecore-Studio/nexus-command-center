@@ -1,0 +1,3 @@
+PIN lebih aman, pilihanmu.
+
+PIN-mu kini dilindungi Android Keystore. Lupa PIN berfungsi dari layar kunci, Hapus Semua Data menghapus PIN, dan kamu bisa mengganti PIN di Pengaturan. Catatan pembukaan aplikasi dan cek pembaruan F-Droid mati sampai kamu setuju. Ekspor menyimpan file sungguhan tanpa data masuk. Target kekayaan bersih tetap memakai mata uangnya sendiri.

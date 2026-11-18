@@ -20,11 +20,15 @@
 // rather than a lost day — and unlike the sibling apps' outboxes, NCC's queue
 // drops permanently-failing items (42501 RLS denial is in PERMANENT_PG_CODES)
 // instead of retrying forever, so a stray open cannot wedge the queue.
+//
+// **Opt-in (v1.21.1, limecore#87).** Nothing is queued or sent unless this
+// account said yes (lib/usageConsent.ts). Not asked counts as no.
 
 import { Capacitor } from '@capacitor/core';
 import { IS_DESKTOP } from './isDesktop';
 import { enqueue } from '../db/syncQueue';
 import { supabase } from './supabase';
+import { consented } from './usageConsent';
 import { generateId } from '../utils/uuid';
 import pkg from '../../package.json';
 
@@ -58,6 +62,7 @@ function platform(): string {
 export async function recordAppOpen(): Promise<boolean> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return false;
+  if (!consented('appOpens', session.user.id)) return false;
 
   const today = localDay();
   try {

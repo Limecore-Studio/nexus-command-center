@@ -16,6 +16,9 @@ public class MainActivity extends BridgeActivity {
         // v1.4 — Android Keystore plugin for PIN hash encryption + future
         // Dexie at-rest encryption. Same pre-super registration pattern.
         registerPlugin(LimecoreKeystorePlugin.class);
+        // v1.21.1 (limecore#103) — the system "create document" picker, so the
+        // data export writes a real file.
+        registerPlugin(LimecoreSaveFilePlugin.class);
         super.onCreate(savedInstanceState);
         handleNotificationTap(getIntent());
     }

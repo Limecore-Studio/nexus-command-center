@@ -341,18 +341,6 @@
     "tagFree": "Gratuit",
     "tagFreeFallback": "Gratuit · secours",
     "tagSamsung": "Samsung Android",
-    "yourData": "Vos données",
-    "yourDataNote": "Emportez une copie de tout, ou effacez-le. Un seul compte couvre Nexus Command Center, LimeLog et StudyDesk.",
-    "exportData": "Exporter mes données",
-    "exporting": "Préparation…",
-    "exportDone": "{{name}} enregistré",
-    "exportFailed": "Échec de l'export : {{msg}}",
-    "deleteAccount": "Supprimer mon compte",
-    "deletingAccount": "Suppression…",
-    "deleteAccountNote": "Efface votre compte et toutes ses données, dans les trois applications, immédiatement et irréversiblement. Aucun délai de récupération.",
-    "deleteAccountConfirm1": "Supprimer votre compte et tout son contenu ? C'est irréversible.",
-    "deleteAccountConfirm2": "Dernière vérification — cela efface aussi vos données LimeLog et StudyDesk. Continuer ?",
-    "deleteAccountFailed": "Échec de la suppression : {{msg}}",
     "support": "Soutien",
     "supportDev": "Soutenir le développement",
     "supportDevSub": "Offrez-moi un café sur Ko-fi",
@@ -658,8 +646,8 @@
     "bioUnavailable": "Biométrie indisponible sur cet appareil",
     "setPinFirst": "Définissez d'abord un PIN — la biométrie déverrouille APRÈS la configuration initiale",
     "bio": "Bio",
-    "forgotPin": "PIN oublié ? Réinitialisez via Paramètres → Effacer toutes les données",
-    "pinUnreadable": "Ce téléphone ne peut pas lire votre PIN enregistré pour le moment. Essayez de redémarrer l'app. Si le déverrouillage par empreinte est activé, vous pouvez l'utiliser, et Paramètres → Effacer toutes les données permet de repartir avec un nouveau PIN. Sinon, effacez le stockage de l'app dans les paramètres Android. Les données synchronisées reviennent à la connexion."
+    "forgotPin": "Code PIN oublié ?",
+    "pinUnreadable": "Ce téléphone ne peut pas lire votre code PIN enregistré pour le moment. Essayez de redémarrer l’app. Le déverrouillage par empreinte fonctionne s’il est activé. Sinon, touchez Code PIN oublié ? ci-dessous."
   },
   "fin": {
     "flow": {

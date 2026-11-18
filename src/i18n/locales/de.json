@@ -341,18 +341,6 @@
     "tagFree": "Kostenlos",
     "tagFreeFallback": "Kostenlos · Fallback",
     "tagSamsung": "Samsung Android",
-    "yourData": "Deine Daten",
-    "yourDataNote": "Nimm eine Kopie von allem mit oder lösche es. Ein Konto gilt für Nexus Command Center, LimeLog und StudyDesk.",
-    "exportData": "Meine Daten exportieren",
-    "exporting": "Wird vorbereitet…",
-    "exportDone": "{{name}} gespeichert",
-    "exportFailed": "Export fehlgeschlagen: {{msg}}",
-    "deleteAccount": "Konto löschen",
-    "deletingAccount": "Wird gelöscht…",
-    "deleteAccountNote": "Löscht dein Konto und alle Daten in allen drei Apps, sofort und unwiderruflich. Es gibt keine Wiederherstellungsfrist.",
-    "deleteAccountConfirm1": "Konto und alle Inhalte löschen? Das lässt sich nicht rückgängig machen.",
-    "deleteAccountConfirm2": "Letzte Prüfung — dies löscht auch deine LimeLog- und StudyDesk-Daten. Fortfahren?",
-    "deleteAccountFailed": "Löschen fehlgeschlagen: {{msg}}",
     "support": "Unterstützen",
     "supportDev": "Entwicklung unterstützen",
     "supportDevSub": "Spendiere mir einen Kaffee auf Ko-fi",
@@ -657,8 +645,8 @@
     "bioUnavailable": "Biometrie auf diesem Gerät nicht verfügbar",
     "setPinFirst": "Lege zuerst eine PIN fest — Biometrie entsperrt erst NACH der Ersteinrichtung",
     "bio": "Bio",
-    "forgotPin": "PIN vergessen? Zurücksetzen unter Einstellungen → Alle Daten löschen",
-    "pinUnreadable": "Dieses Telefon kann deine gespeicherte PIN gerade nicht lesen. Starte die App neu. Ist das Entsperren per Fingerabdruck an, kannst du es nutzen; unter Einstellungen → Alle Daten löschen fängst du mit einer neuen PIN von vorn an. Sonst lösche den App-Speicher in den Android-Einstellungen. Synchronisierte Daten kehren nach der Anmeldung zurück."
+    "forgotPin": "PIN vergessen?",
+    "pinUnreadable": "Dieses Telefon kann deine gespeicherte PIN gerade nicht lesen. Starte die App neu. Die Entsperrung per Fingerabdruck funktioniert, wenn sie aktiviert ist. Sonst tippe unten auf PIN vergessen?"
   },
   "fin": {
     "flow": {

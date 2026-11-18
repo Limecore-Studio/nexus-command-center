@@ -341,18 +341,6 @@
     "tagFree": "Free",
     "tagFreeFallback": "Free · fallback",
     "tagSamsung": "Samsung Android",
-    "yourData": "Your data",
-    "yourDataNote": "Take a copy of everything, or erase it. One account covers Nexus Command Center, LimeLog and StudyDesk.",
-    "exportData": "Export my data",
-    "exporting": "Preparing…",
-    "exportDone": "Saved {{name}}",
-    "exportFailed": "Export failed: {{msg}}",
-    "deleteAccount": "Delete my account",
-    "deletingAccount": "Deleting…",
-    "deleteAccountNote": "Erases your account and all its data, in all three apps, immediately and irreversibly. There is no recovery window.",
-    "deleteAccountConfirm1": "Delete your account and everything in it? This cannot be undone.",
-    "deleteAccountConfirm2": "Last check — this also erases your LimeLog and StudyDesk data. Continue?",
-    "deleteAccountFailed": "Deletion failed: {{msg}}",
     "support": "Support",
     "supportDev": "Support development",
     "supportDevSub": "Buy me a coffee on Ko-fi",
@@ -657,8 +645,8 @@
     "bioUnavailable": "Biometric unavailable on this device",
     "setPinFirst": "Set a PIN first — biometric unlocks AFTER initial setup",
     "bio": "Bio",
-    "forgotPin": "Forgot PIN? Reset in Settings → Clear All Data",
-    "pinUnreadable": "This phone can't read your saved PIN right now. Try restarting the app. If fingerprint unlock is on, you can use it, and Settings → Clear All Data lets you start again with a new PIN. Otherwise clear the app's storage in Android settings. Synced data comes back when you sign in."
+    "forgotPin": "Forgot PIN?",
+    "pinUnreadable": "This phone can't read your saved PIN right now. Try restarting the app. Fingerprint unlock still works if it is on. Otherwise tap Forgot PIN? below."
   },
   "fin": {
     "flow": {

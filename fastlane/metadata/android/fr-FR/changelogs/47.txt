@@ -1,0 +1,3 @@
+Code PIN plus sûr, votre choix.
+
+Votre PIN est désormais protégé par l'Android Keystore. PIN oublié fonctionne depuis l'écran de verrouillage, Effacer toutes les données retire le PIN, et vous pouvez le changer dans les Réglages. Le relevé d'ouverture et la vérification F-Droid sont désactivés jusqu'à votre accord. L'export enregistre un vrai fichier sans données de connexion.

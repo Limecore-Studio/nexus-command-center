@@ -1,0 +1,3 @@
+Turvallisempi PIN, sinun valintasi.
+
+PIN-koodisi on nyt Android Keystoren suojaama. Unohtunut PIN toimii lukitusnäytöltä, Tyhjennä kaikki tiedot poistaa PIN-koodin, ja voit vaihtaa sen asetuksissa. Avauskirjaus ja F-Droid-päivitystarkistus ovat pois päältä, kunnes sanot kyllä. Vienti tallentaa oikean tiedoston ilman kirjautumistietoja. Nettovarallisuustavoitteet pitävät valuuttansa.

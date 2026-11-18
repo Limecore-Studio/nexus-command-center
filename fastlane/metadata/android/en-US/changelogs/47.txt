@@ -1,0 +1,3 @@
+Safer PIN, your choice.
+
+Your PIN is now protected by the Android Keystore. Forgot PIN works from the lock screen, Clear All Data removes the PIN, and you can change your PIN in Settings. The app-open record and the F-Droid update check are off until you say yes. Export saves a real file without sign-in data. Net-worth goals keep their own currency, and delete account never pretends.

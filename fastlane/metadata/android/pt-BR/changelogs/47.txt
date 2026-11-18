@@ -1,0 +1,3 @@
+PIN mais seguro, sua escolha.
+
+Seu PIN agora é protegido pelo Android Keystore. Esqueci o PIN funciona na tela de bloqueio, Apagar todos os dados remove o PIN e você pode trocá-lo em Ajustes. O registro de aberturas e a verificação do F-Droid ficam desligados até você dizer sim. A exportação salva um arquivo real sem dados de login. Metas de patrimônio mantêm a própria moeda.

@@ -1434,6 +1434,7 @@
     "units_one": "{{count}} यूनिट",
     "units_other": "{{count}} यूनिट",
     "depositLabel": "पोर्टफ़ोलियो जमा",
+    "withdrawLabel": "पोर्टफ़ोलियो निकासी",
     "entryTitle": "आवर्ती",
     "entrySub": "किराया, वेतन, जमा और बचत योजनाएँ",
     "addRecurring": "आवर्ती जोड़ें…"

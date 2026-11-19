@@ -1453,6 +1453,7 @@
     "units_many": "{{count}} unités",
     "units_other": "{{count}} unités",
     "depositLabel": "Versement au portefeuille",
+    "withdrawLabel": "Retrait du portefeuille",
     "entryTitle": "Récurrents",
     "entrySub": "Loyer, salaire, versements et plans d’épargne",
     "addRecurring": "Ajouter une récurrence…"

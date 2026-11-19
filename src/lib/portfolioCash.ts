@@ -45,8 +45,10 @@ export const isPortfolioMove = (e: PortfolioCashEntry, accountId: string): boole
   e.accountId === accountId && (e.type === 'deposit' || e.type === 'withdrawal');
 
 // v1.18.1 (NCC#149, NCC#164) — moving money between an account and the
-// portfolio (Deposit, Withdraw, Savings "Invest") changes the account's
-// OPENING balance, which is undated, while the cash entry is dated when it
+// portfolio (Deposit, Withdraw, Savings "Invest") changed the account's
+// OPENING balance, which is undated (until v1.22: NCC#257 books a dated
+// transfer instead, with no accountId on the cash entry, so newer moves never
+// reach this), while the cash entry is dated when it
 // happened. Read as-is, any balance as of a date before a move is short by
 // the move: the net-worth trend lost it for past months (#149). This is what
 // to add back to such a balance: the moves for `accountId` that `isLater`

@@ -1434,6 +1434,7 @@
     "units_one": "{{count}} kpl",
     "units_other": "{{count}} kpl",
     "depositLabel": "Salkkutalletus",
+    "withdrawLabel": "Salkkunosto",
     "entryTitle": "Toistuvat",
     "entrySub": "Vuokra, palkka, talletukset ja säästösuunnitelmat",
     "addRecurring": "Lisää toistuva…"

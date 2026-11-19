@@ -1434,6 +1434,7 @@
     "units_one": "{{count}} unit",
     "units_other": "{{count}} units",
     "depositLabel": "Portfolio deposit",
+    "withdrawLabel": "Portfolio withdrawal",
     "entryTitle": "Recurring",
     "entrySub": "Rent, salary, deposits and savings plans",
     "addRecurring": "Add recurring…"

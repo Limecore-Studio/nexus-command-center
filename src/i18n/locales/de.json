@@ -1434,6 +1434,7 @@
     "units_one": "{{count}} Stück",
     "units_other": "{{count}} Stück",
     "depositLabel": "Portfolio-Einzahlung",
+    "withdrawLabel": "Portfolio-Auszahlung",
     "entryTitle": "Wiederkehrend",
     "entrySub": "Miete, Gehalt, Einzahlungen und Sparpläne",
     "addRecurring": "Wiederkehrend anlegen…"

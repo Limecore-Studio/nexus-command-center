@@ -28,6 +28,7 @@ const marketNewsApi = () => import('../api/marketNews');
 import { computeDividendCredits, guestDividendKey } from '../lib/dividendRealize';
 import { useSettingsStore } from './useSettingsStore';
 import { useSessionStore } from './useSessionStore';
+import i18n from '../i18n';
 import { checkBudgetThresholds } from '../lib/budgetAlerts';
 // v1.2 follow-up — CTO Account refactor. The BUG-6 budgetAssetBridge helper
 // is no longer wired (and the file removed): in the Account model every
@@ -567,51 +568,22 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     }
   },
 
+  // v1.22 (NCC#257): a move between an account and the portfolio is a dated
+  // transfer on the account plus a portfolio cash entry with no accountId,
+  // the model recurring deposits already use (recurringMaterialize). It used
+  // to rewrite the account's opening balance, and that whole-row upsert let
+  // two devices lose or create money: the other device's stale balance won,
+  // while this device's cash entry stayed. The transfer moves the derived
+  // balance on every device and app version; without an accountId the cash
+  // entry is not counted as a second move (portfolioCash.isPortfolioMove).
   async depositToPortfolio({ amount, currency, accountId, note }) {
     if (!(amount > 0)) return;
-    const account = get().manualAssets.find((a) => a.id === accountId);
-    if (!account) throw new Error('Account not found.');
-    // Convert the (base-currency) amount into the account's currency to debit it.
-    const amtInAccount = account.currency === currency
-      ? amount
-      : convertSync(amount, currency, account.currency, get().fxRates);
-    if (amtInAccount == null) {
-      throw new Error(`Couldn't convert ${currency} → ${account.currency} (FX rate missing).`);
-    }
-    // Debit the source account by shifting its opening balance (mirrors the
-    // Savings "Invest" sheet — keeps the derived balance consistent).
-    const base = account.startingBalance ?? account.value ?? 0;
-    const newOpening = base - amtInAccount;
-    await get().updateManualAsset(accountId, { startingBalance: newOpening, value: newOpening });
-    // Credit portfolio cash (+) — stored in the amount's currency.
-    // v1.18.1 (NCC#176) — also record what the account was debited, so the
-    // history views add back that, not a re-conversion at a later rate.
-    await addCashEntry(set, get, {
-      type: 'deposit', amount, currency, accountId, note,
-      accountAmount: amtInAccount, accountCurrency: account.currency,
-    });
+    await portfolioMove(set, get, { amount, currency, accountId, note }, 'deposit');
   },
 
   async withdrawFromPortfolio({ amount, currency, accountId, note }) {
     if (!(amount > 0)) return;
-    const account = get().manualAssets.find((a) => a.id === accountId);
-    if (!account) throw new Error('Account not found.');
-    const amtInAccount = account.currency === currency
-      ? amount
-      : convertSync(amount, currency, account.currency, get().fxRates);
-    if (amtInAccount == null) {
-      throw new Error(`Couldn't convert ${currency} → ${account.currency} (FX rate missing).`);
-    }
-    // Credit the destination account.
-    const base = account.startingBalance ?? account.value ?? 0;
-    const newOpening = base + amtInAccount;
-    await get().updateManualAsset(accountId, { startingBalance: newOpening, value: newOpening });
-    // Debit portfolio cash (−).
-    // v1.18.1 (NCC#176) — record what the account was credited (see deposit).
-    await addCashEntry(set, get, {
-      type: 'withdrawal', amount: -amount, currency, accountId, note,
-      accountAmount: -amtInAccount, accountCurrency: account.currency,
-    });
+    await portfolioMove(set, get, { amount, currency, accountId, note }, 'withdrawal');
   },
 
   async addManualAsset(a) {
@@ -1158,6 +1130,49 @@ async function recomputeHoldingAggregates(
   await enqueue('portfolio_holding', holdingId, 'update', updated);
   setState({
     holdings: getState().holdings.map((h) => (h.id === holdingId ? updated : h)),
+  });
+}
+
+/** v1.22 (NCC#257): see depositToPortfolio. A deposit is a transfer out of
+ *  the account (no destination); a withdrawal a transfer into it (no source).
+ *  The transfer is in the base currency, as every transaction is; the cash
+ *  entry in `currency`. */
+async function portfolioMove(
+  set: (partial: Partial<FinanceStore>) => void,
+  get: () => FinanceStore,
+  input: { amount: number; currency: string; accountId: string; note?: string },
+  kind: 'deposit' | 'withdrawal',
+): Promise<void> {
+  const { amount, currency, accountId, note } = input;
+  if (!get().manualAssets.some((a) => a.id === accountId)) throw new Error('Account not found.');
+  const baseCurrency = useSettingsStore.getState().baseCurrency;
+  const amountBase = currency === baseCurrency ? amount : convertSync(amount, currency, baseCurrency, get().fxRates);
+  if (amountBase == null) {
+    throw new Error(`Couldn't convert ${currency} → ${baseCurrency} (FX rate missing).`);
+  }
+  const deposit = kind === 'deposit';
+  // A transfer with one side only is kept a transfer in the cloud by its
+  // description marker, so it needs a description.
+  const description = note?.trim() || i18n.t(deposit ? 'recurring.depositLabel' : 'recurring.withdrawLabel');
+  const tx: Transaction = {
+    id: generateId(),
+    type: 'transfer',
+    amount: amountBase,
+    description,
+    ...(deposit ? { accountId } : { destinationAccountId: accountId }),
+    date: localDateKey(new Date()),
+    syncStatus: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+  await db.transactions.add(tx);
+  await enqueue('transaction', tx.id, 'insert', tx);
+  set({ transactions: [tx, ...get().transactions] });
+  await addCashEntry(set, get, {
+    type: kind,
+    amount: deposit ? amount : -amount,
+    currency,
+    relatedId: tx.id,
+    note,
   });
 }
 

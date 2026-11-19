@@ -166,6 +166,8 @@
     "switchBody": "Tällä laitteella on toisen tilin tai vieraan tietoja. Lisätäänkö synkronoimattomat kohteet tilillesi vai poistetaanko ne täältä? Toiselle tilille jo synkronoidut kohteet poistuvat laitteelta; ne säilyvät sen pilvessä. Uloskirjautuminen jättää kaiken ennalleen.",
     "switchFooter": "Tietoja ei näytetä eikä synkronoida ennen kuin teet valinnan.",
     "guestBody": "Tällä laitteella on uloskirjautuneen tilin säilytettyjä tietoja. Pidetäänkö synkronoimattomat kohteet vierastietoina vai poistetaanko ne täältä? Tilille jo synkronoidut kohteet poistuvat laitteelta joka tapauksessa; ne säilyvät tilin pilvessä.",
+    "othersDataBody": "Laitteella on toisen tilin tietoja, ja ne pysyvät vain sen tilin käytössä. Kirjaudu ulos, niin ne jäävät tänne sille tilille, tai poista ne tästä laitteesta jatkaaksesi. Tiedot, joita se tili ei ole vielä synkronoinut, menetetään.",
+    "othersDataGuestBody": "Laitteella on uloskirjautuneen tilin säilyttämiä tietoja, ja ne pysyvät vain sen tilin käytössä. Palaa kirjautumiseen, niin ne jäävät tänne, tai poista ne tästä laitteesta jatkaaksesi vieraana. Tiedot, joita se tili ei ole vielä synkronoinut, menetetään.",
     "guestKeep": "Pidä vieraana",
     "backToSignIn": "Takaisin kirjautumiseen"
   },

@@ -166,6 +166,8 @@
     "switchBody": "This device holds another account's or a guest's data. Add its unsynced items to your account, or delete them here? Items already synced to the other account leave this device; they stay in its cloud. Signing out leaves everything as is.",
     "switchFooter": "Nothing here is shown or synced until you choose.",
     "guestBody": "This device holds data kept by an account that signed out. Keep its unsynced items as guest data, or delete them here? Items already synced to that account leave this device either way; they stay in its cloud.",
+    "othersDataBody": "This device holds another account's data, and it stays private to that account. Sign out to leave it here for them, or delete it from this device to continue. Anything that account hasn't synced yet would be lost.",
+    "othersDataGuestBody": "This device holds data kept by an account that signed out, and it stays private to that account. Go back to sign-in to leave it here, or delete it from this device to continue as a guest. Anything that account hasn't synced yet would be lost.",
     "guestKeep": "Keep as guest",
     "backToSignIn": "Back to sign-in"
   },

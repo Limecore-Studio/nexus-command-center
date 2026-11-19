@@ -36,7 +36,7 @@ vi.mock('./guestMode', () => ({ setGuestMode: async () => {}, isGuestModeKnown: 
 vi.stubGlobal('window', { dispatchEvent: () => true, addEventListener: () => {}, removeEventListener: () => {} });
 
 const { db } = await import('../db/database');
-const { evaluateAdoption, evaluateGuestAdoption, readLastUserId, LAST_USER_KEY, GUEST_ID } = await import('./adoptionChoice');
+const { evaluateAdoption, evaluateGuestAdoption, readLastUserId, heldForAnotherAccount, LAST_USER_KEY, GUEST_ID } = await import('./adoptionChoice');
 const { keepLocalData, discardLocalData, keepAsGuest, discardAsGuest } = await import('./adoptionAnswer');
 const { adoptionClearFor, setAdoptionStatus, exportAllowed, useAdoptionGate } = await import('./adoptionGate');
 const { downloadExport } = await import('./dataRights');
@@ -62,6 +62,13 @@ async function keptByA(a: string) {
   await db.tasks.add(task(`${a}-task`, 'synced'));
   localStorage.setItem(LAST_USER_KEY, a);
   writeDecided(a, 'synced');
+}
+
+/** v1.22 (limecore#94, #105): only a guest's data can be kept by someone
+ *  else, so the Keep tests start from a guest's. */
+async function keptByGuest(id: string) {
+  await db.tasks.add(task(`${id}-guest-task`, 'pending'));
+  localStorage.setItem(LAST_USER_KEY, GUEST_ID);
 }
 
 beforeEach(async () => {
@@ -171,7 +178,7 @@ describe('no "Decide later"', () => {
 
 describe('the gate', () => {
   it('stays shut for B until B answers, and opens only for B', async () => {
-    await keptByA('a8');
+    await keptByGuest('g8');
     setAdoptionStatus('b8', await evaluateAdoption('b8'));
     expect(adoptionClearFor('b8')).toBe(false);
     expect(adoptionClearFor('a8')).toBe(false);
@@ -195,21 +202,20 @@ describe('the gate', () => {
 
 describe('Keep and Discard', () => {
   it('Keep adopts into B: unsynced rows and a guest\'s edits are queued for B; B is not asked again', async () => {
-    await keptByA('a10');
+    await keptByGuest('g10');
     await db.tasks.add(task('pending-row', 'pending'));
     await db.syncQueue.add(queued('guest-edit', null));
     await keepLocalData('b10');
     const owners = Object.fromEntries((await db.syncQueue.toArray()).map((q) => [q.entityId, q.owner]));
-    expect(owners).toEqual({ 'pending-row': 'b10', 'guest-edit': 'b10' });
-    // v1.19 (NCC#189): the unsynced row stays; A's synced row leaves the device.
-    expect((await db.tasks.toArray()).map((t) => t.id)).toEqual(['pending-row']);
+    expect(owners).toEqual({ 'g10-guest-task': 'b10', 'pending-row': 'b10', 'guest-edit': 'b10' });
+    expect((await db.tasks.toArray()).map((t) => t.id).sort()).toEqual(['g10-guest-task', 'pending-row']);
     expect(readLastUserId()).toBe('b10');
     expect(await evaluateAdoption('b10')).toBe('clear');
   });
 
   it('Keep works offline: the answer is remembered on the device until the cloud has it', async () => {
     offline();
-    await keptByA('a11');
+    await keptByGuest('g11');
     await keepLocalData('b11');
     expect(readDecided('b11')).toBe('pending');
     expect(adoptionClearFor('b11')).toBe(true);
@@ -294,15 +300,18 @@ describe('v1.19: a guest over kept data (limecore#66) and Keep on a switch (NCC#
     expect(await evaluateGuestAdoption()).toBe('clear');
   });
 
-  it("guest Keep drops the account's synced rows, keeps unsynced ones, and A is asked on return", async () => {
+  // v1.22 (limecore#94): an account's kept data is not the guest's to keep.
+  it("a guest cannot keep an account's data: Keep refuses and nothing moves", async () => {
     await keptByA('a22');
     await db.tasks.add(task('a22-unsynced', 'pending'));
-    await keepAsGuest();
-    expect((await db.tasks.toArray()).map((t) => t.id)).toEqual(['a22-unsynced']);
-    expect(readLastUserId()).toBe(GUEST_ID);
-    expect(adoptionClearFor(GUEST_ID)).toBe(true);
-    expect(exportAllowed(null)).toBe(true);
-    expect(await evaluateAdoption('a22')).toBe('ask');
+    expect(heldForAnotherAccount(null)).toBe(true);
+    await expect(keepAsGuest()).rejects.toThrow();
+    expect((await db.tasks.toArray()).map((t) => t.id).sort()).toEqual(['a22-task', 'a22-unsynced']);
+    expect(readLastUserId()).toBe('a22');
+    expect(adoptionClearFor(GUEST_ID)).toBe(false);
+    expect(exportAllowed(null)).toBe(false);
+    // The account itself is not blocked from its own data.
+    expect(heldForAnotherAccount('a22')).toBe(false);
   });
 
   it("guest Discard empties the device", async () => {
@@ -312,13 +321,21 @@ describe('v1.19: a guest over kept data (limecore#66) and Keep on a switch (NCC#
     expect(readLastUserId()).toBe(GUEST_ID);
   });
 
-  it("B's Keep on a switch adopts A's unsynced rows and drops A's synced ones", async () => {
+  // v1.22 (limecore#105): A's rows never go up under B.
+  it("B cannot keep A's data on a switch: Keep refuses and nothing is queued", async () => {
     await keptByA('a24');
     await db.tasks.add(task('a24-unsynced', 'pending'));
-    await keepLocalData('b24');
-    expect((await db.tasks.toArray()).map((t) => t.id)).toEqual(['a24-unsynced']);
-    const q = await db.syncQueue.filter((i) => i.entityId === 'a24-unsynced').toArray();
-    expect(q.map((i) => i.owner)).toEqual(['b24']);
+    expect(heldForAnotherAccount('b24')).toBe(true);
+    await expect(keepLocalData('b24')).rejects.toThrow();
+    expect(await db.syncQueue.count()).toBe(0);
+    expect((await db.tasks.toArray()).map((t) => t.id).sort()).toEqual(['a24-task', 'a24-unsynced']);
+  });
+
+  it("a guest's kept data can still be kept by an account, and so can a device with no recorded owner", async () => {
+    await keptByGuest('g26');
+    expect(heldForAnotherAccount('b26')).toBe(false);
+    localStorage.removeItem(LAST_USER_KEY);
+    expect(heldForAnotherAccount('b26')).toBe(false);
   });
 
   it("Keep by the same account drops nothing", async () => {

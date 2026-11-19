@@ -166,6 +166,8 @@
     "switchBody": "Auf diesem Gerät liegen Daten eines anderen Kontos oder eines Gasts. Die nicht synchronisierten Einträge zu deinem Konto hinzufügen oder hier löschen? Bereits mit dem anderen Konto synchronisierte Einträge werden vom Gerät entfernt; sie bleiben in seiner Cloud. Abmelden lässt alles unverändert.",
     "switchFooter": "Bis du dich entscheidest, werden diese Daten weder angezeigt noch synchronisiert.",
     "guestBody": "Auf diesem Gerät liegen Daten eines abgemeldeten Kontos. Die nicht synchronisierten Einträge als Gastdaten behalten oder hier löschen? Bereits mit diesem Konto synchronisierte Einträge werden in jedem Fall vom Gerät entfernt; sie bleiben in seiner Cloud.",
+    "othersDataBody": "Auf diesem Gerät sind Daten eines anderen Kontos gespeichert, und sie bleiben privat für dieses Konto. Melde dich ab, um sie hier für dieses Konto zu lassen, oder lösche sie von diesem Gerät, um fortzufahren. Was dieses Konto noch nicht synchronisiert hat, geht dabei verloren.",
+    "othersDataGuestBody": "Auf diesem Gerät sind Daten eines abgemeldeten Kontos gespeichert, und sie bleiben privat für dieses Konto. Geh zurück zur Anmeldung, um sie hier zu lassen, oder lösche sie von diesem Gerät, um als Gast fortzufahren. Was dieses Konto noch nicht synchronisiert hat, geht dabei verloren.",
     "guestKeep": "Als Gast behalten",
     "backToSignIn": "Zurück zur Anmeldung"
   },

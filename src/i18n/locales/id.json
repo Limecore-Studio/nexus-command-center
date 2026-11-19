@@ -82,6 +82,8 @@
     "switchBody": "Perangkat ini menyimpan data akun lain atau tamu. Tambahkan item yang belum disinkronkan ke akun Anda, atau hapus di sini? Item yang sudah disinkronkan ke akun lain dihapus dari perangkat ini; item tersebut tetap ada di cloud-nya. Keluar membiarkan semuanya apa adanya.",
     "switchFooter": "Data ini tidak ditampilkan atau disinkronkan sampai Anda memilih.",
     "guestBody": "Perangkat ini menyimpan data dari akun yang telah keluar. Simpan item yang belum disinkronkan sebagai data tamu, atau hapus di sini? Item yang sudah disinkronkan ke akun itu tetap dihapus dari perangkat ini; item tersebut tetap ada di cloud-nya.",
+    "othersDataBody": "Perangkat ini menyimpan data akun lain, dan data itu tetap pribadi untuk akun tersebut. Keluar untuk meninggalkannya di sini bagi akun itu, atau hapus dari perangkat ini untuk melanjutkan. Apa pun yang belum disinkronkan akun itu akan hilang.",
+    "othersDataGuestBody": "Perangkat ini menyimpan data milik akun yang sudah keluar, dan data itu tetap pribadi untuk akun tersebut. Kembali ke halaman masuk untuk meninggalkannya di sini, atau hapus dari perangkat ini untuk melanjutkan sebagai tamu. Apa pun yang belum disinkronkan akun itu akan hilang.",
     "guestKeep": "Simpan sebagai tamu",
     "backToSignIn": "Kembali ke masuk"
   },

@@ -116,6 +116,20 @@ export async function evaluateAdoption(userId: string, onOwnData?: () => void): 
 
 export { GUEST_ID };
 
+/**
+ * v1.22 (limecore#94, #105) — is the data on this device another account's?
+ * Then it stays that account's: "Keep" is not offered, only Discard or
+ * signing out (which leaves it here for that account). Keep used to hand it
+ * over: to a guest it showed the signed-out account's data, and into another
+ * account it uploaded that account's unsynced rows. Guest data (or a device
+ * from before the last account was recorded) can still be kept.
+ * `viewer` is the account on screen, or null for a guest.
+ */
+export function heldForAnotherAccount(viewer: string | null): boolean {
+  const last = readLastUserId();
+  return last !== null && last !== GUEST_ID && last !== viewer;
+}
+
 /** v1.19 (limecore#66) — must a guest answer "Existing data found" first?
  *  Only when an account's kept data is on the device. All local, no network. */
 export async function evaluateGuestAdoption(): Promise<'ask' | 'clear'> {

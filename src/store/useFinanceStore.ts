@@ -411,9 +411,16 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // Cascade lots locally; cloud cascades via FK ON DELETE CASCADE so we
     // just need to drain our local rows + sync queue entries.
     const lots = await db.portfolioLots.where('holdingId').equals(id).toArray();
+    // v1.22 (NCC#250): as deleteLot does, a deleted holding gives its lots'
+    // purchases back to portfolio cash, so the result no longer depends on
+    // deleting the lots first. Not once anything was sold: the sales and
+    // their proceeds stay, and returning the purchases as well would create
+    // money (a closed position deleted to tidy up).
+    const refundBuys = !get().stockSales.some((sale) => sale.holdingId === id);
     for (const lot of lots) {
       await db.portfolioLots.delete(lot.id);
       await enqueue('portfolio_lot', lot.id, 'delete', { id: lot.id });
+      if (refundBuys) await removeCashEntriesFor(set, get, lot.id);
     }
     // v1.19 (NCC#204): a bond's coupon rule goes with it; the coupons and
     // the redemption it already wrote stay, like any past entries.

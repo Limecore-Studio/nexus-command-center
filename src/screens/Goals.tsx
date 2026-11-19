@@ -15,6 +15,7 @@ import RowActions from '../components/RowActions';
 import { useGoalsStore } from '../store/useGoalsStore';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
+import { liveGpa } from '../utils/gpa';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useTaskStore } from '../store/useTaskStore';
 import { useSettingsStore } from '../store/useSettingsStore';
@@ -73,7 +74,7 @@ export default function Goals() {
       tasks,
       studySessions,
       workouts,
-      currentGpa: currentImport?.calculatedGpa ?? null,
+      currentGpa: liveGpa(currentImport), // v1.22 (NCC#262)
       gradeScale,
     }),
     [

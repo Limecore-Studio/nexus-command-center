@@ -40,9 +40,11 @@ function indexGradesBySubject(grades: Grade[]): Map<string, Grade[]> {
 
 // v1.19 (NCC#213) — the GPA fields of the synthetic currentImport, on the
 // account's scale (whole report grades when StudyDesk's report rule is on).
-function gpaOf(courses: Course[], idx: Map<string, Grade[]>, scale: GradeScale): Pick<GradeImport, 'calculatedGpa' | 'gpaProjection'> {
+function gpaOf(courses: Course[], idx: Map<string, Grade[]>, scale: GradeScale): Pick<GradeImport, 'calculatedGpa' | 'gpaProjection' | 'noGrades'> {
   const { gpa, projection } = calculateScaleGPA(courses, idx, scale);
-  return { calculatedGpa: gpa, gpaProjection: projection };
+  // v1.22 (NCC#262): see GradeImport.noGrades.
+  const noGrades = !courses.some((c) => (idx.get(c.id)?.length ?? 0) > 0);
+  return { calculatedGpa: gpa, gpaProjection: projection, noGrades };
 }
 
 interface StudiesStore {

@@ -96,7 +96,11 @@ export interface SyncQueueItem {
     // v1.12 Item 10 - Braindump quick capture.
     | 'braindump_entry'
     // v1.19 - NCC#202 recurring rules.
-    | 'recurring_rule';
+    | 'recurring_rule'
+    // v1.22 (NCC#247) - writes of derived columns only, never the whole row:
+    // a rule's materialisation progress, and a holding's lot aggregates.
+    | 'recurring_rule_progress'
+    | 'holding_aggregates';
   entityId: string;
   operation: 'insert' | 'update' | 'delete';
   payload: string;

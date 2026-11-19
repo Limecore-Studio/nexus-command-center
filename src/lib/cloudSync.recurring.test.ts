@@ -131,3 +131,68 @@ describe('deleting a rule', () => {
     expect(q.filter((i) => i.entityType === 'transaction' && i.operation === 'delete')).toHaveLength(3);
   });
 });
+
+// v1.22 (NCC#247): materialising writes progress, never the whole rule, and
+// re-deriving a holding writes its aggregates, never the whole holding. A
+// device on a stale copy must not push old content stamped as the newest edit.
+const { materializeDue } = await import('./recurringMaterialize');
+const { useSessionStore } = await import('../store/useSessionStore');
+const { useSettingsStore } = await import('../store/useSettingsStore');
+const { markFirstSyncDone, resetFirstSyncGate } = await import('../store/useRecurringStore');
+
+describe('derived columns only (NCC#247)', () => {
+
+  const staleRule = () => ({
+    id: RULE, kind: 'transaction', template: { type: 'expense', amount: 5, description: 'Gym' },
+    every: 1, unit: 'day', startDate: '2026-11-01', lastMaterializedDate: '2026-11-01',
+    syncStatus: 'synced', createdAt: '2026-11-01T00:00:00Z', updatedAt: '2026-11-01T00:00:00Z',
+  }) as any;
+
+  it('materialising queues a progress-only write, and the rule row is left as it was', async () => {
+    await db.recurringRules.put(staleRule());
+    const deps = { today: '2026-11-03', baseCurrency: 'EUR', unitPrice: () => null, convert: () => null, depositLabel: 'Deposit' };
+    expect((await materializeDue(deps)).created).toBe(2);
+    const local = await db.recurringRules.get(RULE);
+    expect(local).toMatchObject({ lastMaterializedDate: '2026-11-03', updatedAt: '2026-11-01T00:00:00Z', syncStatus: 'synced' });
+    const q = await db.syncQueue.toArray();
+    expect(q.filter((i) => i.entityType === 'recurring_rule')).toHaveLength(0);
+    const progress = q.filter((i) => i.entityType === 'recurring_rule_progress');
+    expect(progress).toHaveLength(1);
+    expect(progress[0].stamp).toBeUndefined();
+
+    await pushQueue(USER);
+    const w = (holder.client.writes as Write[]).filter((x) => x.table === 'recurring_rules');
+    expect(w).toEqual([{ table: 'recurring_rules', op: 'update', row: { last_materialized_date: '2026-11-03' } }]);
+  });
+
+  it("a holding's re-derived aggregates push only the derived columns", async () => {
+    const h = { id: 'h1', assetType: 'stock', ticker: 'ABC', name: 'Renamed elsewhere?', quantity: 0, sectorOverride: 'Tech', syncStatus: 'synced', createdAt: '' } as any;
+    await db.portfolioHoldings.put(h);
+    await db.portfolioLots.put({ id: 'l1', holdingId: 'h1', quantity: 2, costPerUnit: 10, costCurrency: 'USD', syncStatus: 'synced', createdAt: '' } as any);
+    await useFinanceStore.getState().load();
+    await useFinanceStore.getState().refreshHoldingAggregates('h1');
+    const q = await db.syncQueue.toArray();
+    expect(q.map((i) => i.entityType)).toEqual(['holding_aggregates']);
+
+    await pushQueue(USER);
+    const [w] = holder.client.writes as Write[];
+    expect(w).toEqual({ table: 'portfolio_holdings', op: 'update', row: { quantity: 2, avg_cost_native: 10, cost_currency: 'USD' } });
+  });
+
+  it('signed in and online, nothing materialises before the first sync has pulled', async () => {
+    await db.recurringRules.put(staleRule());
+    useSettingsStore.setState({ loaded: true, baseCurrency: 'EUR' } as any);
+    useSessionStore.setState({ user: { id: USER } } as any);
+    vi.stubGlobal('navigator', { ...globalThis.navigator, onLine: true });
+    resetFirstSyncGate();
+    try {
+      expect(await useRecurringStore.getState().materialize()).toBe(0);
+      expect(await db.transactions.count()).toBe(0);
+      markFirstSyncDone();
+      expect(await useRecurringStore.getState().materialize()).toBeGreaterThan(0);
+    } finally {
+      useSessionStore.setState({ user: null } as any);
+      vi.unstubAllGlobals();
+    }
+  });
+});

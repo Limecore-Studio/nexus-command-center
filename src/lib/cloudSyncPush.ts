@@ -800,6 +800,45 @@ async function pushRecurringRule(item: SyncQueueItem, ctx: PushContext): Promise
   if (error) throw error;
 }
 
+/**
+ * v1.22 (NCC#247) — a rule's materialisation progress, and nothing else.
+ * Materialising used to queue the whole rule stamped "now", so a device
+ * running on a stale copy (opened before its first pull) wrote back an old
+ * template, end date or pause state as the newest edit. This touches only
+ * `last_materialized_date` and sends no `updated_at`: set_updated_at() keeps
+ * the stored stamp, so it never wins a last-writer-wins race, and
+ * recurring_rules_keep_progress keeps the date from moving backwards. A rule
+ * not on the server yet matches no row; its own insert carries progress later.
+ */
+async function pushRecurringRuleProgress(item: SyncQueueItem): Promise<void> {
+  const local: Pick<RecurringRule, 'id' | 'lastMaterializedDate'> = JSON.parse(item.payload);
+  if (!local.lastMaterializedDate) return;
+  const { error } = await supabase
+    .from('recurring_rules')
+    .update({ last_materialized_date: local.lastMaterializedDate })
+    .eq('id', legacyIdToUuid(local.id));
+  if (error) throw error;
+}
+
+/**
+ * v1.22 (NCC#247) — a holding's aggregates, which are derived from its lots
+ * (useFinanceStore.recomputeHoldingAggregates). Writing them used to upsert the
+ * whole holding stamped "now", reverting a rename, sector override or manual
+ * price made on another device. Only the derived columns, with no `updated_at`.
+ */
+async function pushHoldingAggregates(item: SyncQueueItem): Promise<void> {
+  const local: Pick<PortfolioHolding, 'id' | 'quantity' | 'avgCostNative' | 'costCurrency'> = JSON.parse(item.payload);
+  const { error } = await supabase
+    .from('portfolio_holdings')
+    .update({
+      quantity: local.quantity,
+      avg_cost_native: local.avgCostNative ?? null,
+      cost_currency: local.costCurrency ?? null,
+    })
+    .eq('id', legacyIdToUuid(local.id));
+  if (error) throw error;
+}
+
 export const pushHandlers: Record<SyncQueueItem['entityType'], (item: SyncQueueItem, ctx: PushContext) => Promise<void>> = {
   transaction: pushTransaction,
   budget_category: pushBudgetCategory,
@@ -838,6 +877,8 @@ export const pushHandlers: Record<SyncQueueItem['entityType'], (item: SyncQueueI
   habit_completion: pushHabitCompletion,
   work_quality_log: pushWorkQualityLog,
   recurring_rule: pushRecurringRule,
+  recurring_rule_progress: pushRecurringRuleProgress,
+  holding_aggregates: pushHoldingAggregates,
   // grade_import is a local-only snapshot concept — courses sync individually.
   grade_import: async () => {
     /* no-op */

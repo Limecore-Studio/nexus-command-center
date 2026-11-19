@@ -10,6 +10,7 @@ import { materializeDue } from '../lib/recurringMaterialize';
 import { holdingUnitPrice } from '../lib/positionValue';
 import { useFinanceStore } from './useFinanceStore';
 import { useSettingsStore } from './useSettingsStore';
+import { useSessionStore } from './useSessionStore';
 
 /**
  * v1.19 — NCC#202: recurring rules. Rules are stored and synced like every
@@ -54,7 +55,26 @@ async function save(rule: RecurringRule, op: 'insert' | 'update'): Promise<void>
 let running: Promise<number> | null = null;
 let again = false;
 
+// v1.22 (NCC#247): signed in and online, nothing is materialised before this
+// launch's first sync has pulled. Until then the rules on this device may be
+// stale: a rule paused, edited or deleted on another device would generate
+// rows here (and push them) for days it should not. useSyncStore opens the
+// gate when that sync ends, whether its pull worked or not, and materialises.
+// A guest, or a device offline, materialises from what it has, as before.
+let firstSyncDone = false;
+export function markFirstSyncDone(): void {
+  firstSyncDone = true;
+}
+/** Test seam. */
+export function resetFirstSyncGate(): void {
+  firstSyncDone = false;
+}
+function waitingForFirstPull(): boolean {
+  return !firstSyncDone && Boolean(useSessionStore.getState().user) && navigator.onLine;
+}
+
 async function runMaterialize(): Promise<number> {
+  if (waitingForFirstPull()) return 0;
   // The base currency must be the user's, not the default: a sync can end
   // before AppShell has loaded settings. AppShell runs this once they are.
   const settings = useSettingsStore.getState();

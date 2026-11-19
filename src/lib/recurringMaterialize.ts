@@ -361,9 +361,10 @@ export async function materializeDue(deps: MaterializeDeps): Promise<Materialize
       last = date;
     }
     if (last !== rule.lastMaterializedDate) {
-      const next = { ...rule, lastMaterializedDate: last, waitingSince, syncStatus: 'pending' as const, updatedAt: now() };
-      await db.recurringRules.put(next);
-      await enqueue('recurring_rule', next.id, 'update', next);
+      // v1.22 (NCC#247): progress only. The rule itself is not edited here,
+      // so its content, stamp and sync state stay as they are.
+      await db.recurringRules.update(rule.id, { lastMaterializedDate: last, waitingSince });
+      await enqueue('recurring_rule_progress', rule.id, 'update', { id: rule.id, lastMaterializedDate: last });
     } else if (waitingSince !== rule.waitingSince) {
       // Local-only flag: no push.
       await db.recurringRules.update(rule.id, { waitingSince });

@@ -12,9 +12,11 @@
 // lib/adoptionGate.ts holds the result that App.tsx and the sync wait on.
 import { db } from '../db/database';
 import { hasGuestEdits } from '../db/syncQueue';
-import { hasLocalData } from './cloudSync';
 import { getDismissedFromCloud, readDecided, recordDecision, writeDecided } from './adoptionFlag';
 import { GUEST_ID } from './adoptionGate';
+
+// v1.22 (limecore#126): loaded on first use, outside the startup bundle.
+const cloudSync = () => import('./cloudSync');
 
 // v1.2.1 — the last account that answered (or had nothing to answer) on this
 // device. Its own per-account flags cannot tell B that A's data is here, so a
@@ -93,7 +95,7 @@ export async function evaluateAdoption(userId: string, onOwnData?: () => void): 
     if (decided === 'pending') recordDecision(userId);
     return open();
   }
-  const hasData = await hasLocalData();
+  const hasData = await (await cloudSync()).hasLocalData();
   if (previousUserId === userId) onOwnData?.();
   const dismissed = await getDismissedFromCloud(userId);
   // Could not ask (offline, timed out): say nothing now; the `online` event

@@ -754,6 +754,11 @@ export async function adoptLocalData(userId: string): Promise<number> {
   await enqueueAll('stock_sale', stockSales);
   await enqueueAll('portfolio_cash_entry', cashEntries);
   await enqueueAll('work_quality_log', workQualityLogs);
+  // v1.22 (limecore#106): habits, their completions and braindump notes,
+  // which were missing from this list.
+  await enqueueAll('habit', await db.habits.filter((r) => r.syncStatus === 'pending').toArray());
+  await enqueueAll('habit_completion', await db.habitCompletions.filter((r) => r.syncStatus === 'pending').toArray());
+  await enqueueAll('braindump_entry', await db.braindumpEntries.filter((r) => r.syncStatus === 'pending').toArray());
   // v1.19 (NCC#202): unsynced recurring rules, like the rows above.
   await enqueueAll('recurring_rule', await db.recurringRules.filter((r) => r.syncStatus === 'pending').toArray());
 

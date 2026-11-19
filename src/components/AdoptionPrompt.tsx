@@ -100,7 +100,8 @@ export default function AdoptionPrompt() {
         window.dispatchEvent(new CustomEvent('nexus:guest-mode-changed'));
         return;
       }
-      await signOut();
+      // v1.22 (limecore#106): a guest's queued edits wait for the next answer.
+      await signOut({ keepGuestEdits: true });
       // Same as Settings' sign-out: every store starts again from the device.
       window.location.reload();
     } catch (e) {

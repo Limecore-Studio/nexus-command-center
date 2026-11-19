@@ -114,3 +114,29 @@ describe('sign-out (NCC#140)', () => {
     expect((await db.syncQueue.toArray()).map((q) => q.id).sort()).toEqual(['other', 'own']);
   });
 });
+
+// v1.22 (limecore#106) — a guest's work survives a sign-out from the
+// "Existing data found" prompt, and Keep queues all of it.
+describe('guest work through the prompt (limecore#106)', () => {
+  it('a sign-out from the prompt keeps a guest\'s queued edits', async () => {
+    useSessionStore.setState({ user: { id: 'u1' } as never, initialized: true });
+    await db.syncQueue.bulkAdd([item('guest', null), item('older')]);
+    await useSessionStore.getState().signOut({ keepGuestEdits: true });
+    expect((await db.syncQueue.toArray()).map((q) => q.id)).toEqual(['guest']);
+  });
+
+  it('Keep queues unsynced habits, completions and braindump notes', async () => {
+    await db.habits.clear();
+    await db.habitCompletions.clear();
+    await db.braindumpEntries.clear();
+    await db.habits.bulkPut([
+      { id: 'h-new', syncStatus: 'pending' },
+      { id: 'h-old', syncStatus: 'synced' },
+    ] as any);
+    await db.habitCompletions.put({ id: 'c-new', habitId: 'h-new', date: '2026-11-19', syncStatus: 'pending' } as any);
+    await db.braindumpEntries.put({ id: 'b-new', text: 'idea', syncStatus: 'pending' } as any);
+    await adoptLocalData('u1');
+    const queued = (await db.syncQueue.toArray()).map((q) => `${q.entityType}:${q.entityId}`).sort();
+    expect(queued).toEqual(['braindump_entry:b-new', 'habit:h-new', 'habit_completion:c-new']);
+  });
+});

@@ -152,6 +152,11 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     }
     const { push, pull } = await (await cloudSync()).fullSync(user.id);
     announce(push);
+    // v1.22 (NCC#247): recurring rules materialise only once this has pulled
+    // (afterPull runs it); a failed pull lets them run on what is here.
+    const recurring = await import('./useRecurringStore');
+    recurring.markFirstSyncDone();
+    if (pull.errors.length > 0) void recurring.useRecurringStore.getState().materialize();
     // After a successful pull, refresh in-memory state in every data
     // store so the UI reflects rows that just landed in Dexie (whether
     // from another device, Realtime, or an external app writing into
@@ -186,6 +191,10 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
     });
   } catch (e) {
     set({ syncing: false, lastError: (e as Error).message });
+    void import('./useRecurringStore').then((m) => {
+      m.markFirstSyncDone();
+      return m.useRecurringStore.getState().materialize();
+    });
   }
 }
 

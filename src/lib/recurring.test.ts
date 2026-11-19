@@ -97,7 +97,9 @@ describe('materialising', () => {
     expect(res.created).toBe(40); // Sep 13 .. Oct 22
     const r = await db.recurringRules.get(expense().id);
     expect(r?.lastMaterializedDate).toBe('2026-10-22');
-    const ruleItems = await db.syncQueue.filter((q) => q.entityType === 'recurring_rule').toArray();
+    // v1.22 (NCC#247): progress only, never the whole rule.
+    expect(await db.syncQueue.filter((q) => q.entityType === 'recurring_rule').count()).toBe(0);
+    const ruleItems = await db.syncQueue.filter((q) => q.entityType === 'recurring_rule_progress').toArray();
     expect(ruleItems).toHaveLength(1);
     expect(JSON.parse(ruleItems[0].payload).lastMaterializedDate).toBe('2026-10-22');
   });

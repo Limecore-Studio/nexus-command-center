@@ -64,7 +64,10 @@ vi.mock('./useBodyMetricsStore', () => ({ useBodyMetricsStore: loadable }));
 vi.mock('./useWorkQualityStore', () => ({ useWorkQualityStore: loadable }));
 vi.mock('./useBraindumpStore', () => ({ useBraindumpStore: loadable }));
 vi.mock('./useHabitsStore', () => ({ useHabitsStore: loadable }));
-vi.mock('./useRecurringStore', () => ({ useRecurringStore: { getState: () => ({ materialize: async () => 0 }) } }));
+vi.mock('./useRecurringStore', () => ({
+  useRecurringStore: { getState: () => ({ materialize: async () => 0 }) },
+  markFirstSyncDone: () => {},
+}));
 vi.mock('./useTaskStore', () => ({ useTaskStore: { getState: () => ({ load: async () => {}, tasks: [] }) } }));
 
 vi.stubGlobal('navigator', { onLine: true });

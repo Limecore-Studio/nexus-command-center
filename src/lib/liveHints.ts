@@ -53,6 +53,8 @@ export const ENTITY_TABLES: Partial<Record<SyncQueueItem['entityType'], string>>
   habit_completion: 'habit_completions',
   work_quality_log: 'work_quality_logs',
   recurring_rule: 'recurring_rules',
+  recurring_rule_progress: 'recurring_rules',
+  holding_aggregates: 'portfolio_holdings',
 };
 
 /** This page's id. `broadcast.self: false` already keeps a channel's own sends

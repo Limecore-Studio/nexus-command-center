@@ -1120,7 +1120,8 @@ async function recomputeHoldingAggregates(
       costCurrency: undefined,
     };
     await db.portfolioHoldings.put(updated);
-    await enqueue('portfolio_holding', holdingId, 'update', updated);
+    // v1.22 (NCC#247): only the derived columns; see pushHoldingAggregates.
+    await enqueue('holding_aggregates', holdingId, 'update', { id: holdingId, quantity: holding.quantity });
     setState({
       holdings: getState().holdings.map((h) => (h.id === holdingId ? updated : h)),
     });
@@ -1155,7 +1156,13 @@ async function recomputeHoldingAggregates(
     costCurrency: dominantCurrency,
   };
   await db.portfolioHoldings.put(updated);
-  await enqueue('portfolio_holding', holdingId, 'update', updated);
+  // v1.22 (NCC#247): only the derived columns; see pushHoldingAggregates.
+  await enqueue('holding_aggregates', holdingId, 'update', {
+    id: holdingId,
+    quantity: totalQty,
+    avgCostNative: avgCost,
+    costCurrency: dominantCurrency,
+  });
   setState({
     holdings: getState().holdings.map((h) => (h.id === holdingId ? updated : h)),
   });

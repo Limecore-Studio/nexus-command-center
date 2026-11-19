@@ -93,6 +93,10 @@ const ENTITY_PRIORITY: Record<SyncQueueItem['entityType'], number> = {
   // v1.19 (NCC#202): no FK either way (generated rows keep only a plain
   // recurring_rule_id), so any tier works; with the other parents.
   recurring_rule: 1,
+  // v1.22 (NCC#247): after the row they update has been inserted. A holding's
+  // aggregates follow its lots (tier 2), so they go with them.
+  recurring_rule_progress: 1,
+  holding_aggregates: 2,
 };
 
 // Postgres integrity-constraint violations whose cause is the payload itself, not

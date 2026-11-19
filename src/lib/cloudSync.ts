@@ -37,7 +37,7 @@ import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
 import type { Goal, GoalType } from '../types/goals';
 import type { RecurringRule } from '../types/recurring';
-import { selectRequeue, REQUEUE_TAG } from './requeueDropped';
+import { selectRequeue, selectPrunable, REQUEUE_TAG, PRUNE_AFTER_DAYS } from './requeueDropped';
 import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, putFromCloud, removeTombstoned } from './cloudSyncHydrate';
 import { pushHandlers } from './cloudSyncPush';
 import { dueFromServer } from './taskDue';
@@ -132,13 +132,32 @@ async function hasLiveSession(): Promise<boolean> {
   }
 }
 
+// v1.22 (NCC#249): delete pushed items older than PRUNE_AFTER_DAYS, at most
+// once an hour. `all` is the queue as read before this drain.
+let lastPruneAt = 0;
+async function pruneQueue(all: SyncQueueItem[]): Promise<void> {
+  const nowMs = Date.now();
+  if (nowMs - lastPruneAt < 3_600_000) return;
+  lastPruneAt = nowMs;
+  const cutoff = new Date(nowMs - PRUNE_AFTER_DAYS * 86_400_000).toISOString();
+  const ids = selectPrunable(all, cutoff).map((it) => it.id);
+  if (ids.length > 0) await db.syncQueue.bulkDelete(ids);
+}
+
+/** Test seam. */
+export function resetQueuePrune(): void {
+  lastPruneAt = 0;
+}
+
 export async function pushQueue(userId: string): Promise<PushResult> {
   // NCC#55 — one-time rescue of accounts and transactions dropped by the old
   // manual_assets CHECK. See requeueDropped.ts.
-  const requeue = selectRequeue(await db.syncQueue.toArray());
+  const all = await db.syncQueue.toArray();
+  const requeue = selectRequeue(all);
   for (const it of requeue) {
     await db.syncQueue.update(it.id, { syncedAt: undefined, lastError: undefined, requeuedFor: REQUEUE_TAG });
   }
+  await pruneQueue(all);
   // v1.18.1 (limecore#59 §2): only this user's items; see syncQueue.ts.
   const pending = (await listPending()).filter((q) => pushableFor(q, userId));
   pending.sort((a, b) => {

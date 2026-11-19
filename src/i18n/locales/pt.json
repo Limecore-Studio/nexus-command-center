@@ -82,6 +82,8 @@
     "switchBody": "Este dispositivo guarda dados de outra conta ou de um convidado. Adicionar os itens não sincronizados à sua conta ou apagá-los aqui? Os itens já sincronizados com a outra conta saem deste dispositivo; continuam na nuvem dela. Sair deixa tudo como está.",
     "switchFooter": "Esses dados não são exibidos nem sincronizados até você escolher.",
     "guestBody": "Este dispositivo guarda dados de uma conta que saiu. Manter os itens não sincronizados como dados de convidado ou apagá-los aqui? Os itens já sincronizados com essa conta saem deste dispositivo de qualquer forma; continuam na nuvem dela.",
+    "othersDataBody": "Este dispositivo contém dados de outra conta, que continuam privados dessa conta. Termine a sessão para os deixar aqui para essa conta, ou elimine-os deste dispositivo para continuar. Tudo o que essa conta ainda não sincronizou será perdido.",
+    "othersDataGuestBody": "Este dispositivo contém dados guardados por uma conta que terminou a sessão, que continuam privados dessa conta. Volte ao início de sessão para os deixar aqui, ou elimine-os deste dispositivo para continuar como convidado. Tudo o que essa conta ainda não sincronizou será perdido.",
     "guestKeep": "Manter como convidado",
     "backToSignIn": "Voltar ao início de sessão"
   },

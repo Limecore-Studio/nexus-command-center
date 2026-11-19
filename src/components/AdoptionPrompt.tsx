@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { useConfirm } from './ConfirmDialog';
-import { readLastUserId } from '../lib/adoptionChoice';
+import { heldForAnotherAccount, readLastUserId } from '../lib/adoptionChoice';
 import { discardAsGuest, discardLocalData, keepAsGuest, keepLocalData } from '../lib/adoptionAnswer';
 import { setGuestMode } from '../lib/guestMode';
 import { useSessionStore } from '../store/useSessionStore';
@@ -50,6 +50,9 @@ export default function AdoptionPrompt() {
   // v1.19 (limecore#66): no account on screen means a guest over an
   // account's kept data (App.tsx renders this only then).
   const guest = !user;
+  // v1.22 (limecore#94, #105): another account's data is not offered for
+  // keeping. Signing out (leaving it for that account) is the main way on.
+  const [othersData] = useState(() => heldForAnotherAccount(useSessionStore.getState().user?.id ?? null));
 
   const onKeep = async () => {
     setBusy(true);
@@ -121,18 +124,30 @@ export default function AdoptionPrompt() {
       <div className="card-elevated max-w-sm w-full">
         <h2 id="adoption-title" className="font-heading font-bold text-lg mb-2">{t('adoption.title')}</h2>
         <p className="text-sm text-text-muted mb-4">
-          {t(guest ? 'adoption.guestBody' : isSwitch ? 'adoption.switchBody' : 'adoption.body')}
+          {t(
+            othersData
+              ? guest ? 'adoption.othersDataGuestBody' : 'adoption.othersDataBody'
+              : guest ? 'adoption.guestBody' : isSwitch ? 'adoption.switchBody' : 'adoption.body',
+          )}
         </p>
         <div className="space-y-2">
-          <button onClick={onKeep} disabled={busy} className="btn w-full">
-            {busy ? t('adoption.working') : t(guest ? 'adoption.guestKeep' : 'adoption.keep')}
-          </button>
+          {othersData ? (
+            <button onClick={onSignOut} disabled={busy} className="btn w-full">
+              {busy ? t('adoption.working') : t(guest ? 'adoption.backToSignIn' : 'settings.signOut')}
+            </button>
+          ) : (
+            <button onClick={onKeep} disabled={busy} className="btn w-full">
+              {busy ? t('adoption.working') : t(guest ? 'adoption.guestKeep' : 'adoption.keep')}
+            </button>
+          )}
           <button onClick={onDiscard} disabled={busy} className="btn-ghost w-full text-danger border-danger/40">
             {t('adoption.discard')}
           </button>
-          <button onClick={onSignOut} disabled={busy} className="btn-ghost w-full">
-            {t(guest ? 'adoption.backToSignIn' : 'settings.signOut')}
-          </button>
+          {!othersData && (
+            <button onClick={onSignOut} disabled={busy} className="btn-ghost w-full">
+              {t(guest ? 'adoption.backToSignIn' : 'settings.signOut')}
+            </button>
+          )}
         </div>
         {failed && (
           <p role="alert" className="text-sm text-danger mt-3 text-center">

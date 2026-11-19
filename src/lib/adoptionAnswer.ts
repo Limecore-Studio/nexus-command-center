@@ -3,7 +3,7 @@
 // its chunk; when to ask is lib/adoptionChoice.ts.
 import { clearAllLocalData } from '../db/database';
 import { adoptLocalData, dropSyncedRows } from './cloudSync';
-import { GUEST_ID, readLastUserId, remember, rememberGuest } from './adoptionChoice';
+import { GUEST_ID, heldForAnotherAccount, readLastUserId, remember, rememberGuest } from './adoptionChoice';
 import { setAdoptionStatus } from './adoptionGate';
 
 /** Keep: every unsynced local row is queued for this account (local work
@@ -11,6 +11,9 @@ import { setAdoptionStatus } from './adoptionGate';
  *  Opens the app for this account. v1.19 (NCC#189): on an account switch the
  *  previous account's synced rows leave the device; they are in its cloud. */
 export async function keepLocalData(userId: string): Promise<void> {
+  // v1.22 (limecore#105): the prompt offers no Keep then; never adopt another
+  // account's data whatever the caller.
+  if (heldForAnotherAccount(userId)) throw new Error('This device holds another account’s data.');
   const last = readLastUserId();
   await adoptLocalData(userId);
   if (last !== null && last !== userId) await dropSyncedRows();
@@ -22,6 +25,8 @@ export async function keepLocalData(userId: string): Promise<void> {
  *  data; the signed-out account's synced rows leave the device (they are in
  *  its cloud and come back when it signs in). */
 export async function keepAsGuest(): Promise<void> {
+  // v1.22 (limecore#94): see keepLocalData.
+  if (heldForAnotherAccount(null)) throw new Error('This device holds another account’s data.');
   await dropSyncedRows();
   rememberGuest();
   setAdoptionStatus(GUEST_ID, 'clear');

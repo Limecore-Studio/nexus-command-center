@@ -166,6 +166,8 @@
     "switchBody": "Cet appareil contient des données d'un autre compte ou d'un invité. Ajouter ses éléments non synchronisés à votre compte, ou les supprimer ici ? Les éléments déjà synchronisés avec l'autre compte quittent l'appareil ; ils restent dans son cloud. Se déconnecter laisse tout en l'état.",
     "switchFooter": "Ces données ne sont ni affichées ni synchronisées tant que vous n’avez pas choisi.",
     "guestBody": "Cet appareil contient des données d'un compte déconnecté. Garder ses éléments non synchronisés comme données invité, ou les supprimer ici ? Les éléments déjà synchronisés avec ce compte quittent l'appareil dans tous les cas ; ils restent dans son cloud.",
+    "othersDataBody": "Cet appareil contient les données d'un autre compte, qui restent privées pour ce compte. Déconnectez-vous pour les laisser ici pour ce compte, ou supprimez-les de cet appareil pour continuer. Tout ce que ce compte n'a pas encore synchronisé sera perdu.",
+    "othersDataGuestBody": "Cet appareil contient des données conservées par un compte déconnecté, qui restent privées pour ce compte. Revenez à la connexion pour les laisser ici, ou supprimez-les de cet appareil pour continuer en tant qu'invité. Tout ce que ce compte n'a pas encore synchronisé sera perdu.",
     "guestKeep": "Garder en invité",
     "backToSignIn": "Retour à la connexion"
   },

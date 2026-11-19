@@ -707,3 +707,26 @@ export function toCsv(
   }
   return lines.join('\n');
 }
+
+/**
+ * v1.22 (NCC#254) — a statement's amounts are in its account's currency, and
+ * a transaction's are in the base currency (lib/accountBalance.ts converts
+ * them back for the account at read time). Import into an account in another
+ * currency converts each amount to the base. Null when any amount has no
+ * rate: then nothing is imported, rather than some rows in the wrong currency.
+ */
+export function amountsInBase(
+  amounts: number[],
+  accountCurrency: string,
+  baseCurrency: string,
+  convert: (amount: number, from: string, to: string) => number | null,
+): number[] | null {
+  if (accountCurrency === baseCurrency) return amounts;
+  const out: number[] = [];
+  for (const a of amounts) {
+    const v = convert(a, accountCurrency, baseCurrency);
+    if (v == null || !Number.isFinite(v)) return null;
+    out.push(Math.round(v * 100) / 100);
+  }
+  return out;
+}

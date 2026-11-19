@@ -464,3 +464,12 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     set({ autoLockMinutes: minutes });
   },
 }));
+
+/** v1.22: runs `onLock` each time the app goes from unlocked to locked (the
+ *  lock button, auto-lock, the resume check). Never while no app lock is set,
+ *  since `unlocked` then stays false. Returns the unsubscribe. */
+export function whenLocked(onLock: () => void): () => void {
+  return useAuthStore.subscribe((s, prev) => {
+    if (prev.unlocked && !s.unlocked) onLock();
+  });
+}

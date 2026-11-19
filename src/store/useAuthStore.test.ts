@@ -32,7 +32,7 @@ vi.mock('@/lib/keystore', () => ({
   },
 }));
 
-const { useAuthStore } = await import('./useAuthStore');
+const { useAuthStore, whenLocked } = await import('./useAuthStore');
 const { clearPin } = await import('../lib/clearPin');
 
 beforeEach(() => {
@@ -178,5 +178,28 @@ describe('Change PIN (Settings)', () => {
     expect(prefs.has('auth.pinFailedAttempts')).toBe(false);
     expect((await useAuthStore.getState().verifyPin('222222')).ok).toBe(true);
     expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(false);
+  });
+});
+
+// v1.22: a confirmation open when the app locks is answered "cancel"
+// (ConfirmDialog subscribes through whenLocked).
+describe('whenLocked', () => {
+  it('fires on every unlocked → locked change, and never while no lock applies', () => {
+    const fired = vi.fn();
+    useAuthStore.setState({ unlocked: false });
+    const stop = whenLocked(fired);
+    useAuthStore.getState().lock(); // false → false: no app lock in use
+    expect(fired).not.toHaveBeenCalled();
+    useAuthStore.getState().unlock();
+    useAuthStore.getState().lock();
+    expect(fired).toHaveBeenCalledTimes(1);
+    useAuthStore.getState().unlock();
+    useAuthStore.setState({ autoLockMinutes: 1, lastActivity: Date.now() - 120_000 });
+    useAuthStore.getState().bumpActivity(); // auto-lock
+    expect(fired).toHaveBeenCalledTimes(2);
+    stop();
+    useAuthStore.getState().unlock();
+    useAuthStore.getState().lock();
+    expect(fired).toHaveBeenCalledTimes(2);
   });
 });

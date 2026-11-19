@@ -249,6 +249,20 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // the cloud portfolio_lots table doesn't carry it) is corrected.
     const lotsWithSold = applySoldShares(portfolioLots, stockSales);
     set({ transactions, budgetCategories, holdings, portfolioLots: lotsWithSold, portfolioSnapshots, manualAssets, watchlist, stockSales, portfolioCashEntries, loading: false });
+    // v1.22 (NCC#251): FX rates came only with a portfolio refresh, which
+    // never runs without holdings or a watchlist, so such a user's
+    // foreign-currency accounts dropped every transaction and fell out of net
+    // worth. Loaded here whenever an account or a cash entry is in another
+    // currency (ensureFxRates serves its 12 h cache first).
+    const base = useSettingsStore.getState().baseCurrency;
+    const foreign = (c?: string) => Boolean(c) && c !== base;
+    if (!get().fxRates && (manualAssets.some((a) => foreign(a.currency)) || portfolioCashEntries.some((e) => foreign(e.currency)))) {
+      void ensureFxRates()
+        .then((p) => {
+          if (p?.rates && !get().fxRates) set({ fxRates: p.rates });
+        })
+        .catch(() => {});
+    }
   },
 
   async addTransaction(t) {

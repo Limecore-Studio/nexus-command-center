@@ -45,6 +45,8 @@ export default function Dashboard() {
   const goals = useGoalsStore((s) => s.goals);
   const holdings = useFinanceStore((s) => s.holdings);
   const manualAssets = useFinanceStore((s) => s.manualAssets);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
+  const portfolioCashEntries = useFinanceStore((s) => s.portfolioCashEntries);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
   const studySessions = useStudiesStore((s) => s.studySessions);
@@ -116,13 +118,14 @@ export default function Dashboard() {
   const activeGoals = useMemo(() => {
     const data = {
       transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency,
+      portfolioLots, portfolioCashEntries, // v1.22 (NCC#252)
       tasks, studySessions, workouts: sessions, currentGpa: studies?.calculatedGpa ?? null,
       gradeScale, // v1.19 (NCC#197)
     };
     return goals
       .filter((g) => !g.completed && !g.deletedAt)
       .map((g) => ({ goal: g, pct: Math.max(0, Math.min(100, Math.round(computeGoalProgress(g, data).percent))) }));
-  }, [goals, transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, studies, gradeScale]);
+  }, [goals, transactions, holdings, manualAssets, portfolioLots, portfolioCashEntries, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, studies, gradeScale]);
 
   // This week so far, from the builder the Review screen itself uses.
   const week = useMemo(

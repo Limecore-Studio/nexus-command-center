@@ -19,8 +19,7 @@ import { useTranslation } from 'react-i18next';
 import AppHeader from '../../components/AppHeader';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
-import { convertSync, normalizeCurrency } from '../../api/fxRates';
-import { LIABILITY_TYPES } from '../../types/finance';
+import { netWorthParts } from '../../lib/netWorth';
 import { project, yearReachingMilestone } from '../../lib/projection';
 import { RULE, INK_MUTE, SUCCESS } from '../../lib/themeColors';
 // v1.18.1 (NCC#166): typed amounts and rates accept a decimal comma.
@@ -56,36 +55,20 @@ export default function WhatIf() {
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
   const manualAssets = useFinanceStore((s) => s.manualAssets);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
+  const transactions = useFinanceStore((s) => s.transactions);
+  const portfolioCashEntries = useFinanceStore((s) => s.portfolioCashEntries);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
-  // Compute current net worth — same formula as NetWorth.tsx & FinanceOverview.
-  const currentNetWorth = useMemo(() => {
-    let portfolioBase = 0;
-    for (const h of holdings) {
-      if (h.assetType === 'stock' || h.assetType === 'etf') {
-        const q = stockQuotes.find((s) => s.ticker === h.ticker);
-        if (!q) continue;
-        const native = normalizeCurrency(q.quote.c * h.quantity, q.currency);
-        const conv = convertSync(native.amount, native.currency, baseCurrency, fxRates);
-        if (conv != null) portfolioBase += conv;
-      } else {
-        const p = cryptoPrices?.prices.find((p) => p.id === h.ticker);
-        if (!p) continue;
-        const native = p.priceEur * h.quantity;
-        const conv = baseCurrency === 'EUR' ? native : convertSync(native, 'EUR', baseCurrency, fxRates);
-        if (conv != null) portfolioBase += conv;
-      }
-    }
-    let assets = 0;
-    let liab = 0;
-    for (const a of manualAssets) {
-      const conv = convertSync(a.value, a.currency, baseCurrency, fxRates);
-      if (conv == null) continue;
-      if (LIABILITY_TYPES.includes(a.assetType)) liab += conv;
-      else assets += conv;
-    }
-    return Math.max(0, portfolioBase + assets - liab);
-  }, [holdings, stockQuotes, cryptoPrices, fxRates, manualAssets, baseCurrency]);
+  // v1.22 (NCC#252): the Finance overview's net worth (lib/netWorth.ts). This
+  // copy read accounts' opening balances, added liabilities and skipped bond
+  // and custom holdings.
+  const currentNetWorth = useMemo(
+    () =>
+      Math.max(0, netWorthParts({
+        holdings, portfolioLots, stockQuotes, cryptoPrices, fxRates, baseCurrency, manualAssets, transactions, portfolioCashEntries,
+      }).total),
+  [holdings, portfolioLots, stockQuotes, cryptoPrices, fxRates, baseCurrency, manualAssets, transactions, portfolioCashEntries]);
 
   // Input state — initialised once from current net worth.
   // v1.18.1 (NCC#166): the three typed fields keep what was typed and are read

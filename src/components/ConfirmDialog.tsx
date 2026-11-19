@@ -15,9 +15,10 @@
 // and nothing else about the surrounding logic moves.
 
 import {
-  createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode,
+  createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { whenLocked } from '../store/useAuthStore';
 
 interface ConfirmOptions {
   message: string;
@@ -62,6 +63,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     resolver.current = null;
     setPending(null);
   }, []);
+
+  // v1.22: the provider sits outside the app lock, so a dialog open when the
+  // app locks would stay usable over the lock screen. Locking answers it
+  // "cancel": it closes, and the action waiting on it does not run.
+  useEffect(() => whenLocked(() => settle(false)), [settle]);
 
   const value = useMemo(() => confirm, [confirm]);
 

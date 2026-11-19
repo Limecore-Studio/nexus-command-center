@@ -8,7 +8,8 @@
 // a `[dropped]` error, so none of them ever reached the server — 0 checking,
 // credit-card or investment accounts exist there.
 //
-// Queue items are never pruned (only cleared on sign-out), so the dropped
+// Pushed items were never pruned before v1.22, and the newest revivable one
+// of an entity still is not (selectPrunable), so dropped
 // items are still on the device. Once the constraint accepts the new types
 // (supabase/migrations/20260924_manual_assets_account_types.sql) they can be
 // pushed as they are. This module picks which ones; it has no I/O so it can be
@@ -47,4 +48,23 @@ export function selectRequeue(items: SyncQueueItem[]): SyncQueueItem[] {
     out.push(it);
   }
   return out;
+}
+
+// v1.22 (NCC#249): pushed items were kept forever, and every pull and drain
+// reads the whole queue, so it grew with each edit, import row and recurring
+// occurrence. Pushed items older than this are deleted.
+export const PRUNE_AFTER_DAYS = 14;
+
+/**
+ * Pushed items (`syncedAt` set) older than `cutoff` that can go. Pending items
+ * always stay. One pushed item may also stay: the newest item of an entity
+ * that selectRequeue could still put back (dropped for a reason it revives,
+ * not yet requeued). selectRequeue only looks at an entity's newest item, so
+ * deleting the newer ones while keeping an older dropped one would make that
+ * stale snapshot "newest" and revive it. Here an entity's older items go, and
+ * its newest stays only if it is itself revivable.
+ */
+export function selectPrunable(items: SyncQueueItem[], cutoff: string): SyncQueueItem[] {
+  const keep = new Set(selectRequeue(items).map((it) => it.id));
+  return items.filter((it) => it.syncedAt && it.syncedAt < cutoff && !keep.has(it.id));
 }

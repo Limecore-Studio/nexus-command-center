@@ -125,3 +125,22 @@ describe('pushQueue when the session ends mid-drain (NCC#162)', () => {
     expect(r2.errors.every((e) => e.message.includes('[dropped'))).toBe(true);
   });
 });
+
+// v1.22 (NCC#249): a drain deletes pushed items older than two weeks.
+describe('queue pruning (NCC#249)', () => {
+  it('a drain removes old pushed items and keeps recent and pending ones', async () => {
+    const { resetQueuePrune } = await import('./cloudSync');
+    const { PRUNE_AFTER_DAYS } = await import('./requeueDropped');
+    resetQueuePrune();
+    await db.syncQueue.clear();
+    const longAgo = new Date(Date.now() - (PRUNE_AFTER_DAYS + 1) * 86_400_000).toISOString();
+    const lately = new Date(Date.now() - 86_400_000).toISOString();
+    const base = { entityType: 'goal', operation: 'update', payload: '{}', createdAt: longAgo } as const;
+    await db.syncQueue.bulkAdd([
+      { ...base, id: 'old', entityId: 'g1', syncedAt: longAgo },
+      { ...base, id: 'recent', entityId: 'g2', syncedAt: lately },
+    ]);
+    await pushQueue('user-1');
+    expect((await db.syncQueue.toArray()).map((q) => q.id).sort()).toEqual(['recent']);
+  });
+});

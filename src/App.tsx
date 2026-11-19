@@ -12,7 +12,9 @@ import { clearAllLocalData } from './db/database';
 import { supabase } from './lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { startLive, stopLive } from './lib/liveSync';
-import { hydrateStudiesFromCloud, hydrateHabitsFromCloud, hydrateBodyMetricsFromCloud, hydrateWorkQualityFromCloud, hydrateBraindumpFromCloud } from './lib/cloudSync';
+// v1.22 (limecore#126): the sync engine runs after the first frame, never
+// before it, so it loads on first use instead of in the startup bundle.
+const cloudSync = () => import('./lib/cloudSync');
 import { setConsentOwner } from './lib/consentOwner';
 import { refreshEntitlement } from './lib/entitlement';
 import { useStudiesStore } from './store/useStudiesStore';
@@ -293,7 +295,7 @@ export default function App() {
     const userId = session.user.id;
     (async () => {
       try {
-        const result = await hydrateStudiesFromCloud(userId);
+        const result = await (await cloudSync()).hydrateStudiesFromCloud(userId);
         console.log(
           `[app-init] studies hydrated: subjects=${result.subjects}, grades=${result.grades}, study_sessions=${result.studySessions}, errors=${result.errors.length}`,
         );
@@ -311,7 +313,7 @@ export default function App() {
       // the realtime channel handle subsequent deltas. Fire-and-forget; a
       // failure here doesn't block the rest of app-init.
       try {
-        const habitsResult = await hydrateHabitsFromCloud(userId);
+        const habitsResult = await (await cloudSync()).hydrateHabitsFromCloud(userId);
         console.log(
           `[app-init] habits hydrated: habits=${habitsResult.habits}, completions=${habitsResult.completions}, errors=${habitsResult.errors.length}`,
         );
@@ -330,7 +332,7 @@ export default function App() {
       // Same sibling-of-habits shape; fire-and-forget so a failure doesn't
       // block app-init.
       try {
-        const bodyResult = await hydrateBodyMetricsFromCloud(userId);
+        const bodyResult = await (await cloudSync()).hydrateBodyMetricsFromCloud(userId);
         console.log(
           `[app-init] body metrics hydrated: rows=${bodyResult.bodyMetrics}, errors=${bodyResult.errors.length}`,
         );
@@ -346,7 +348,7 @@ export default function App() {
       // score reflect ratings made on another device. Sibling-of-habits
       // shape; fire-and-forget so a failure doesn't block app-init.
       try {
-        const workResult = await hydrateWorkQualityFromCloud(userId);
+        const workResult = await (await cloudSync()).hydrateWorkQualityFromCloud(userId);
         console.log(
           `[app-init] work quality hydrated: rows=${workResult.workQualityLogs}, errors=${workResult.errors.length}`,
         );
@@ -362,7 +364,7 @@ export default function App() {
       // without waiting for a manual sync, and a failure here must not block
       // app-init.
       try {
-        const bdResult = await hydrateBraindumpFromCloud(userId);
+        const bdResult = await (await cloudSync()).hydrateBraindumpFromCloud(userId);
         console.log(
           `[app-init] braindump hydrated: rows=${bdResult.braindumpEntries}, errors=${bdResult.errors.length}`,
         );

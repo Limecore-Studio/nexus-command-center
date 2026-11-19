@@ -35,7 +35,12 @@ import { fileURLToPath } from 'node:url';
 // by loading Health Connect on first use (-2.5 KiB).
 // v1.21 (NCC#266): the conversion rollback added 0.5 KiB, paid for by loading
 // the crash screen's data export on demand (-1.9 KiB).
-const BUDGET_KIB = 957; // measured 2026-11-16 after NCC#266: 956.6 KiB (was 958 at 957.9)
+// v1.22 (limecore#126): the sync engine (cloudSync with its push handlers and
+// hydrators) runs only after the first frame, so it loads on first use,
+// 956.4 -> 922.0 KiB. On the owner's decision (2026-11-19), 20 KiB of that is
+// kept as headroom for the v1.22 fixes; the v1.22 release PR sets the budget
+// back to the measured size. This still lowers it (957 -> 942).
+const BUDGET_KIB = 942; // measured 2026-11-19 after limecore#126: 922.0 KiB + 20 headroom (was 957 at 956.4)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');

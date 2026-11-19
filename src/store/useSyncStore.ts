@@ -1,6 +1,6 @@
 import { create, type StoreApi } from 'zustand';
 import { listOwnPending, onEnqueued } from '../db/syncQueue';
-import { fullSync, pushQueue, pullAll, PushResult, PullResult } from '../lib/cloudSync';
+import type { PushResult, PullResult } from '../lib/cloudSync';
 import { coalesce } from '../lib/coalesce';
 import { reconcileTaskRemindersIfChanged } from '../lib/taskReminders';
 import { useSessionStore } from './useSessionStore';
@@ -15,6 +15,11 @@ import { useBodyMetricsStore } from './useBodyMetricsStore';
 import { useWorkQualityStore } from './useWorkQualityStore';
 import { useBraindumpStore } from './useBraindumpStore';
 import { useHabitsStore } from './useHabitsStore';
+
+// v1.22 (limecore#126): the sync engine (cloudSync, its push handlers and
+// hydrators) runs after the first frame, so it loads on first use instead of
+// in the startup bundle. It is a local asset, so it loads offline too.
+const cloudSync = () => import('../lib/cloudSync');
 
 // Reload every cloud-synced data store from Dexie. Called after each pull so
 // that rows newly merged into Dexie (from other devices, Realtime triggers,
@@ -145,7 +150,7 @@ async function runSync(set: StoreApi<SyncStore>['setState']): Promise<void> {
       set({ syncing: false });
       return;
     }
-    const { push, pull } = await fullSync(user.id);
+    const { push, pull } = await (await cloudSync()).fullSync(user.id);
     announce(push);
     // After a successful pull, refresh in-memory state in every data
     // store so the UI reflects rows that just landed in Dexie (whether
@@ -221,7 +226,7 @@ async function runPush(set: StoreApi<SyncStore>['setState']): Promise<void> {
   const userId = syncableUser();
   if (!userId) return;
   try {
-    const push = await pushQueue(userId);
+    const push = await (await cloudSync()).pushQueue(userId);
     announce(push);
     const pending = await listOwnPending();
     set({
@@ -237,7 +242,7 @@ async function runPush(set: StoreApi<SyncStore>['setState']): Promise<void> {
 async function runPull(tables: string[]): Promise<void> {
   const userId = syncableUser();
   if (!userId) return;
-  const pull = await pullAll(userId, new Set(tables));
+  const pull = await (await cloudSync()).pullAll(userId, new Set(tables));
   if (pull.errors.length > 0) {
     console.warn('[sync] hinted pull failed:', pull.errors[0]);
     return;

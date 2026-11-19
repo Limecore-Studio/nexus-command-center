@@ -1453,6 +1453,7 @@
     "units_many": "{{count}} unidades",
     "units_other": "{{count}} unidades",
     "depositLabel": "Depósito na carteira",
+    "withdrawLabel": "Levantamento da carteira",
     "entryTitle": "Recorrentes",
     "entrySub": "Renda, salário, depósitos e planos de poupança",
     "addRecurring": "Adicionar recorrente…"

@@ -175,8 +175,8 @@ export default function SavingsGoals() {
     // with a dated entry. This used to only lower the account's opening
     // balance, which left no record of when, rewrote every past month of the
     // net-worth trend, and put nothing in portfolio cash for the purchase
-    // the user goes on to make. depositToPortfolio converts the amount into
-    // the account's currency and refuses when there is no FX rate.
+    // the user goes on to make. Since v1.22 (NCC#257) the debit is a dated
+    // transfer on the account, not a change to its opening balance.
     try {
       await depositToPortfolio({ amount, currency: baseCurrency, accountId: source.id });
     } catch (e) {

@@ -1421,6 +1421,7 @@
     "buyOf": "买入 {{name}}",
     "units_other": "{{count}} 单位",
     "depositLabel": "投资组合存入",
+    "withdrawLabel": "投资组合取出",
     "entryTitle": "定期",
     "entrySub": "房租、工资、存入和定投计划",
     "addRecurring": "添加定期…"

@@ -1514,6 +1514,7 @@
     "units_many": "{{count}} وحدة",
     "units_other": "{{count}} وحدة",
     "depositLabel": "إيداع في المحفظة",
+    "withdrawLabel": "سحب من المحفظة",
     "entryTitle": "المتكررة",
     "entrySub": "الإيجار والراتب والإيداعات وخطط الادخار",
     "addRecurring": "إضافة متكرر…"

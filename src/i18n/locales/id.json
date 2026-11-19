@@ -1415,6 +1415,7 @@
     "buyOf": "Beli {{name}}",
     "units_other": "{{count}} unit",
     "depositLabel": "Setoran portofolio",
+    "withdrawLabel": "Penarikan portofolio",
     "entryTitle": "Berulang",
     "entrySub": "Sewa, gaji, setoran, dan rencana tabungan",
     "addRecurring": "Tambah berulang…"

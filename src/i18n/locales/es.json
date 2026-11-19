@@ -1453,6 +1453,7 @@
     "units_many": "{{count}} unidades",
     "units_other": "{{count}} unidades",
     "depositLabel": "Depósito en cartera",
+    "withdrawLabel": "Retiro de cartera",
     "entryTitle": "Recurrentes",
     "entrySub": "Alquiler, sueldo, depósitos y planes de ahorro",
     "addRecurring": "Añadir recurrente…"

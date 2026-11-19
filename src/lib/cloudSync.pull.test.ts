@@ -137,6 +137,36 @@ describe('pullAll', () => {
   });
 });
 
+// v1.22 (NCC#260) — LimeLog hard-deletes sets while their session lives on.
+describe('workout sets deleted upstream', () => {
+  it('a set the pull no longer returns is removed, even under a live session', async () => {
+    const w = workouts(2);
+    const [s1] = w.cloudSessions;
+    const extra = { id: crypto.randomUUID(), sessionId: s1.id, exercise: 'Squat', weightKg: 100, reps: 5, createdAt: '2026-01-01T00:00:00Z' };
+    await db.workoutSessions.bulkPut(w.localSessions as any);
+    await db.workoutSets.bulkPut([...w.localSets, extra] as any);
+    holder.client = fakeClient({ workout_sessions: w.cloudSessions, workout_sets: w.cloudSets });
+
+    await pullAll(USER);
+
+    expect(await db.workoutSessions.count()).toBe(2);
+    expect((await db.workoutSets.toArray()).map((s) => s.id).sort()).toEqual(w.cloudSets.map((s) => s.id).sort());
+  });
+
+  it('keeps the sets of a session still waiting to be pushed', async () => {
+    const w = workouts(1);
+    const pending = { id: crypto.randomUUID(), sessionType: 'strength', date: '2026-01-02', sets: [], syncStatus: 'pending', createdAt: '' };
+    const set = { id: crypto.randomUUID(), sessionId: pending.id, exercise: 'Row', reps: 8, createdAt: '' };
+    await db.workoutSessions.bulkPut([...w.localSessions, pending] as any);
+    await db.workoutSets.bulkPut([...w.localSets, set] as any);
+    holder.client = fakeClient({ workout_sessions: w.cloudSessions, workout_sets: w.cloudSets });
+
+    await pullAll(USER);
+
+    expect(await db.workoutSets.get(set.id)).toBeDefined();
+  });
+});
+
 // v1.20 (NCC#221) — a live-sync hint pulls only the tables it names.
 describe('pullAll with a table filter', () => {
   const requested = () => new Set((holder.client.requests as { table: string }[]).map((r) => r.table));

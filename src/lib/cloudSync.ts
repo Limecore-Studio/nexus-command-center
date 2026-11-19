@@ -464,9 +464,19 @@ export async function pullAll(_userId: string, only?: ReadonlySet<string>): Prom
       // (e.g. after a session was pruned above, or a set was deleted upstream).
       // Sets carry no syncStatus, so we key off the parent: any set pointing at
       // a session id that isn't in workoutSessions is dead weight.
-      const liveSessionIds = new Set((await db.workoutSessions.toArray()).map((s) => s.id));
+      //
+      // v1.22 (NCC#260): and any set the server no longer has. LimeLog
+      // hard-deletes sets (no tombstone) while their session lives on: un-ticking
+      // or removing a set shifts its position-based ids, and old duplicates are
+      // cleaned up server-side. This pull returned every set of the account, so
+      // a set it did not return is gone, unless its session is still waiting to
+      // be pushed from this device.
+      const sessions = await db.workoutSessions.toArray();
+      const liveSessionIds = new Set(sessions.map((s) => s.id));
+      const pendingSessionIds = new Set(sessions.filter((s) => s.syncStatus === 'pending').map((s) => s.id));
+      const pulledSetIds = new Set(rows.map((r) => r.id));
       const orphanSetIds = (await db.workoutSets.toArray())
-        .filter((st) => !liveSessionIds.has(st.sessionId))
+        .filter((st) => !liveSessionIds.has(st.sessionId) || (!pulledSetIds.has(st.id) && !pendingSessionIds.has(st.sessionId)))
         .map((st) => st.id);
       if (orphanSetIds.length > 0) {
         await db.workoutSets.bulkDelete(orphanSetIds);

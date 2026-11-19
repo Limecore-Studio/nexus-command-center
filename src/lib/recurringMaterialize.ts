@@ -56,6 +56,18 @@ export interface MaterializeResult {
 
 const now = () => new Date().toISOString();
 
+/**
+ * v1.22 (NCC#256): when a generated portfolio cash entry happened. A cash
+ * entry has no date of its own, so its `createdAt` is what the net-worth trend
+ * and the statement date it by; a catch-up writing three months at once used
+ * to put all three deposits on today, while their account transfers carried
+ * their own dates. Noon of the occurrence day (local), never later than now.
+ */
+export function occurredAt(date: string, nowMs: number = Date.now()): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Math.min(new Date(y, m - 1, d, 12).getTime(), nowMs)).toISOString();
+}
+
 async function put<T extends { id: string }>(
   table: { get(id: string): Promise<T | undefined>; add(row: T): Promise<unknown> },
   entityType: SyncQueueItem['entityType'],
@@ -113,7 +125,7 @@ async function writeOccurrence(rule: RecurringRule, date: string, deps: Material
       relatedId: txId,
       note: t.note,
       recurringRuleId: rule.id,
-      createdAt,
+      createdAt: occurredAt(date),
       syncStatus: 'pending',
     };
     if (await put(db.transactions, 'transaction', tx)) out.created++;
@@ -167,7 +179,7 @@ async function writeOccurrence(rule: RecurringRule, date: string, deps: Material
     currency,
     relatedId: lot.id,
     recurringRuleId: rule.id,
-    createdAt,
+    createdAt: occurredAt(date),
     syncStatus: 'pending',
   };
   if (await put(db.portfolioLots, 'portfolio_lot', lot)) {
@@ -207,7 +219,7 @@ async function writeCoupon(rule: Extract<RecurringRule, { kind: 'coupon' }>, dat
       relatedId: holding.id,
       note: holding.ticker,
       recurringRuleId: rule.id,
-      createdAt,
+      createdAt: occurredAt(date),
       syncStatus: 'pending',
     };
     if (await put(db.portfolioCashEntries, 'portfolio_cash_entry', cash)) out.created++;
@@ -243,7 +255,7 @@ async function writeCoupon(rule: Extract<RecurringRule, { kind: 'coupon' }>, dat
           currency: terms.currency,
           relatedId: sale.id,
           recurringRuleId: rule.id,
-          createdAt,
+          createdAt: occurredAt(date),
           syncStatus: 'pending',
         };
         await put(db.portfolioCashEntries, 'portfolio_cash_entry', proceeds);

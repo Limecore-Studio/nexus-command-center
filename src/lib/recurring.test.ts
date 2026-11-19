@@ -7,7 +7,8 @@ vi.mock('./supabase', () => ({ supabase: {} }));
 // materialiser against real Dexie (fake-indexeddb), and the forecast.
 
 const { occurrenceAt, occurrencesBetween, nextOccurrence, uuidv5, occurrenceId } = await import('./recurring');
-const { materializeDue } = await import('./recurringMaterialize');
+const { materializeDue, occurredAt } = await import('./recurringMaterialize');
+const { localDateKey } = await import('@/utils/formatters');
 const { detectRecurring, projectCashFlow } = await import('./cashFlowForecast');
 const { db } = await import('../db/database');
 type Rule = import('../types/recurring').RecurringRule;
@@ -120,6 +121,26 @@ describe('materialising', () => {
     expect(tx.destinationAccountId).toBeUndefined();
     expect(cash).toMatchObject({ type: 'deposit', amount: 200, currency: 'EUR', relatedId: tx.id });
     expect(cash.accountId).toBeUndefined();
+  });
+
+  it('a catch-up dates each cash deposit on its own occurrence day, like its transfer (NCC#256)', async () => {
+    await db.recurringRules.put(
+      rule({ kind: 'cash_deposit', template: { accountId: 'acc-1', amount: 200 }, startDate: '2026-08-01', unit: 'month' }),
+    );
+    await materializeDue(deps());
+    const txDays = (await db.transactions.orderBy('date').toArray()).map((t) => t.date);
+    const cashDays = (await db.portfolioCashEntries.toArray())
+      .map((c) => localDateKey(new Date(c.createdAt)))
+      .sort();
+    expect(txDays).toEqual(['2026-08-01', '2026-09-01', '2026-10-01']);
+    expect(cashDays).toEqual(txDays);
+  });
+
+  it('occurredAt is local noon of the day, and never later than now', () => {
+    expect(localDateKey(new Date(occurredAt('2026-03-29')))).toBe('2026-03-29');
+    expect(new Date(occurredAt('2026-03-29')).getHours()).toBe(12);
+    const at8 = new Date(2026, 9, 22, 8).getTime();
+    expect(occurredAt('2026-10-22', at8)).toBe(new Date(at8).toISOString());
   });
 
   it('a market-price buy waits with no price, then uses the loaded price', async () => {

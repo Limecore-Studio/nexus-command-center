@@ -26,7 +26,8 @@ interface SessionState {
    *  sign-out. */
   sessionUnverified: boolean;
   init: () => Promise<void>;
-  signOut: () => Promise<void>;
+  /** `keepGuestEdits`: v1.22, the adoption prompt's sign-out (see below). */
+  signOut: (opts?: { keepGuestEdits?: boolean }) => Promise<void>;
 }
 
 // Derive display name + initials from user metadata.
@@ -174,7 +175,7 @@ export const useSessionStore = create<SessionState>((set) => ({
     }
   },
 
-  async signOut() {
+  async signOut(opts) {
     // v1.4 — clear the SSO bridge BEFORE the auth round-trip so a
     // concurrent sibling query can't grab a token that's about to be
     // invalidated. onAuthStateChange's null fire will also clear, but
@@ -225,8 +226,15 @@ export const useSessionStore = create<SessionState>((set) => ({
     // them (pushableFor), so deleting them only lost its offline edits, e.g.
     // when B signs out from the "Existing data found" prompt over A's kept
     // data. A guest's (null) still go, as before.
+    //
+    // v1.22 (limecore#106): signing out from the "Existing data found" prompt
+    // keeps a guest's too. That data is still on the device and the prompt
+    // comes back at the next sign-in; deleting the queue lost the guest's
+    // habits, completions and notes, which nothing else re-queues.
     try {
-      await db.syncQueue.filter((q) => !q.syncedAt && typeof q.owner !== 'string').delete();
+      await db.syncQueue
+        .filter((q) => !q.syncedAt && typeof q.owner !== 'string' && !(opts?.keepGuestEdits && q.owner === null))
+        .delete();
     } catch (e) {
       console.warn('[auth] signOut: syncQueue drain failed:', (e as Error).message);
     }

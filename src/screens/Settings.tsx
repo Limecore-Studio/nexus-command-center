@@ -342,8 +342,11 @@ export default function Settings() {
   const onForceResync = async () => {
     if (!user) return;
     if (!(await confirm({ message: t('settings.forceResyncConfirm') }))) return;
-    const { adoptLocalData } = await import('../lib/cloudSync');
-    await adoptLocalData(user.id);
+    // v1.22 (NCC#261): only rows the server has never had; see resyncLocalData.
+    // If the ids cannot be read, nothing is queued; the sync below still runs
+    // and reports the connection problem.
+    const { resyncLocalData } = await import('../lib/cloudSync');
+    await resyncLocalData(user.id).catch((e) => console.warn('[sync] force re-sync:', (e as Error).message));
     await refreshPending();
     await syncNow();
   };

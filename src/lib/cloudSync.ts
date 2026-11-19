@@ -30,7 +30,7 @@ import type { Table } from 'dexie';
 import { recordSeen } from './editStamp';
 import { db, SyncQueueItem } from '../db/database';
 import { listPending, pushableFor } from '../db/syncQueue';
-import { generateId } from '../utils/uuid';
+import { generateId, legacyIdToUuid } from '../utils/uuid';
 import type { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, ManualAsset, WatchlistItem } from '../types/finance';
 import { legacyAssetTypeToAccountType } from '../types/finance';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
@@ -725,7 +725,14 @@ export async function pullAll(_userId: string, only?: ReadonlySet<string>): Prom
 // ============================================================================
 // Adoption: enqueue every existing local row as an insert for the new user.
 // ============================================================================
-export async function adoptLocalData(userId: string): Promise<number> {
+/** v1.22 (NCC#261): ids the server already has (tombstones included) for the
+ *  tables adopted in full. See resyncLocalData. */
+export interface ServerIds {
+  budget_categories: Set<string>;
+  portfolio_holdings: Set<string>;
+}
+
+export async function adoptLocalData(userId: string, onServer?: ServerIds): Promise<number> {
   const now = new Date().toISOString();
   let count = 0;
 
@@ -772,8 +779,13 @@ export async function adoptLocalData(userId: string): Promise<number> {
     ]);
 
   await enqueueAll('transaction', txs);
-  await enqueueAll('budget_category', budgets);
-  await enqueueAll('portfolio_holding', holdings);
+  // v1.22 (NCC#261): Force Re-sync passes `onServer`. A row the server
+  // already has is not queued: queued at "now", this device's last-pulled
+  // copy would overwrite a newer edit made elsewhere.
+  const missing = <T extends { id: string }>(rows: T[], ids?: Set<string>) =>
+    ids ? rows.filter((r) => !ids.has(r.id) && !ids.has(legacyIdToUuid(r.id))) : rows;
+  await enqueueAll('budget_category', missing(budgets, onServer?.budget_categories));
+  await enqueueAll('portfolio_holding', missing(holdings, onServer?.portfolio_holdings));
   await enqueueAll('portfolio_lot', lots);
   await enqueueAll('manual_asset', manualAssets);
   await enqueueAll('watchlist_item', watchlistItems);
@@ -781,7 +793,10 @@ export async function adoptLocalData(userId: string): Promise<number> {
   // enqueued here — those tables are consumer-read-only for NCC per the
   // suite data contract (LimeLog/StudyDesk own them).
   await enqueueAll('task', tasks);
-  await enqueueAll('course', courses);
+  // v1.22 (NCC#261): never on Force Re-sync. Courses are StudyDesk's: one
+  // the server has is newer there, and one it lacks may have been deleted and
+  // purged. A course made in NCC and not pushed yet is still in the queue.
+  if (!onServer) await enqueueAll('course', courses);
   await enqueueAll('grade', grades);
   await enqueueAll('goal', goals);
   await enqueueAll('stock_sale', stockSales);
@@ -795,6 +810,26 @@ export async function adoptLocalData(userId: string): Promise<number> {
   // they are this user's, like the rows queued above.
   await db.syncQueue.filter((q) => !q.syncedAt && q.owner === null).modify({ owner: userId });
   return count;
+}
+
+/**
+ * v1.22 (NCC#261) — Settings → Force Re-sync. Re-queues what never reached
+ * the server, like adoptLocalData, but the tables adopted in full (they have
+ * no per-row sync state) are queued only for rows the server has never had,
+ * and courses not at all. Reads the ids first; if that fails, nothing is
+ * queued and the error is thrown.
+ */
+export async function resyncLocalData(userId: string): Promise<number> {
+  const ids = async (table: string): Promise<Set<string>> => {
+    const { data, error } = await selectAll(supabase, table, {
+      columns: 'id',
+      filter: (q) => q.eq('user_id', userId),
+    });
+    if (error || !data) throw new Error(`${table}: ${error?.message ?? 'no data'}`);
+    return new Set(data.map((r) => r.id));
+  };
+  const [budget_categories, portfolio_holdings] = await Promise.all([ids('budget_categories'), ids('portfolio_holdings')]);
+  return adoptLocalData(userId, { budget_categories, portfolio_holdings });
 }
 
 /** v1.19 (NCC#189): "Keep" on an account switch adopts only unsynced rows.

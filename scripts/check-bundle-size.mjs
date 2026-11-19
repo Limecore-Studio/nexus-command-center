@@ -37,8 +37,10 @@ import { fileURLToPath } from 'node:url';
 // the crash screen's data export on demand (-1.9 KiB).
 // v1.22 (limecore#126): the sync engine (cloudSync with its push handlers and
 // hydrators) runs only after the first frame, so it loads on first use,
-// 956.4 -> 922.0 KiB. The budget comes down with it.
-const BUDGET_KIB = 923; // measured 2026-11-19 after limecore#126: 922.0 KiB (was 957 at 956.4)
+// 956.4 -> 922.0 KiB. On the owner's decision (2026-11-19), 20 KiB of that is
+// kept as headroom for the v1.22 fixes; the v1.22 release PR sets the budget
+// back to the measured size. This still lowers it (957 -> 942).
+const BUDGET_KIB = 942; // measured 2026-11-19 after limecore#126: 922.0 KiB + 20 headroom (was 957 at 956.4)
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');

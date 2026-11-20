@@ -133,6 +133,8 @@
     "updateReady": "Reiniciar para atualizar"
   },
   "life": {
+    "narrativeRegenerate": "Gerar o resumo de novo",
+    "narrativeFootnote": "Gerado pelo Gemini a partir das suas pontuações. Não é aconselhamento médico nem financeiro.",
     "notCountedYet": "Ainda não contabilizado",
     "title": "Padrões de vida",
     "thisWeek": "Esta semana",
@@ -1508,5 +1510,37 @@
     "body": "Se algo falhar, o NCC pode enviar-nos os detalhes técnicos: a versão da app, o erro e o ecrã onde aconteceu. Nunca o que escreve. Pode alterar isto nas Definições.",
     "yes": "Sim, enviar",
     "notNow": "Agora não"
+  },
+  "ql": {
+    "title": "Registo rápido",
+    "task": "Tarefa",
+    "saveExpense": "Guardar despesa",
+    "workQuestion": "Como correu o trabalho hoje?",
+    "workToday": "Trabalho de hoje — toque para alterar",
+    "rateGroup": "Avalie o seu dia de trabalho de 1 a 5",
+    "ratingOf": "{{n}} de 5",
+    "notePh": "Adicionar uma nota… (opcional)",
+    "addNote": "+ Adicionar uma nota",
+    "saveRating": "Guardar avaliação",
+    "updateRating": "Atualizar avaliação"
+  },
+  "notifIntro": {
+    "title": "Mantenha-se a par",
+    "body": "O NCC pode enviar lembretes no dispositivo sobre o que, de outra forma, teria de abrir a app para verificar. São agendados no seu telemóvel.",
+    "tasksSub": "quando algo vence",
+    "budgetsSub": "quando se aproxima ou ultrapassa o limite de uma categoria",
+    "portfolio": "Fecho da carteira",
+    "portfolioSub": "um resumo diário da variação de hoje",
+    "newsSub": "notícias sobre o que detém e grandes movimentos de índices",
+    "muteHint": "Pode desativar cada tipo em Definições → Notificações.",
+    "enable": "Ativar notificações",
+    "alreadyGranted": "Já permiti as notificações",
+    "denied": "As notificações do NCC não estão permitidas. Pode permiti-las nas definições do telemóvel.",
+    "failed": "Não foi possível ativar as notificações. Tente de novo ou use Definições → Notificações."
+  },
+  "share": {
+    "none": "Ainda não partilhado com ninguém.",
+    "canEdit": "Pode editar",
+    "readOnly": "Só leitura"
   }
 }

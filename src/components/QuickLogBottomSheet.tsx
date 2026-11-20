@@ -27,13 +27,15 @@ interface QuickLogBottomSheetProps {
 
 // `icon` is a Glyph name; it used to be an emoji baked into the label string,
 // which meant the glyph could never take the label's colour.
+// v1.22 (NCC#288): `label` is an i18n key.
 const tabs: { key: QuickTab; label: string; icon: string }[] = [
-  { key: 'expense', label: 'Expense', icon: 'expense' },
-  { key: 'work', label: 'Work', icon: 'work' },
-  { key: 'task', label: 'Task', icon: 'tasks' },
+  { key: 'expense', label: 'fin.tx.expense', icon: 'expense' },
+  { key: 'work', label: 'domains.work', icon: 'work' },
+  { key: 'task', label: 'ql.task', icon: 'tasks' },
 ];
 
 export default function QuickLogBottomSheet({ open, onClose }: QuickLogBottomSheetProps) {
+  const { t: tr } = useTranslation();
   const [tab, setTab] = useState<QuickTab>('expense');
   const refreshTemplates = useTemplatesStore((s) => s.refresh);
 
@@ -45,7 +47,7 @@ export default function QuickLogBottomSheet({ open, onClose }: QuickLogBottomShe
   }, [open, refreshTemplates]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Quick Log">
+    <BottomSheet open={open} onClose={onClose} title={tr('ql.title')}>
       <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
         {tabs.map((t) => (
           <button
@@ -53,7 +55,7 @@ export default function QuickLogBottomSheet({ open, onClose }: QuickLogBottomShe
             onClick={() => setTab(t.key)}
             className={`chip flex-shrink-0 ${tab === t.key ? 'chip-on' : ''}`}
           >
-            <Glyph name={t.icon} size={12} />{t.label}
+            <Glyph name={t.icon} size={12} />{tr(t.label)}
           </button>
         ))}
       </div>
@@ -155,13 +157,13 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
         <input
           className="input max-w-[110px]"
           inputMode="decimal"
-          placeholder="€ Amount"
+          placeholder={t('fin.tx.amount')}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
         <input
           className="input"
-          placeholder="Description"
+          placeholder={t('fin.tx.description')}
           value={desc}
           onChange={(e) => setDesc(e.target.value)}
         />
@@ -171,7 +173,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
       >
-        <option value="">Category…</option>
+        <option value="">{t('fin.tx.categoryPh')}</option>
         {categories.map((c) => (
           <option key={c.id} value={c.id}>
             {c.icon ? `${c.icon} ` : ''}{c.name}
@@ -201,7 +203,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
         >
-          <option value="">Account…</option>
+          <option value="">{t('fin.tx.account')}</option>
           {accounts.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name}
@@ -214,7 +216,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
         onClick={submit}
         disabled={!amount || !desc.trim() || !accountId}
       >
-        Save Expense
+        {t('ql.saveExpense')}
       </button>
     </div>
   );
@@ -225,6 +227,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
 // again before saving just changes the selection. Pre-fills today's rating
 // if already logged.
 function QuickWork({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const logs = useWorkQualityStore((s) => s.logs);
   const loaded = useWorkQualityStore((s) => s.loaded);
   const load = useWorkQualityStore((s) => s.load);
@@ -247,7 +250,7 @@ function QuickWork({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-3">
       <div>
-        <div className="sec mb-2">How was work today?</div>
+        <div className="sec mb-2">{t('ql.workQuestion')}</div>
         <div className="flex gap-2.5">
           {[1, 2, 3, 4, 5].map((n) => {
             const on = rating === n;
@@ -257,7 +260,7 @@ function QuickWork({ onDone }: { onDone: () => void }) {
                 type="button"
                 onClick={() => setRatingState(n)}
                 aria-pressed={on}
-                aria-label={`${n} out of 5`}
+                aria-label={t('ql.ratingOf', { n })}
                 className={`press-spring flex-1 h-11 rounded-md border text-lg font-heading font-semibold transition-colors ${
                   on ? 'border-primary/60 bg-primary/10 text-primary' : 'border-border text-text-muted'
                 }`}
@@ -270,19 +273,20 @@ function QuickWork({ onDone }: { onDone: () => void }) {
       </div>
       <textarea
         className="input resize-none h-16 text-sm"
-        placeholder="Add a note… (optional)"
+        placeholder={t('ql.notePh')}
         maxLength={120}
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
       <button className="btn w-full" onClick={submit} disabled={rating < 1}>
-        {today ? 'Update Work Rating' : 'Save Work Rating'}
+        {today ? t('ql.updateRating') : t('ql.saveRating')}
       </button>
     </div>
   );
 }
 
 function QuickTask({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState('');
   const [due, setDue] = useState('');
   // Default priority+category from the picked template; falls back to
@@ -318,7 +322,7 @@ function QuickTask({ onDone }: { onDone: () => void }) {
       )}
       <input
         className="input"
-        placeholder="What needs to be done?"
+        placeholder={t('addtask.taskNamePlaceholder')}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
       />
@@ -329,7 +333,7 @@ function QuickTask({ onDone }: { onDone: () => void }) {
         onChange={(e) => setDue(e.target.value)}
       />
       <button className="btn w-full" onClick={submit}>
-        Save Task
+        {t('addtask.saveTask')}
       </button>
     </div>
   );

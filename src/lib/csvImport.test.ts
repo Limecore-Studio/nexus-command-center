@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  amountsInBase,
   parseDelimited,
   detectDelimiter,
   stripBom,
@@ -420,5 +421,23 @@ describe('guessMapping', () => {
     const m = guessMapping(['Date', 'Description', 'Debit', 'Credit']);
     expect(m[2]).toBe('debit');
     expect(m[3]).toBe('credit');
+  });
+});
+
+// v1.22 (NCC#254) — a statement imported into an account in another currency.
+describe('amountsInBase', () => {
+  // 1 USD = 0.9 EUR
+  const convert = (a: number, from: string, to: string) => (from === 'USD' && to === 'EUR' ? a * 0.9 : null);
+
+  it('converts every amount from the account currency to the base', () => {
+    expect(amountsInBase([1000, 12.5], 'USD', 'EUR', convert)).toEqual([900, 11.25]);
+  });
+
+  it('leaves amounts alone when the account is in the base currency', () => {
+    expect(amountsInBase([1000], 'EUR', 'EUR', () => null)).toEqual([1000]);
+  });
+
+  it('imports nothing when a rate is missing', () => {
+    expect(amountsInBase([1000], 'SEK', 'EUR', convert)).toBeNull();
   });
 });

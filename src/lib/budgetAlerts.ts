@@ -29,14 +29,17 @@
 import type { Transaction, BudgetCategory } from '../types/finance';
 import { scheduleNotification, ID_RANGES } from './notifications';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { hashSlot, slotAllocator } from './notifSlots';
 
 const THRESHOLDS = [80, 100] as const;
 type Threshold = (typeof THRESHOLDS)[number];
 
-function budgetNotifId(categoryId: string, threshold: Threshold): number {
-  let hash = 0;
-  for (const ch of categoryId) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  const slot = Math.abs(hash) % 50; // 50 categories × 2 tiers = 100 IDs
+// v1.22 (NCC#258): a slot per category assigned on this device
+// (lib/notifSlots.ts), not a hash modulo 50 that let one category's alert
+// replace another's. 50 categories × 2 tiers = 100 ids; past 50, the hash.
+const budgetSlots = slotAllocator('budgets.alertSlots', 50);
+async function budgetNotifId(categoryId: string, threshold: Threshold): Promise<number> {
+  const slot = (await budgetSlots.slotOf(categoryId)) ?? hashSlot(categoryId, 50);
   const tier = threshold === 80 ? 0 : 1;
   return ID_RANGES.budgets.base + slot * 2 + tier;
 }
@@ -119,7 +122,7 @@ export async function checkBudgetThresholds(
 
     try {
       const result = await scheduleNotification({
-        id: budgetNotifId(cat.id, highestCrossed),
+        id: await budgetNotifId(cat.id, highestCrossed),
         category: 'budgets',
         title,
         body,

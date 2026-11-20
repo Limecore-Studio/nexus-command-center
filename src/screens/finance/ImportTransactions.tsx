@@ -23,9 +23,11 @@ import { useTranslation } from 'react-i18next';
 import AppHeader from '../../components/AppHeader';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
+import { convertSync, ensureFxRates } from '../../api/fxRates';
 import { formatMoney } from '../../lib/currencies';
 import { formatLocale } from '../../utils/formatters';
 import {
+  amountsInBase,
   buildRows,
   detectDateOrder,
   detectDecimalSeparator,
@@ -290,9 +292,25 @@ export default function ImportTransactions() {
           useFinanceStore.getState().budgetCategories.map((c) => [c.name.trim().toLowerCase(), c.id]),
         );
       }
+      // v1.22 (NCC#254): the statement is in the account's currency; a
+      // transaction's amount is in the base currency.
+      const account = accounts.find((a) => a.id === accountId);
+      const accountCurrency = account?.currency ?? baseCurrency;
+      let rates = useFinanceStore.getState().fxRates;
+      if (accountCurrency !== baseCurrency && !rates) rates = (await ensureFxRates())?.rates ?? null;
+      const amounts = amountsInBase(
+        selected.map((r) => r.amount as number),
+        accountCurrency,
+        baseCurrency,
+        (a, from, to) => convertSync(a, from, to, rates),
+      );
+      if (!amounts) {
+        setError(t('fin.sg.fxConvertFail', { from: accountCurrency, to: baseCurrency }));
+        return;
+      }
       const n = await addBulk(
-        selected.map((r) => ({
-          amount: r.amount as number,
+        selected.map((r, i) => ({
+          amount: amounts[i],
           description: r.description,
           date: r.date as string,
           type: r.type,

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
 import SyncStatusChip from '../components/SyncStatusChip';
@@ -11,10 +11,16 @@ import ModuleSummaryCard from '../components/ModuleSummaryCard';
 import HabitsDashboardStrip from '../components/HabitsDashboardStrip';
 import WorkRatingCard from '../components/WorkRatingCard';
 import CrossDomainCard from '../components/CrossDomainCard';
+import { computerNoteDue } from '../lib/computerApps';
+import { useSessionStore } from '../store/useSessionStore';
+import { useSyncStore } from '../store/useSyncStore';
+// v1.22 (StudyDesk#260): loaded only when due, outside the startup bundle.
+const ComputerAppsNote = lazy(() => import('../components/ComputerAppsNote'));
 import ListRow from '../components/ListRow';
 import ProgressBar from '../components/ProgressBar';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
+import { liveGpa } from '../utils/gpa';
 import { gpaSuffix as scaleSuffix, meterValue } from '../lib/gradeScale';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useTaskStore } from '../store/useTaskStore';
@@ -32,6 +38,10 @@ export default function Dashboard() {
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
 
   const studies = useStudiesStore((s) => s.currentImport);
+  const user = useSessionStore((s) => s.user);
+  const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt);
+  // Decided once per mount; dismissing hides it at once.
+  const [computerNote, setComputerNote] = useState(() => computerNoteDue(user, lastSyncedAt));
   const studyCourses = useStudiesStore((s) => s.courses);
   const previousGpa = useStudiesStore((s) => s.previousGpa);
   // v1.18.2 — StudyDesk's scale from the account (or NCC's guess without one).
@@ -45,6 +55,8 @@ export default function Dashboard() {
   const goals = useGoalsStore((s) => s.goals);
   const holdings = useFinanceStore((s) => s.holdings);
   const manualAssets = useFinanceStore((s) => s.manualAssets);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
+  const portfolioCashEntries = useFinanceStore((s) => s.portfolioCashEntries);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
   const studySessions = useStudiesStore((s) => s.studySessions);
@@ -107,8 +119,10 @@ export default function Dashboard() {
   const weekAgo = Date.now() - 7 * 86400000;
   const workoutsThisWeek = sessions.filter((s) => parseDateLocal(s.date).getTime() > weekAgo).length;
 
-  const gpaDelta = studies && previousGpa != null
-    ? `${studies.calculatedGpa - previousGpa >= 0 ? '↑' : '↓'} ${Math.abs(studies.calculatedGpa - previousGpa).toFixed(2)} ${t('dash.pts')}`
+  // v1.22 (NCC#262): no grades yet is no GPA, not 0.00.
+  const gpa = liveGpa(studies);
+  const gpaDelta = studies && gpa != null && previousGpa != null
+    ? `${gpa - previousGpa >= 0 ? '↑' : '↓'} ${Math.abs(gpa - previousGpa).toFixed(2)} ${t('dash.pts')}`
     : studies ? t('dash.coursesCount', { count: studyCourses.length }) : t('dash.noImports');
 
   // Same inputs and the same computeGoalProgress the Goals screen uses, so a
@@ -116,25 +130,26 @@ export default function Dashboard() {
   const activeGoals = useMemo(() => {
     const data = {
       transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency,
-      tasks, studySessions, workouts: sessions, currentGpa: studies?.calculatedGpa ?? null,
+      portfolioLots, portfolioCashEntries, // v1.22 (NCC#252)
+      tasks, studySessions, workouts: sessions, currentGpa: gpa,
       gradeScale, // v1.19 (NCC#197)
     };
     return goals
       .filter((g) => !g.completed && !g.deletedAt)
       .map((g) => ({ goal: g, pct: Math.max(0, Math.min(100, Math.round(computeGoalProgress(g, data).percent))) }));
-  }, [goals, transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, studies, gradeScale]);
+  }, [goals, transactions, holdings, manualAssets, portfolioLots, portfolioCashEntries, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, gpa, gradeScale]);
 
   // This week so far, from the builder the Review screen itself uses.
   const week = useMemo(
     () => buildWeeklyReview({
       transactions, courses: studyCourses, sessions: studySessions, workouts: sessions, tasks,
-      currentGpa: studies?.calculatedGpa ?? null, holdings,
+      currentGpa: gpa, holdings,
     }),
-    [transactions, studyCourses, studySessions, sessions, tasks, studies, holdings],
+    [transactions, studyCourses, studySessions, sessions, tasks, gpa, holdings],
   );
 
   // v1.19 (NCC#213): ≈ when a subject is between two report grades, as StudyDesk.
-  const gpaDisplay = studies ? (studies.gpaProjection ? '≈' : '') + studies.calculatedGpa.toFixed(2) + scaleSuffix(gradeScale) : '—';
+  const gpaDisplay = studies && gpa != null ? (studies.gpaProjection ? '≈' : '') + gpa.toFixed(2) + scaleSuffix(gradeScale) : '—';
 
   return (
     <>
@@ -161,6 +176,14 @@ export default function Dashboard() {
           {/* Rack: the inputs row — the suite made visible. Dashboard only. */}
           {rack && <RoutingStrip />}
           <SyncStatusChip />
+
+          {/* v1.22 (StudyDesk#260): once, after the first week: NCC also runs
+              on a computer with this account. */}
+          {computerNote && user && (
+            <Suspense fallback={null}>
+              <ComputerAppsNote userId={user.id} onDone={() => setComputerNote(false)} />
+            </Suspense>
+          )}
 
           {/* v1.2 — daily habits surface above the stat grid. The strip itself
               handles all empty/eligible/all-rest-day states; we render it
@@ -193,7 +216,7 @@ export default function Dashboard() {
                 // v1.18.2: the meter runs over the account's scale. On a
                 // lower-is-better scale (German 1–6) it is read the other way
                 // round, so a fuller meter is always the better grade.
-                gpa={studies ? meterValue(studies.calculatedGpa, gradeScale) : null}
+                gpa={gpa != null ? meterValue(gpa, gradeScale) : null}
                 gpaMax={gradeScale.max}
                 gpaPrevious={studies && previousGpa != null ? meterValue(previousGpa, gradeScale) : null}
                 gpaDisplay={gpaDisplay}
@@ -222,7 +245,7 @@ export default function Dashboard() {
             <StatCard
               value={`${workoutsThisWeek}×`}
               label={t('dash.workoutsWk')}
-              sub={workoutsThisWeek >= 4 ? t('dash.onTarget') : t('dash.pushHarder')}
+              sub={workoutsThisWeek >= 4 ? t('dash.onTarget') : workoutsThisWeek === 0 ? t('dash.noWorkoutsYet') : t('dash.pushHarder')}
             />
             <StatCard
               value={tasksToday}

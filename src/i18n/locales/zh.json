@@ -65,6 +65,8 @@
     "updateReady": "重启以更新"
   },
   "life": {
+    "narrativeRegenerate": "重新生成摘要",
+    "narrativeFootnote": "由 Gemini 根据你的分数生成。不构成医疗或财务建议。",
     "notCountedYet": "尚未计入",
     "title": "生活模式",
     "thisWeek": "本周",
@@ -198,6 +200,12 @@
     "languageBody": "你可以随时在设置中更改。"
   },
   "settings": {
+    "computerTitle": "在电脑上使用 NCC",
+    "computerSameAccount": "用同一个账户登录，所有内容都会同步。",
+    "computerWeb": "网页版",
+    "computerWebSub": "nexus.limecore.dev，任意浏览器均可",
+    "computerDesktop": "Windows 应用",
+    "computerDesktopSub": "从 GitHub 下载安装程序",
     "errorReports": "发送错误报告",
     "errorReportsSub": "默认关闭 · 仅限账户",
     "errorReportsNote": "当应用遇到无法恢复的错误时，会向我们发送错误类型、出错的代码位置、应用及 Android 或浏览器版本，以及当时打开的页面。绝不包含你输入的内容。保留 90 天。",
@@ -421,6 +429,10 @@
     "todayShort": "今天"
   },
   "dash": {
+    "computerNoteTitle": "NCC 也能在电脑上使用",
+    "computerNoteBody": "打开 nexus.limecore.dev 或安装 Windows 应用，并用此账户登录。所有内容都会同步。",
+    "computerNoteOpen": "查看方法",
+    "computerNoteDismiss": "以后再说",
     "habitsToday": "今日习惯",
     "doneOfTotal": "{{total}} 个中已完成 {{done}}",
     "buildHabitTitle": "建立习惯",
@@ -447,6 +459,7 @@
     "workoutsWk": "本周",
     "onTarget": "达标",
     "pushHarder": "再加把劲",
+    "noWorkoutsYet": "本周尚未记录",
     "tasksToday": "今天",
     "overdueWarn": "{{count}} 项逾期",
     "allOnTrack": "一切正常",
@@ -1473,6 +1486,38 @@
     "body": "出现问题时，NCC 可以把技术细节发给我们：应用版本、错误本身以及出错时所在的页面。绝不包含你输入的内容。你可以在设置中更改。",
     "yes": "好，发送",
     "notNow": "暂不"
+  },
+  "ql": {
+    "title": "快速记录",
+    "task": "任务",
+    "saveExpense": "保存支出",
+    "workQuestion": "今天工作怎么样？",
+    "workToday": "今天的工作 — 点按可更改",
+    "rateGroup": "为你的工作日打分（1 到 5）",
+    "ratingOf": "{{n}} 分（满分 5）",
+    "notePh": "添加备注…（可选）",
+    "addNote": "+ 添加备注",
+    "saveRating": "保存评分",
+    "updateRating": "更新评分"
+  },
+  "notifIntro": {
+    "title": "随时掌握动态",
+    "body": "NCC 可以在设备上提醒你那些原本需要打开应用才能查看的事情。提醒在你的手机上安排。",
+    "tasksSub": "有事项到期时",
+    "budgetsSub": "接近或超出某个类别的限额时",
+    "portfolio": "投资组合收盘",
+    "portfolioSub": "今日变动的每日回顾",
+    "newsSub": "你所持资产的新闻和主要指数变动",
+    "muteHint": "你可以在“设置 → 通知”中关闭每一类通知。",
+    "enable": "开启通知",
+    "alreadyGranted": "我已经允许通知",
+    "denied": "NCC 的通知未被允许。你可以在手机设置中允许。",
+    "failed": "无法开启通知。请重试，或前往“设置 → 通知”。"
+  },
+  "share": {
+    "none": "尚未与任何人共享。",
+    "canEdit": "可编辑",
+    "readOnly": "只读"
   },
   "undo": {
     "deleted": "已删除“{{name}}”",

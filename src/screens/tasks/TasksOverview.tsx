@@ -7,6 +7,7 @@ import RowActions from '../../components/RowActions';
 import ShareModal from '../../components/ShareModal';
 import HeatmapCalendar from '../../components/HeatmapCalendar';
 import { deleteWithUndo, useUndoStore } from '../../store/useUndoStore';
+import { haptic } from '../../lib/haptic';
 import { useTaskStore, TaskFilter } from '../../store/useTaskStore';
 import { useSessionStore } from '../../store/useSessionStore';
 import { isOverdue, isToday, formatShortDate, localDateKey, formatLocale } from '../../utils/formatters';
@@ -27,7 +28,12 @@ export default function TasksOverview() {
   const tasks = useTaskStore((s) => s.tasks);
   const filter = useTaskStore((s) => s.filter);
   const setFilter = useTaskStore((s) => s.setFilter);
-  const toggleComplete = useTaskStore((s) => s.toggleComplete);
+  const toggleCompleteRaw = useTaskStore((s) => s.toggleComplete);
+  // v1.22 (limecore#130): checking a task off is the user's own action.
+  const toggleComplete = (id: string) => {
+    haptic.light();
+    return toggleCompleteRaw(id);
+  };
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const currentUserId = useSessionStore((s) => s.user?.id);
   const [sharing, setSharing] = useState<Task | null>(null);

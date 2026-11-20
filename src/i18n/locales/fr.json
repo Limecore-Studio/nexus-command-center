@@ -65,6 +65,8 @@
     "updateReady": "Redémarrer pour mettre à jour"
   },
   "life": {
+    "narrativeRegenerate": "Régénérer le résumé",
+    "narrativeFootnote": "Généré par Gemini à partir de vos scores. Ni un conseil médical ni un conseil financier.",
     "notCountedYet": "Pas encore compté",
     "title": "Schémas de vie",
     "thisWeek": "Cette semaine",
@@ -198,6 +200,12 @@
     "languageBody": "Tu peux changer cela à tout moment dans les paramètres."
   },
   "settings": {
+    "computerTitle": "Utiliser NCC sur votre ordinateur",
+    "computerSameAccount": "Connectez-vous avec ce même compte et tout se synchronise.",
+    "computerWeb": "Application web",
+    "computerWebSub": "nexus.limecore.dev, dans n’importe quel navigateur",
+    "computerDesktop": "Application Windows",
+    "computerDesktopSub": "Téléchargez le programme d’installation sur GitHub",
     "errorReports": "Envoyer les rapports d’erreur",
     "errorReportsSub": "Désactivé par défaut · compte requis",
     "errorReportsNote": "Quand l’app rencontre une erreur dont elle ne peut se remettre, elle nous envoie l’erreur, l’endroit de notre code, la version de l’app et d’Android ou du navigateur, et l’écran ouvert. Jamais ce que vous avez saisi. Conservés 90 jours.",
@@ -423,6 +431,10 @@
     "todayShort": "AUJ."
   },
   "dash": {
+    "computerNoteTitle": "NCC fonctionne aussi sur votre ordinateur",
+    "computerNoteBody": "Ouvrez nexus.limecore.dev ou installez l’application Windows, puis connectez-vous avec ce compte. Tout se synchronise.",
+    "computerNoteOpen": "Voir comment",
+    "computerNoteDismiss": "Plus tard",
     "habitsToday": "Habitudes du jour",
     "doneOfTotal": "{{done}} sur {{total}} fait",
     "buildHabitTitle": "Créer une habitude",
@@ -449,6 +461,7 @@
     "workoutsWk": "Cette semaine",
     "onTarget": "Dans les temps",
     "pushHarder": "Force un peu",
+    "noWorkoutsYet": "Aucun enregistré cette semaine",
     "tasksToday": "Aujourd'hui",
     "overdueWarn": "{{count}} en retard",
     "allOnTrack": "Tout va bien",
@@ -1507,6 +1520,38 @@
     "body": "En cas de problème, NCC peut nous envoyer les détails techniques : la version de l’app, l’erreur et l’écran où elle s’est produite. Jamais ce que vous saisissez. Vous pouvez changer cela dans les Réglages.",
     "yes": "Oui, envoyer",
     "notNow": "Pas maintenant"
+  },
+  "ql": {
+    "title": "Saisie rapide",
+    "task": "Tâche",
+    "saveExpense": "Enregistrer la dépense",
+    "workQuestion": "Comment s’est passé le travail aujourd’hui ?",
+    "workToday": "Travail du jour — touchez pour modifier",
+    "rateGroup": "Notez votre journée de travail de 1 à 5",
+    "ratingOf": "{{n}} sur 5",
+    "notePh": "Ajouter une note… (facultatif)",
+    "addNote": "+ Ajouter une note",
+    "saveRating": "Enregistrer la note",
+    "updateRating": "Mettre à jour la note"
+  },
+  "notifIntro": {
+    "title": "Restez informé",
+    "body": "NCC peut vous envoyer sur l’appareil des rappels pour ce que vous devriez sinon ouvrir l’app pour vérifier. Ils sont programmés sur votre téléphone.",
+    "tasksSub": "quand une échéance arrive",
+    "budgetsSub": "quand vous approchez ou dépassez la limite d’une catégorie",
+    "portfolio": "Clôture du portefeuille",
+    "portfolioSub": "un récapitulatif quotidien de la variation du jour",
+    "newsSub": "actualités sur vos positions et grands mouvements d’indices",
+    "muteHint": "Vous pouvez désactiver chaque type dans Réglages → Notifications.",
+    "enable": "Activer les notifications",
+    "alreadyGranted": "J’ai déjà autorisé les notifications",
+    "denied": "Les notifications ne sont pas autorisées pour NCC. Vous pouvez les autoriser dans les réglages du téléphone.",
+    "failed": "Impossible d’activer les notifications. Réessayez ou passez par Réglages → Notifications."
+  },
+  "share": {
+    "none": "Partagé avec personne pour l’instant.",
+    "canEdit": "Peut modifier",
+    "readOnly": "Lecture seule"
   },
   "undo": {
     "deleted": "« {{name}} » supprimé",

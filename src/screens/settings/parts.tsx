@@ -1,6 +1,7 @@
 // Building blocks shared by the Settings screen and its section files.
 // Moved out of Settings.tsx unchanged (limecore#12).
 
+import { haptic } from '../../lib/haptic';
 export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -41,7 +42,11 @@ export function Toggle({
           2px padding is exactly the 40×20 the knob and its 20px travel need.
           The travel flips under RTL, where the knob starts on the right. */}
       <button
-        onClick={() => !locked && onChange(!value)}
+        onClick={() => {
+          if (locked) return;
+          haptic.light(); // v1.22 (limecore#130)
+          onChange(!value);
+        }}
         className={`w-11 h-6 rounded-full p-0.5 bg-surface2 ring-1 ring-inset transition flex-shrink-0 ${
           value ? 'ring-primary' : 'ring-border'
         } ${locked ? 'opacity-60' : ''}`}

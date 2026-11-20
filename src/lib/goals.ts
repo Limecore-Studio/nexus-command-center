@@ -7,13 +7,12 @@
 import type { Goal, GoalType } from '../types/goals';
 import { formatLocale, parseDateLocal } from '../utils/formatters';
 import { isCumulativeGoal } from '../types/goals';
-import type { Transaction, PortfolioHolding, PortfolioLot, ManualAsset } from '../types/finance';
-import { LIABILITY_TYPES, isManuallyPriced } from '../types/finance';
-import { manualHoldingValueBase } from './manualValuation';
+import type { Transaction, PortfolioHolding, PortfolioLot, ManualAsset, PortfolioCashEntry } from '../types/finance';
+import { netWorthParts } from './netWorth';
 import type { StudySession } from '../types/studies';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
-import { convertSync, normalizeCurrency } from '../api/fxRates';
+import { convertSync } from '../api/fxRates';
 import { gpaSuffix, type GradeScale } from './gradeScale';
 
 export interface DataSources {
@@ -22,6 +21,8 @@ export interface DataSources {
   /** v1.19 (NCC#204): a bond's book value is per lot. */
   portfolioLots?: PortfolioLot[];
   manualAssets: ManualAsset[];
+  /** v1.22 (NCC#252): net worth includes portfolio cash. */
+  portfolioCashEntries?: PortfolioCashEntry[];
   // Quote + price data needed to value the portfolio in base currency.
   stockQuotes: Array<{ ticker: string; quote: { c: number }; currency: string }>;
   cryptoPrices: { prices: Array<{ id: string; priceEur: number }> } | null;
@@ -51,36 +52,10 @@ interface GoalProgress {
   reached: boolean;
 }
 
+// v1.22 (NCC#252): the Finance overview's net worth (lib/netWorth.ts). This
+// copy read accounts' opening balances and added liabilities.
 function netWorthBase(d: DataSources): number {
-  let portfolioBase = 0;
-  for (const h of d.holdings) {
-    if (isManuallyPriced(h.assetType)) {
-      // v1.19 (NCC#204): bonds and custom holdings carry their own price.
-      const v = manualHoldingValueBase(h, d.portfolioLots ?? [], d.fxRates, d.baseCurrency);
-      if (v != null) portfolioBase += v;
-    } else if (h.assetType === 'stock' || h.assetType === 'etf') {
-      const q = d.stockQuotes.find((s) => s.ticker === h.ticker);
-      if (!q) continue;
-      const native = normalizeCurrency(q.quote.c * h.quantity, q.currency);
-      const conv = convertSync(native.amount, native.currency, d.baseCurrency, d.fxRates);
-      if (conv != null) portfolioBase += conv;
-    } else {
-      const p = d.cryptoPrices?.prices.find((p) => p.id === h.ticker);
-      if (!p) continue;
-      const native = p.priceEur * h.quantity;
-      const conv = d.baseCurrency === 'EUR' ? native : convertSync(native, 'EUR', d.baseCurrency, d.fxRates);
-      if (conv != null) portfolioBase += conv;
-    }
-  }
-  let assets = 0;
-  let liab = 0;
-  for (const a of d.manualAssets) {
-    const conv = convertSync(a.value, a.currency, d.baseCurrency, d.fxRates);
-    if (conv == null) continue;
-    if (LIABILITY_TYPES.includes(a.assetType)) liab += conv;
-    else assets += conv;
-  }
-  return portfolioBase + assets - liab;
+  return netWorthParts(d).total;
 }
 
 function currentValueFor(goal: Goal, d: DataSources): number {

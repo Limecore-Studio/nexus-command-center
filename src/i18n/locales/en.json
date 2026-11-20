@@ -65,6 +65,8 @@
     "updateReady": "Restart to update"
   },
   "life": {
+    "narrativeRegenerate": "Regenerate summary",
+    "narrativeFootnote": "Generated from your scores by Gemini. Not medical or financial advice.",
     "notCountedYet": "Not counted yet",
     "title": "Life Patterns",
     "thisWeek": "This week",
@@ -198,6 +200,12 @@
     "languageBody": "You can change this anytime in Settings."
   },
   "settings": {
+    "computerTitle": "Use NCC on your computer",
+    "computerSameAccount": "Sign in with this same account and everything syncs.",
+    "computerWeb": "Web app",
+    "computerWebSub": "nexus.limecore.dev, in any browser",
+    "computerDesktop": "Windows app",
+    "computerDesktopSub": "Download the installer from GitHub",
     "errorReports": "Send error reports",
     "errorReportsSub": "Off by default · account only",
     "errorReportsNote": "When the app hits an error it cannot recover from, it sends us which error it was, where in our code, the app and Android or browser version, and the screen that was open. Never what you entered. Kept 90 days.",
@@ -422,6 +430,10 @@
     "todayShort": "TODAY"
   },
   "dash": {
+    "computerNoteTitle": "NCC works on your computer too",
+    "computerNoteBody": "Open nexus.limecore.dev or install the Windows app, and sign in with this account. Everything syncs.",
+    "computerNoteOpen": "Show me",
+    "computerNoteDismiss": "Not now",
     "habitsToday": "Today's habits",
     "doneOfTotal": "{{done}} of {{total}} done",
     "buildHabitTitle": "Build a habit",
@@ -448,6 +460,7 @@
     "workoutsWk": "This week",
     "onTarget": "On target",
     "pushHarder": "Push harder",
+    "noWorkoutsYet": "None logged yet this week",
     "tasksToday": "Due today",
     "overdueWarn": "{{count}} overdue",
     "allOnTrack": "All on track",
@@ -1487,6 +1500,38 @@
     "body": "If something breaks, NCC can send us the technical details: the app version, the error and the screen it happened on. Never what you type. You can change this in Settings.",
     "yes": "Yes, send reports",
     "notNow": "Not now"
+  },
+  "ql": {
+    "title": "Quick Log",
+    "task": "Task",
+    "saveExpense": "Save expense",
+    "workQuestion": "How was work today?",
+    "workToday": "Work today — tap to change",
+    "rateGroup": "Rate your work day 1 to 5",
+    "ratingOf": "{{n}} out of 5",
+    "notePh": "Add a note… (optional)",
+    "addNote": "+ Add a note",
+    "saveRating": "Save work rating",
+    "updateRating": "Update work rating"
+  },
+  "notifIntro": {
+    "title": "Stay in the loop",
+    "body": "NCC can send on-device reminders for the things you'd otherwise open the app to check. They are scheduled on your phone.",
+    "tasksSub": "when something's due",
+    "budgetsSub": "when you near or pass a category limit",
+    "portfolio": "Portfolio close",
+    "portfolioSub": "a daily recap of today's change",
+    "newsSub": "stories on what you own and major index moves",
+    "muteHint": "You can turn each kind off in Settings → Notifications.",
+    "enable": "Turn on notifications",
+    "alreadyGranted": "I already allowed notifications",
+    "denied": "Notifications are not allowed for NCC. You can allow them in your phone’s settings.",
+    "failed": "Couldn't turn on notifications. Try again, or use Settings → Notifications."
+  },
+  "share": {
+    "none": "Not shared with anyone yet.",
+    "canEdit": "Can edit",
+    "readOnly": "Read only"
   },
   "undo": {
     "deleted": "“{{name}}” deleted",

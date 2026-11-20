@@ -65,6 +65,8 @@
     "updateReady": "Reiniciar para actualizar"
   },
   "life": {
+    "narrativeRegenerate": "Volver a generar el resumen",
+    "narrativeFootnote": "Generado por Gemini a partir de tus puntuaciones. No es consejo médico ni financiero.",
     "notCountedYet": "Aún no contado",
     "title": "Patrones de vida",
     "thisWeek": "Esta semana",
@@ -198,6 +200,12 @@
     "languageBody": "Puedes cambiarlo cuando quieras en Ajustes."
   },
   "settings": {
+    "computerTitle": "Usa NCC en tu ordenador",
+    "computerSameAccount": "Inicia sesión con esta misma cuenta y todo se sincroniza.",
+    "computerWeb": "Aplicación web",
+    "computerWebSub": "nexus.limecore.dev, en cualquier navegador",
+    "computerDesktop": "Aplicación para Windows",
+    "computerDesktopSub": "Descarga el instalador desde GitHub",
     "errorReports": "Enviar informes de errores",
     "errorReportsSub": "Desactivado por defecto · solo con cuenta",
     "errorReportsNote": "Cuando la app encuentra un error del que no puede recuperarse, nos envía qué error fue, en qué parte de nuestro código, la versión de la app y de Android o del navegador, y la pantalla abierta. Nunca lo que escribiste. Se guardan 90 días.",
@@ -423,6 +431,10 @@
     "todayShort": "HOY"
   },
   "dash": {
+    "computerNoteTitle": "NCC también funciona en tu ordenador",
+    "computerNoteBody": "Abre nexus.limecore.dev o instala la aplicación para Windows e inicia sesión con esta cuenta. Todo se sincroniza.",
+    "computerNoteOpen": "Ver cómo",
+    "computerNoteDismiss": "Ahora no",
     "habitsToday": "Hábitos de hoy",
     "doneOfTotal": "{{done}} de {{total}} hecho",
     "buildHabitTitle": "Crear un hábito",
@@ -449,6 +461,7 @@
     "workoutsWk": "Esta semana",
     "onTarget": "En objetivo",
     "pushHarder": "Esfuérzate más",
+    "noWorkoutsYet": "Ninguno registrado esta semana",
     "tasksToday": "Para hoy",
     "overdueWarn": "{{count}} atrasadas",
     "allOnTrack": "Todo en orden",
@@ -1507,6 +1520,38 @@
     "body": "Si algo falla, NCC puede enviarnos los detalles técnicos: la versión de la app, el error y la pantalla en la que ocurrió. Nunca lo que escribes. Puedes cambiarlo en Ajustes.",
     "yes": "Sí, enviar",
     "notNow": "Ahora no"
+  },
+  "ql": {
+    "title": "Registro rápido",
+    "task": "Tarea",
+    "saveExpense": "Guardar gasto",
+    "workQuestion": "¿Qué tal el trabajo hoy?",
+    "workToday": "Trabajo de hoy — toca para cambiar",
+    "rateGroup": "Valora tu jornada de 1 a 5",
+    "ratingOf": "{{n}} de 5",
+    "notePh": "Añade una nota… (opcional)",
+    "addNote": "+ Añadir una nota",
+    "saveRating": "Guardar valoración",
+    "updateRating": "Actualizar valoración"
+  },
+  "notifIntro": {
+    "title": "Mantente al día",
+    "body": "NCC puede enviarte recordatorios en el dispositivo de lo que, si no, tendrías que abrir la app para revisar. Se programan en tu teléfono.",
+    "tasksSub": "cuando algo vence",
+    "budgetsSub": "cuando te acercas o superas el límite de una categoría",
+    "portfolio": "Cierre de cartera",
+    "portfolioSub": "un resumen diario del cambio de hoy",
+    "newsSub": "noticias sobre lo que tienes y grandes movimientos de índices",
+    "muteHint": "Puedes desactivar cada tipo en Ajustes → Notificaciones.",
+    "enable": "Activar notificaciones",
+    "alreadyGranted": "Ya he permitido las notificaciones",
+    "denied": "Las notificaciones de NCC no están permitidas. Puedes permitirlas en los ajustes del teléfono.",
+    "failed": "No se pudieron activar las notificaciones. Inténtalo de nuevo o usa Ajustes → Notificaciones."
+  },
+  "share": {
+    "none": "Aún no se ha compartido con nadie.",
+    "canEdit": "Puede editar",
+    "readOnly": "Solo lectura"
   },
   "undo": {
     "deleted": "«{{name}}» eliminado",

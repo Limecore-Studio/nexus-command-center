@@ -18,9 +18,10 @@
 //   2. Re-schedules a notification for every currently-incomplete task
 //      with a future due date.
 //
-// ID mapping: stable hash from task UUID → slot in 2000-2999.
-// Collisions are possible if you have >1000 active tasks; in practice the
-// app's working set is far below that.
+// ID mapping: v1.22 (NCC#258) a slot in 2000-2999 assigned per device
+// (lib/notifSlots.ts). It was a hash of the task id modulo 1000, and two
+// dated tasks often shared one alarm: one reminder replaced the other, and
+// finishing either cancelled both.
 
 import type { Task } from '../types/tasks';
 import { cancelCategory, cancelNotifications, ID_RANGES, reminderEpoch, scheduleNotification } from './notifications';
@@ -28,15 +29,12 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { useTaskStore } from '../store/useTaskStore';
 import i18n from '../i18n';
 import { formatLocale } from '../utils/formatters';
+import { slotAllocator } from './notifSlots';
 
 const TASKS_BASE = ID_RANGES.tasks.base;
 const TASKS_SIZE = ID_RANGES.tasks.size;
 
-function taskNotifId(taskId: string): number {
-  let hash = 0;
-  for (const ch of taskId) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  return TASKS_BASE + (Math.abs(hash) % TASKS_SIZE);
-}
+const taskSlots = slotAllocator('tasks.reminderSlots', TASKS_SIZE);
 
 /** v1.19 (NCC#170) — the reminder for a task, `leadMin` before it is due.
  *  A timed task reminds that long before its time; when that moment has
@@ -116,8 +114,13 @@ export async function scheduleTaskReminder(task: Task): Promise<void> {
   const priorityTag = task.priority === 'high' ? i18n.t('notif.task.highPriority') + ' · ' : '';
   const notesPreview = task.notes ? ' — ' + task.notes.split('\n')[0].slice(0, 80) : '';
   try {
+    const slot = await taskSlots.slotOf(task.id);
+    if (slot == null) {
+      console.warn('[taskReminders] no free reminder slot; skipped', task.id);
+      return;
+    }
     await scheduleNotification({
-      id: taskNotifId(task.id),
+      id: TASKS_BASE + slot,
       category: 'tasks',
       title: task.title,
       body: `${priorityTag}${taskReminderWhen(when)}${notesPreview}`,
@@ -140,7 +143,11 @@ export async function scheduleTaskReminder(task: Task): Promise<void> {
 /** Cancel the reminder for one task. Safe to call on tasks that never had
  *  one — the underlying plugin no-ops on unknown IDs. */
 export async function cancelTaskReminder(taskId: string): Promise<void> {
-  await cancelNotifications([taskNotifId(taskId)]);
+  // v1.22 (NCC#258): only this task's own slot, then it is free again.
+  const slot = await taskSlots.peek(taskId);
+  if (slot === undefined) return;
+  await cancelNotifications([TASKS_BASE + slot]);
+  await taskSlots.free(taskId);
 }
 
 /** Wipe + re-arm all pending task notifications.
@@ -167,6 +174,9 @@ export async function reconcileTaskReminders(
   // alarms gone regardless. scheduleTaskReminder itself bails on either
   // toggle being off, so the loop below is a no-op in that case.
   await cancelCategory('tasks');
+  // v1.22 (NCC#258): every task alarm is gone, so every slot is free; the
+  // loop below assigns them again.
+  await taskSlots.reset();
   const settings = useSettingsStore.getState();
   if (settings.notifMasterEnabled && settings.notifTasksEnabled) {
     for (const t of tasks) {

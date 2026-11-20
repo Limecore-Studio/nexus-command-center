@@ -133,3 +133,12 @@ function gradeToPoints(grade: number): number {
   return 0;
 }
 
+/**
+ * v1.22 (NCC#262) — the GPA to show and to measure goals with, or null while
+ * no live course has a grade. A missing GPA read as 0.00: on a lower-is-better
+ * scale (German 1–6, Czech) that is the best grade there is, so the meter
+ * showed full and a GPA goal "reached".
+ */
+export function liveGpa(imp: { calculatedGpa: number; noGrades?: boolean } | null | undefined): number | null {
+  return imp && !imp.noGrades ? imp.calculatedGpa : null;
+}

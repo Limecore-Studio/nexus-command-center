@@ -1,7 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
-import SyncStatusChip from '../components/SyncStatusChip';
 import StatCard from '../components/StatCard';
 import RoutingStrip from '../components/RoutingStrip';
 import RackBudgetMeter from '../components/RackBudgetMeter';
@@ -12,6 +11,9 @@ import HabitsDashboardStrip from '../components/HabitsDashboardStrip';
 import WorkRatingCard from '../components/WorkRatingCard';
 import CrossDomainCard from '../components/CrossDomainCard';
 import { computerNoteDue } from '../lib/computerApps';
+import { reviewCardDue } from '../lib/reviewCard';
+// v1.22 (NCC#278): loaded only on Sunday evening, once per week.
+const WeeklyReviewCard = lazy(() => import('../components/WeeklyReviewCard'));
 import { useSessionStore } from '../store/useSessionStore';
 import { useSyncStore } from '../store/useSyncStore';
 // v1.22 (StudyDesk#260): loaded only when due, outside the startup bundle.
@@ -42,6 +44,7 @@ export default function Dashboard() {
   const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt);
   // Decided once per mount; dismissing hides it at once.
   const [computerNote, setComputerNote] = useState(() => computerNoteDue(user, lastSyncedAt));
+  const [reviewCard, setReviewCard] = useState(() => reviewCardDue());
   const studyCourses = useStudiesStore((s) => s.courses);
   const previousGpa = useStudiesStore((s) => s.previousGpa);
   // v1.18.2 — StudyDesk's scale from the account (or NCC's guess without one).
@@ -175,7 +178,6 @@ export default function Dashboard() {
         <div className="desk-stack">
           {/* Rack: the inputs row — the suite made visible. Dashboard only. */}
           {rack && <RoutingStrip />}
-          <SyncStatusChip />
 
           {/* v1.22 (StudyDesk#260): once, after the first week: NCC also runs
               on a computer with this account. */}
@@ -188,6 +190,13 @@ export default function Dashboard() {
           {/* v1.2 — daily habits surface above the stat grid. The strip itself
               handles all empty/eligible/all-rest-day states; we render it
               unconditionally so the layout doesn't shift based on data. */}
+          {/* v1.22 (NCC#278): Sunday evening, once a week. */}
+          {reviewCard && (
+            <Suspense fallback={null}>
+              <WeeklyReviewCard onDone={() => setReviewCard(false)} />
+            </Suspense>
+          )}
+
           <HabitsDashboardStrip />
 
           {/* v1.5 — Work domain daily self-assessment. Self-gates: renders only

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSessionStore, userInitials } from '../store/useSessionStore';
+import SyncDot from './SyncDot';
 
 interface AppHeaderProps {
   title: string;
@@ -46,6 +47,8 @@ export default function AppHeader({ title, back, backLabel, action, showAvatar =
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {action}
+        {/* v1.22 (NCC#290): hidden unless something waits or failed. */}
+        <SyncDot />
         {showAvatar && (
           <button
             onClick={() => navigate('/settings')}

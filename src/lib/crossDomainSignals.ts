@@ -146,7 +146,8 @@ function bucketStudyByWeek(
   });
 }
 
-function bucketFinanceByWeek(
+// v1.22 (NCC#278): also the Weekly Review's budget figure.
+export function bucketFinanceByWeek(
   txns: Transaction[],
   budgets: BudgetCategory[],
   weeks: Date[],

@@ -429,6 +429,9 @@
     "todayShort": "今天"
   },
   "dash": {
+    "reviewReadyTitle": "你的本周回顾",
+    "reviewReadySub": "学习、训练、财务、习惯和任务并排呈现，以及下周到期的事项。",
+    "reviewReadyOpen": "打开回顾",
     "computerNoteTitle": "NCC 也能在电脑上使用",
     "computerNoteBody": "打开 nexus.limecore.dev 或安装 Windows 应用，并用此账户登录。所有内容都会同步。",
     "computerNoteOpen": "查看方法",
@@ -1221,6 +1224,28 @@
     "workoutTargetMore": "增加一次"
   },
   "weeklyReview": {
+    "budgetUsed": "本月预算已用 {{pct}}%",
+    "habitsKept": "坚持的习惯",
+    "habitsKeptValue": "{{hit}}/{{due}}",
+    "newBests": "新纪录",
+    "nextWeek": "下周",
+    "billsDue": "待付账单",
+    "nothingDue": "没有安排",
+    "delta": {
+      "first": "本期首次",
+      "same": "与上周持平",
+      "pct": "较上周 {{pct}}%",
+      "count": "较上周 {{n}}"
+    },
+    "ins": {
+      "busyNoWorkout": "任务繁忙的一周（完成 {{count}} 项），但没有记录训练。恢复同样重要。",
+      "workouts": "本周 {{count}} 次训练。坚持得很好。",
+      "spendUp": "支出较上周增加 {{pct}}%。值得看看最高的类别。",
+      "spendDown": "支出较上周大幅下降。节俭的一段时间。",
+      "studied": "本周学习了 {{hours}} 小时。很努力。",
+      "overdue": "{{count}} 项逾期任务正在堆积。抽 30 分钟整理一下。",
+      "light": "各方面都很轻松的一周。周一重新开始。"
+    },
     "title": "每周回顾",
     "week": "周",
     "prev": "← 上一周",
@@ -1518,6 +1543,16 @@
     "none": "尚未与任何人共享。",
     "canEdit": "可编辑",
     "readOnly": "只读"
+  },
+  "sync": {
+    "status": "同步状态",
+    "allSynced": "全部已同步。",
+    "failed": "上一次同步没有完成。你的更改安全地保存在此设备上。",
+    "conversion": "一次货币转换仍在完成中。完成之前不会同步任何内容。",
+    "offline": "你处于离线状态。更改会保留在此设备上，恢复联网后同步。",
+    "pending_one": "{{count}} 项更改等待同步",
+    "pending_other": "{{count}} 项更改等待同步",
+    "never": "尚未同步"
   },
   "undo": {
     "deleted": "已删除“{{name}}”",

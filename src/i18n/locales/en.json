@@ -430,6 +430,9 @@
     "todayShort": "TODAY"
   },
   "dash": {
+    "reviewReadyTitle": "Your week in review",
+    "reviewReadySub": "Study, training, money, habits and tasks side by side, and what is due next week.",
+    "reviewReadyOpen": "Open review",
     "computerNoteTitle": "NCC works on your computer too",
     "computerNoteBody": "Open nexus.limecore.dev or install the Windows app, and sign in with this account. Everything syncs.",
     "computerNoteOpen": "Show me",
@@ -1222,6 +1225,28 @@
     "workoutTargetMore": "One more"
   },
   "weeklyReview": {
+    "budgetUsed": "Budgets {{pct}}% used this month",
+    "habitsKept": "Habits kept",
+    "habitsKeptValue": "{{hit}} of {{due}}",
+    "newBests": "New bests",
+    "nextWeek": "Next week",
+    "billsDue": "Bills due",
+    "nothingDue": "Nothing scheduled",
+    "delta": {
+      "first": "first time this period",
+      "same": "same as last week",
+      "pct": "{{pct}}% vs last week",
+      "count": "{{n}} vs last week"
+    },
+    "ins": {
+      "busyNoWorkout": "Busy task week ({{count}} done) but no workouts logged. Recovery matters too.",
+      "workouts": "{{count}} workouts this week. Solid consistency.",
+      "spendUp": "Spending up {{pct}}% vs last week. Worth a glance at the top category.",
+      "spendDown": "Spending down sharply vs last week. A frugal stretch.",
+      "studied": "Studied {{hours}} h this week. Strong push.",
+      "overdue": "{{count}} overdue tasks piling up. Block 30 minutes to triage.",
+      "light": "Light week across the board. A fresh slate for Monday."
+    },
     "title": "Weekly Review",
     "week": "Week",
     "prev": "← Prev",
@@ -1532,6 +1557,16 @@
     "none": "Not shared with anyone yet.",
     "canEdit": "Can edit",
     "readOnly": "Read only"
+  },
+  "sync": {
+    "status": "Sync status",
+    "allSynced": "Everything is synced.",
+    "failed": "The last sync didn't go through. Your changes are safe on this device.",
+    "conversion": "A currency conversion is still finishing. Nothing syncs until it does.",
+    "offline": "You're offline. Changes stay on this device and sync when you're back online.",
+    "pending_one": "{{count}} change waiting to sync",
+    "pending_other": "{{count}} changes waiting to sync",
+    "never": "not yet"
   },
   "undo": {
     "deleted": "“{{name}}” deleted",

@@ -19,7 +19,8 @@ vi.mock('@capacitor/haptics', () => ({
 }));
 
 const { haptic } = await import('./haptic');
-const settle = () => new Promise((r) => setTimeout(r, 0));
+// The plugin is a dynamic import: under load it can take more than one tick.
+const settle = () => new Promise((r) => setTimeout(r, 50));
 
 beforeEach(() => {
   calls.length = 0;
@@ -31,7 +32,7 @@ describe('haptic', () => {
     haptic.light();
     haptic.success();
     haptic.warning();
-    await settle();
+    await vi.waitFor(() => expect(calls).toHaveLength(3));
     expect(calls).toEqual(['impact:LIGHT', 'notification:SUCCESS', 'notification:WARNING']);
   });
 

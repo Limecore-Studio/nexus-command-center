@@ -431,6 +431,9 @@
     "todayShort": "AUJ."
   },
   "dash": {
+    "reviewReadyTitle": "Votre bilan de la semaine",
+    "reviewReadySub": "Études, entraînement, argent, habitudes et tâches côte à côte, et ce qui arrive la semaine prochaine.",
+    "reviewReadyOpen": "Ouvrir le bilan",
     "computerNoteTitle": "NCC fonctionne aussi sur votre ordinateur",
     "computerNoteBody": "Ouvrez nexus.limecore.dev ou installez l’application Windows, puis connectez-vous avec ce compte. Tout se synchronise.",
     "computerNoteOpen": "Voir comment",
@@ -1229,6 +1232,28 @@
     "workoutTargetMore": "Un de plus"
   },
   "weeklyReview": {
+    "budgetUsed": "Budgets utilisés à {{pct}} % ce mois-ci",
+    "habitsKept": "Habitudes tenues",
+    "habitsKeptValue": "{{hit}} sur {{due}}",
+    "newBests": "Nouveaux records",
+    "nextWeek": "La semaine prochaine",
+    "billsDue": "Prélèvements à venir",
+    "nothingDue": "Rien de prévu",
+    "delta": {
+      "first": "première fois sur la période",
+      "same": "comme la semaine dernière",
+      "pct": "{{pct}} % vs la semaine dernière",
+      "count": "{{n}} vs la semaine dernière"
+    },
+    "ins": {
+      "busyNoWorkout": "Semaine chargée en tâches ({{count}} terminées) mais aucun entraînement. La récupération compte aussi.",
+      "workouts": "{{count}} entraînements cette semaine. Belle régularité.",
+      "spendUp": "Dépenses en hausse de {{pct}} % sur la semaine dernière. Un coup d’œil à la catégorie principale s’impose.",
+      "spendDown": "Dépenses en forte baisse sur la semaine dernière. Une période économe.",
+      "studied": "{{hours}} h d’étude cette semaine. Bel effort.",
+      "overdue": "{{count}} tâches en retard s’accumulent. Prévoyez 30 minutes pour faire le tri.",
+      "light": "Semaine calme partout. Une page blanche pour lundi."
+    },
     "title": "Bilan hebdo",
     "week": "Semaine",
     "prev": "← Préc.",
@@ -1552,6 +1577,16 @@
     "none": "Partagé avec personne pour l’instant.",
     "canEdit": "Peut modifier",
     "readOnly": "Lecture seule"
+  },
+  "sync": {
+    "status": "État de la synchronisation",
+    "allSynced": "Tout est synchronisé.",
+    "failed": "La dernière synchronisation n’a pas abouti. Vos modifications sont en sécurité sur cet appareil.",
+    "conversion": "Une conversion de devise est encore en cours. Rien ne se synchronise avant qu’elle soit terminée.",
+    "offline": "Vous êtes hors ligne. Les modifications restent sur cet appareil et se synchronisent dès votre retour en ligne.",
+    "pending_one": "{{count}} modification en attente de synchronisation",
+    "pending_other": "{{count}} modifications en attente de synchronisation",
+    "never": "pas encore"
   },
   "undo": {
     "deleted": "« {{name}} » supprimé",

@@ -445,6 +445,31 @@
            font-mono text-[0.625rem] uppercase tracking-[0.16em] text-text-muted transition-colors;
   }
 
+  /* v1.22 (NCC#292): chips draw 26 px tall, under the 44-48 px a finger
+     needs. The hit area grows, vertically only, and the drawn chip doesn't:
+     the look is unchanged and neighbours in a row keep their own taps. */
+  .chip,
+  .chip-micro {
+    position: relative;
+  }
+  .chip::after,
+  .chip-micro::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: max(100%, 44px);
+    transform: translateY(-50%);
+  }
+  /* A row of chips that scrolls sideways clips the taller hit area (overflow
+     on one axis clips both). The row gets the room inside its own box, and a
+     matching negative margin keeps the layout where it was. */
+  .overflow-x-auto:has(> .chip, > .chip-micro) {
+    padding-block: 9px;
+    margin-block: -9px;
+  }
+
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-3 rounded-sm bg-primary text-bg font-heading font-semibold text-sm tracking-tight active:opacity-90 disabled:opacity-50;
   }

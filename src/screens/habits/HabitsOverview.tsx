@@ -20,6 +20,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
 import BottomSheet from '../../components/BottomSheet';
 import HabitRing from '../../components/HabitRing';
+import { haptic } from '../../lib/haptic';
 import { useHabitsStore } from '../../store/useHabitsStore';
 import { isEligibleOn, dateKey } from '../../lib/habitStreaks';
 import type { Habit } from '../../types/habits';
@@ -33,7 +34,12 @@ export default function HabitsOverview() {
   const navigate = useNavigate();
   const habits = useHabitsStore((s) => s.habits);
   const completions = useHabitsStore((s) => s.completions);
-  const toggle = useHabitsStore((s) => s.toggleCompletion);
+  const toggleRaw = useHabitsStore((s) => s.toggleCompletion);
+  // v1.22 (limecore#130): checking a habit off is the user's own action.
+  const toggle: typeof toggleRaw = (...args) => {
+    haptic.light();
+    return toggleRaw(...args);
+  };
   const addToCompletion = useHabitsStore((s) => s.addToCompletion);
   const setCompletionAmount = useHabitsStore((s) => s.setCompletionAmount);
   const archiveHabit = useHabitsStore((s) => s.archiveHabit);

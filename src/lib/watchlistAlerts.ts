@@ -36,6 +36,7 @@ import { convertSync, normalizeCurrency } from '../api/fxRates';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ID_RANGES, scheduleNotification } from './notifications';
+import { hashSlot, slotAllocator } from './notifSlots';
 
 export type TargetSide = 'above' | 'below';
 
@@ -87,10 +88,13 @@ function trackerKey(itemId: string): string {
   return `nexus.notif.watch.${itemId}`;
 }
 
-function watchNotifId(itemId: string, side: TargetSide): number {
-  let hash = 0;
-  for (const ch of itemId) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  const slot = Math.abs(hash) % (ID_RANGES.watchlist.size / 2);
+// v1.22 (NCC#258): a slot per item assigned on this device
+// (lib/notifSlots.ts), not a hash that let one item's alert replace
+// another's. Past the range's size, the hash.
+const WATCH_SLOTS = ID_RANGES.watchlist.size / 2;
+const watchSlots = slotAllocator('watchlist.alertSlots', WATCH_SLOTS);
+async function watchNotifId(itemId: string, side: TargetSide): Promise<number> {
+  const slot = (await watchSlots.slotOf(itemId)) ?? hashSlot(itemId, WATCH_SLOTS);
   return ID_RANGES.watchlist.base + slot * 2 + (side === 'above' ? 0 : 1);
 }
 
@@ -140,7 +144,7 @@ export async function runWatchlistAlertsTick(): Promise<void> {
 
     try {
       const result = await scheduleNotification({
-        id: watchNotifId(w.id, side),
+        id: await watchNotifId(w.id, side),
         category: 'watchlist',
         title: `${w.ticker.toUpperCase()} ${side === 'above' ? '≥' : '≤'} ${formatPrice(target)} ${currency}`,
         body: `${w.name}: ${formatPrice(price)} ${currency}`,

@@ -9,8 +9,8 @@ import { formatMoney } from '../lib/currencies';
 import { formatLocale } from '../utils/formatters';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
-import { convertSync } from '../api/fxRates';
 import { holdingValueBase } from '../lib/positionValue';
+import { netWorthParts } from '../lib/netWorth';
 import { LIABILITY_TYPES } from '../types/finance';
 import type { PortfolioHolding } from '../types/finance';
 
@@ -32,6 +32,8 @@ export default function InsightsCard() {
   const sparklines = useFinanceStore((s) => s.sparklines);
   const fxRates = useFinanceStore((s) => s.fxRates);
   const manualAssets = useFinanceStore((s) => s.manualAssets);
+  const transactions = useFinanceStore((s) => s.transactions);
+  const portfolioCashEntries = useFinanceStore((s) => s.portfolioCashEntries);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
   const insights = useMemo<Insight[]>(() => {
@@ -52,19 +54,23 @@ export default function InsightsCard() {
       }
     }
 
-    // Manual liquid cash + total assets+liabilities (in base).
+    // v1.22 (NCC#252): accounts at their derived balance (opening balance plus
+    // transactions), liabilities stored negative, portfolio cash included: the
+    // Finance overview's net worth (lib/netWorth.ts). This read the opening
+    // balance and added debt to net worth.
+    const parts = netWorthParts({
+      holdings, portfolioLots, stockQuotes, cryptoPrices, fxRates, baseCurrency, manualAssets, transactions, portfolioCashEntries,
+    });
     let liquidBase = 0;
-    let manualAssetsBase = 0;
-    let liabBase = 0;
-    for (const a of manualAssets) {
-      const conv = convertSync(a.value, a.currency, baseCurrency, fxRates);
-      if (conv == null) continue;
-      if (LIABILITY_TYPES.includes(a.assetType)) liabBase += conv;
-      else manualAssetsBase += conv;
-      if (a.assetType === 'cash' || a.assetType === 'savings') liquidBase += conv;
+    let liabBase = 0; // what is owed, as a positive amount
+    let accountAssetsBase = 0;
+    for (const { account: a, base } of parts.accounts) {
+      if (LIABILITY_TYPES.includes(a.accountType ?? a.assetType)) liabBase += Math.max(0, -base);
+      else accountAssetsBase += base;
+      if (a.assetType === 'cash' || a.assetType === 'savings') liquidBase += base;
     }
-    const totalAssetsBase = portfolioBase + manualAssetsBase;
-    const netWorthBase = totalAssetsBase - liabBase;
+    const totalAssetsBase = portfolioBase + parts.cashBase + accountAssetsBase;
+    const netWorthBase = parts.total;
 
     // — Concentration: top holding > 30% of portfolio
     if (positions.length > 0 && portfolioBase > 0) {
@@ -138,7 +144,7 @@ export default function InsightsCard() {
     }
 
     return out;
-  }, [holdings, portfolioLots, stockQuotes, cryptoPrices, sparklines, fxRates, manualAssets, baseCurrency]);
+  }, [holdings, portfolioLots, stockQuotes, cryptoPrices, sparklines, fxRates, manualAssets, transactions, portfolioCashEntries, baseCurrency]);
 
   if (insights.length === 0) return null;
 

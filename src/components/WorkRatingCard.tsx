@@ -13,6 +13,7 @@
 // inline note that collapses when empty.
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { weekdayNames } from '../utils/formatters';
 import { useWorkQualityStore, todayKey } from '../store/useWorkQualityStore';
 import { useLifeProfileStore } from '../store/useLifeProfileStore';
@@ -21,6 +22,7 @@ const NOTE_MAX = 120;
 
 
 export default function WorkRatingCard() {
+  const { t } = useTranslation();
   const workWeight = useLifeProfileStore((s) => s.profile.domains.work);
   const logs = useWorkQualityStore((s) => s.logs);
   const loaded = useWorkQualityStore((s) => s.loaded);
@@ -78,14 +80,14 @@ export default function WorkRatingCard() {
     <div className="panel p-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-medium">
-          {rating > 0 ? 'Work today — tap to change' : 'How was work today?'}
+          {rating > 0 ? t('ql.workToday') : t('ql.workQuestion')}
         </span>
         <span className="text-[0.625rem] uppercase tracking-wider text-text-muted">
           {weekdayNames('short')[dow]}
         </span>
       </div>
 
-      <div className="flex gap-2.5" role="group" aria-label="Rate your work day 1 to 5">
+      <div className="flex gap-2.5" role="group" aria-label={t('ql.rateGroup')}>
         {[1, 2, 3, 4, 5].map((n) => {
           const on = rating === n;
           return (
@@ -93,7 +95,7 @@ export default function WorkRatingCard() {
               key={n}
               onClick={() => onPickRating(n)}
               aria-pressed={on}
-              aria-label={`${n} out of 5`}
+              aria-label={t('ql.ratingOf', { n })}
               className={`press-spring flex-1 h-11 rounded-md border text-lg font-heading font-semibold transition-colors ${
                 on
                   ? 'border-primary/60 bg-primary/10 text-primary'
@@ -109,7 +111,7 @@ export default function WorkRatingCard() {
       {noteOpen ? (
         <textarea
           className="input mt-3 resize-none h-16 text-sm"
-          placeholder="Add a note… (optional)"
+          placeholder={t('ql.notePh')}
           maxLength={NOTE_MAX}
           value={noteDraft}
           onChange={(e) => setNoteDraft(e.target.value)}
@@ -121,7 +123,7 @@ export default function WorkRatingCard() {
           onClick={() => setNoteOpen(true)}
           className="mt-3 text-xs text-text-muted/80 active:text-text"
         >
-          {todayLog?.note ? `“${todayLog.note}”` : '+ Add a note'}
+          {todayLog?.note ? `“${todayLog.note}”` : t('ql.addNote')}
         </button>
       )}
     </div>

@@ -36,11 +36,13 @@
 // show a prompt that can't actually do anything.
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Capacitor } from '@capacitor/core';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ensureNotificationPermission, hasNotificationPermission } from '../lib/notifications';
 
 export default function NotificationsExplainerModal() {
+  const { t } = useTranslation();
   const loaded = useSettingsStore((s) => s.loaded);
   const introSeen = useSettingsStore((s) => s.notifIntroSeen);
   const setIntroSeen = useSettingsStore((s) => s.setNotifIntroSeen);
@@ -142,13 +144,14 @@ export default function NotificationsExplainerModal() {
       console.log('[notif-modal] onEnable: permission result =', JSON.stringify(perm));
       if (!perm.ok) {
         // Show the error in-modal. Bypass button already visible from above.
-        setErrMsg(perm.reason ?? 'Permission denied.');
+        if (perm.reason) console.info('[notif-modal] permission:', perm.reason);
+        setErrMsg(t('notifIntro.denied'));
         return;
       }
       await flipEverythingOnAndClose();
     } catch (e) {
       console.warn('[notif-modal] onEnable threw:', (e as Error).message);
-      setErrMsg((e as Error).message || 'Unexpected error enabling notifications.');
+      setErrMsg(t('notifIntro.failed'));
     } finally {
       setBusy(false);
     }
@@ -164,7 +167,8 @@ export default function NotificationsExplainerModal() {
     try {
       await flipEverythingOnAndClose();
     } catch (e) {
-      setErrMsg((e as Error).message || 'Failed to enable.');
+      console.warn('[notif-modal] enable failed:', (e as Error).message);
+      setErrMsg(t('notifIntro.failed'));
     } finally {
       setBusy(false);
     }
@@ -185,44 +189,40 @@ export default function NotificationsExplainerModal() {
   return (
     <div className="fixed inset-0 bg-bg/90 z-50 flex items-end sm:items-center justify-center p-4">
       <div className="card-elevated max-w-sm w-full">
-        <h2 className="font-heading font-bold text-base mb-1">Stay in the loop</h2>
-        <p className="text-xs text-text-muted mb-4">
-          Nexus can send on-device pings for the things you'd otherwise have to
-          open the app to check. No accounts, no servers — all scheduled
-          locally on your phone.
-        </p>
+        <h2 className="font-heading font-bold text-base mb-1">{t('notifIntro.title')}</h2>
+        <p className="text-xs text-text-muted mb-4">{t('notifIntro.body')}</p>
         <ul className="space-y-2 mb-4 text-xs">
           <li className="flex gap-2">
             <span className="text-primary mt-0.5">·</span>
             <span>
-              <span className="text-text">Task reminders</span>
-              <span className="text-text-muted"> — when something's due</span>
+              <span className="text-text">{t('settings.taskReminders')}</span>
+              <span className="text-text-muted"> — {t('notifIntro.tasksSub')}</span>
             </span>
           </li>
           <li className="flex gap-2">
             <span className="text-primary mt-0.5">·</span>
             <span>
-              <span className="text-text">Budget alerts</span>
-              <span className="text-text-muted"> — when you near or exceed a category cap</span>
+              <span className="text-text">{t('settings.budgetAlerts')}</span>
+              <span className="text-text-muted"> — {t('notifIntro.budgetsSub')}</span>
             </span>
           </li>
           <li className="flex gap-2">
             <span className="text-primary mt-0.5">·</span>
             <span>
-              <span className="text-text">Portfolio close</span>
-              <span className="text-text-muted"> — daily recap with today's +%/$</span>
+              <span className="text-text">{t('notifIntro.portfolio')}</span>
+              <span className="text-text-muted"> — {t('notifIntro.portfolioSub')}</span>
             </span>
           </li>
           <li className="flex gap-2">
             <span className="text-primary mt-0.5">·</span>
             <span>
-              <span className="text-text">Market news</span>
-              <span className="text-text-muted"> — stories on tickers you own + major index moves</span>
+              <span className="text-text">{t('settings.marketNews')}</span>
+              <span className="text-text-muted"> — {t('notifIntro.newsSub')}</span>
             </span>
           </li>
         </ul>
         <p className="text-[0.625rem] text-text-muted mb-4">
-          You can mute any category individually in Settings → Notifications.
+          {t('notifIntro.muteHint')}
         </p>
         {errMsg && (
           <div className="alert alert-warn text-xs mb-3">
@@ -232,7 +232,7 @@ export default function NotificationsExplainerModal() {
         )}
         <div className="space-y-2">
           <button className="btn w-full" onClick={onEnable} disabled={busy}>
-            {busy ? 'Working…' : 'Enable Notifications'}
+            {busy ? t('adoption.working') : t('notifIntro.enable')}
           </button>
           {showBypass && (
             // Bypass intentionally NOT gated by busy — its whole purpose is
@@ -244,7 +244,7 @@ export default function NotificationsExplainerModal() {
               className="btn-ghost w-full text-primary border-primary/40"
               onClick={onBypass}
             >
-              I already granted permission
+              {t('notifIntro.alreadyGranted')}
             </button>
           )}
           {/* Never disabled — primary escape hatch from a hanging plugin
@@ -252,7 +252,7 @@ export default function NotificationsExplainerModal() {
               user close the modal and use Settings → Notifications
               instead. */}
           <button className="btn-ghost w-full" onClick={onSkip}>
-            Not Now
+            {t('reportPrompt.notNow')}
           </button>
         </div>
       </div>

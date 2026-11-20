@@ -529,6 +529,9 @@
     "queued": "Na fila local · sincroniza quando houver conexão"
   },
   "dash": {
+    "reviewReadyTitle": "O resumo da sua semana",
+    "reviewReadySub": "Estudo, treino, dinheiro, hábitos e tarefas lado a lado, e o que vence na próxima semana.",
+    "reviewReadyOpen": "Abrir resumo",
     "computerNoteTitle": "O NCC também funciona no computador",
     "computerNoteBody": "Abra nexus.limecore.dev ou instale a aplicação para Windows e inicie sessão com esta conta. Tudo é sincronizado.",
     "computerNoteOpen": "Mostrar",

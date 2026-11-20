@@ -532,6 +532,9 @@
     "queued": "في قائمة انتظار محلية · تتزامن عند الاتصال"
   },
   "dash": {
+    "reviewReadyTitle": "مراجعة أسبوعك",
+    "reviewReadySub": "الدراسة والتمرين والمال والعادات والمهام جنبًا إلى جنب، وما يستحق الأسبوع القادم.",
+    "reviewReadyOpen": "فتح المراجعة",
     "computerNoteTitle": "يعمل NCC على حاسوبك أيضًا",
     "computerNoteBody": "افتح nexus.limecore.dev أو ثبّت تطبيق Windows، وسجّل الدخول بهذا الحساب. ستتم مزامنة كل شيء.",
     "computerNoteOpen": "أرني",

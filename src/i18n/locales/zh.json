@@ -429,6 +429,9 @@
     "todayShort": "今天"
   },
   "dash": {
+    "reviewReadyTitle": "你的本周回顾",
+    "reviewReadySub": "学习、训练、财务、习惯和任务并排呈现，以及下周到期的事项。",
+    "reviewReadyOpen": "打开回顾",
     "computerNoteTitle": "NCC 也能在电脑上使用",
     "computerNoteBody": "打开 nexus.limecore.dev 或安装 Windows 应用，并用此账户登录。所有内容都会同步。",
     "computerNoteOpen": "查看方法",

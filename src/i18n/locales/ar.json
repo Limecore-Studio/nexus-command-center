@@ -694,6 +694,17 @@
     "paceDone": "تم بلوغ الهدف"
   },
   "weeklyReview": {
+    "deadlines": "الامتحانات والمواعيد النهائية",
+    "noDeadlines": "لا امتحانات ولا مواعيد نهائية",
+    "exam": "امتحان",
+    "dueToday": "اليوم",
+    "dueTomorrow": "غدًا",
+    "dueInDays_zero": "خلال {{count}} يوم",
+    "dueInDays_one": "خلال يوم واحد",
+    "dueInDays_two": "خلال يومين",
+    "dueInDays_few": "خلال {{count}} أيام",
+    "dueInDays_many": "خلال {{count}} يومًا",
+    "dueInDays_other": "خلال {{count}} يوم",
     "budgetUsed": "استُخدم {{pct}}% من الميزانيات هذا الشهر",
     "habitsKept": "العادات المنجزة",
     "habitsKeptValue": "{{hit}} من {{due}}",

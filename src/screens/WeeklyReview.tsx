@@ -13,7 +13,7 @@
 // to that module's overview so the user can drill in.
 
 import { useEffect, useMemo, useState } from 'react';
-import { formatLocale, formatShortDate } from '../utils/formatters';
+import { formatLocale, formatShortDate, localDateKey } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
@@ -28,6 +28,7 @@ import { db } from '../db/database';
 import type { RecurringRule } from '../types/recurring';
 import { buildWeeklyReview, startOfWeek } from '../lib/weeklyReview';
 import { buildWeeklyExtras } from '../lib/weeklyExtras';
+import { daysUntil, fetchStudyDeadlines, type StudyDeadline } from '../lib/studyDeadlines';
 import { RackLevels, RackLog, type LevelRow } from '../components/RackWeekly';
 import { useActiveTheme } from '../lib/theme';
 import Glyph from '../components/Glyph';
@@ -113,6 +114,29 @@ export default function WeeklyReview() {
     ],
   );
   // v1.22 (NCC#278): the suite view (lib/weeklyExtras).
+  // v1.22 (NCC#278): exams and assignments from StudyDesk, read on demand for
+  // the current week (lib/studyDeadlines; NCC only reads them).
+  const [deadlines, setDeadlines] = useState<StudyDeadline[]>([]);
+  const today = localDateKey(new Date());
+  useEffect(() => {
+    // Shown only for the current week and a signed-in user, so other cases
+    // need no fetch (and no clearing).
+    if (weekOffset !== 0 || !userId) return;
+    const end = new Date(currentWeekStart);
+    end.setDate(end.getDate() + 13);
+    let cancelled = false;
+    void fetchStudyDeadlines(userId, today, localDateKey(end)).then((d) => {
+      if (!cancelled) setDeadlines(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [weekOffset, userId, currentWeekStart, today]);
+  const dueLabel = (due: string) => {
+    const n = daysUntil(due, today);
+    return n <= 0 ? t('weeklyReview.dueToday') : n === 1 ? t('weeklyReview.dueTomorrow') : t('weeklyReview.dueInDays', { count: n });
+  };
+
   const extras = useMemo(
     () =>
       buildWeeklyExtras({
@@ -413,6 +437,31 @@ export default function WeeklyReview() {
                   </div>
                 ))}
               </div>
+            )}
+            {/* v1.22 (NCC#278): StudyDesk's open exams and assignments, signed in only. */}
+            {userId && (
+              <>
+                <div className="text-[0.5625rem] uppercase tracking-wider text-text-muted mt-3 mb-1">{t('weeklyReview.deadlines')}</div>
+                {deadlines.length === 0 ? (
+                  <div className="text-xs text-text-muted">{t('weeklyReview.noDeadlines')}</div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {deadlines.slice(0, 8).map((d) => {
+                      const course = courses.find((c) => c.id === d.subjectId)?.name;
+                      return (
+                        <div key={`${d.kind}:${d.id}`} className="flex justify-between gap-2 text-xs">
+                          <span className="truncate">
+                            {d.kind === 'exam' && <span className="text-warning me-1">{t('weeklyReview.exam')}</span>}
+                            {course ? `${course} · ` : ''}
+                            {d.title}
+                          </span>
+                          <span className="text-text-muted whitespace-nowrap">{dueLabel(d.dueDate)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

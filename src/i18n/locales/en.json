@@ -1225,6 +1225,13 @@
     "workoutTargetMore": "One more"
   },
   "weeklyReview": {
+    "deadlines": "Exams and deadlines",
+    "noDeadlines": "No exams or deadlines",
+    "exam": "Exam",
+    "dueToday": "today",
+    "dueTomorrow": "tomorrow",
+    "dueInDays_one": "in {{count}} day",
+    "dueInDays_other": "in {{count}} days",
     "budgetUsed": "Budgets {{pct}}% used this month",
     "habitsKept": "Habits kept",
     "habitsKeptValue": "{{hit}} of {{due}}",

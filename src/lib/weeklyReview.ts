@@ -16,6 +16,7 @@ import type { Course, StudySession } from '../types/studies';
 import type { WorkoutSession, WorkoutSet } from '../types/fitness';
 import type { Task } from '../types/tasks';
 import { parseDateLocal } from '@/utils/formatters';
+import i18n from '../i18n';
 
 // ───────────────────────────────────────────────────────────────────────────
 // Date helpers
@@ -32,14 +33,14 @@ export function startOfWeek(d: Date = new Date()): Date {
 }
 
 /** Sunday 23:59:59.999 local for the same week. */
-function endOfWeek(weekStart: Date): Date {
+export function endOfWeek(weekStart: Date): Date {
   const x = new Date(weekStart);
   x.setDate(x.getDate() + 6);
   x.setHours(23, 59, 59, 999);
   return x;
 }
 
-function inRange(iso: string, start: Date, end: Date): boolean {
+export function inRange(iso: string, start: Date, end: Date): boolean {
   const t = parseDateLocal(iso).getTime();
   return t >= start.getTime() && t <= end.getTime();
 }
@@ -54,17 +55,18 @@ function priorWeek(weekStart: Date): { start: Date; end: Date } {
 }
 
 /** Δ string like "↑ 3 from last week" / "↓ 12%" / "first week". */
+// v1.22 (NCC#278): in the user's language (they were English everywhere).
 function deltaLabel(current: number, prior: number, kind: 'count' | 'pct' = 'count'): string {
   if (current === 0 && prior === 0) return '—';
-  if (prior === 0) return current > 0 ? 'first time this period' : '—';
+  if (prior === 0) return current > 0 ? i18n.t('weeklyReview.delta.first') : '—';
   const diff = current - prior;
-  if (diff === 0) return 'same as last week';
+  if (diff === 0) return i18n.t('weeklyReview.delta.same');
   const arrow = diff > 0 ? '↑' : '↓';
   if (kind === 'pct') {
     const pct = Math.round((Math.abs(diff) / prior) * 100);
-    return `${arrow} ${pct}% vs last week`;
+    return `${arrow} ${i18n.t('weeklyReview.delta.pct', { pct })}`;
   }
-  return `${arrow} ${Math.abs(diff)} vs last week`;
+  return `${arrow} ${i18n.t('weeklyReview.delta.count', { n: Math.abs(diff) })}`;
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -284,6 +286,7 @@ interface WeeklyReviewData {
   portfolioChangeBase: number | null;
 }
 
+
 export function buildWeeklyReview(args: {
   weekStart?: Date;
   transactions: Transaction[];
@@ -308,7 +311,7 @@ export function buildWeeklyReview(args: {
   // Tasks vs workouts — high task volume + skipped gym is a stress proxy.
   if (tasks.completed >= 10 && fitness.workoutCount === 0) {
     insights.push({
-      text: `Busy task week (${tasks.completed} done) but no workouts logged. Recovery matters too.`,
+      text: i18n.t('weeklyReview.ins.busyNoWorkout', { count: tasks.completed }),
       tone: 'warn',
     });
   }
@@ -316,7 +319,7 @@ export function buildWeeklyReview(args: {
   // Strong workout week.
   if (fitness.workoutCount >= 3) {
     insights.push({
-      text: `${fitness.workoutCount} workouts this week — solid consistency.`,
+      text: i18n.t('weeklyReview.ins.workouts', { count: fitness.workoutCount }),
       tone: 'positive',
     });
   }
@@ -325,17 +328,17 @@ export function buildWeeklyReview(args: {
   if (finance.priorSpend > 0 && finance.spend > finance.priorSpend * 1.4) {
     const pct = Math.round(((finance.spend - finance.priorSpend) / finance.priorSpend) * 100);
     insights.push({
-      text: `Spending up ${pct}% vs last week. Worth a glance at the top category.`,
+      text: i18n.t('weeklyReview.ins.spendUp', { pct }),
       tone: 'warn',
     });
   } else if (finance.priorSpend > 0 && finance.spend < finance.priorSpend * 0.6) {
-    insights.push({ text: `Spending down sharply vs last week — frugal stretch.`, tone: 'positive' });
+    insights.push({ text: i18n.t('weeklyReview.ins.spendDown'), tone: 'positive' });
   }
 
   // Study hours.
   if (studies.studyMinutes >= 300) {
     insights.push({
-      text: `Studied ${Math.round(studies.studyMinutes / 60)}h this week. Strong push.`,
+      text: i18n.t('weeklyReview.ins.studied', { hours: Math.round(studies.studyMinutes / 60) }),
       tone: 'positive',
     });
   }
@@ -343,7 +346,7 @@ export function buildWeeklyReview(args: {
   // Overdue task warning.
   if (tasks.overdue >= 3) {
     insights.push({
-      text: `${tasks.overdue} overdue tasks piling up. Block 30min to triage.`,
+      text: i18n.t('weeklyReview.ins.overdue', { count: tasks.overdue }),
       tone: 'warn',
     });
   }
@@ -352,7 +355,7 @@ export function buildWeeklyReview(args: {
   // Empty-week fallback so the section never renders zero insights.
   if (insights.length === 0) {
     insights.push({
-      text: `Light week across the board. A fresh slate for Monday.`,
+      text: i18n.t('weeklyReview.ins.light'),
       tone: 'neutral',
     });
   }

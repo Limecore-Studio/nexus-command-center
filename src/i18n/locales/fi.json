@@ -65,6 +65,8 @@
     "updateReady": "Käynnistä uudelleen ja päivitä"
   },
   "life": {
+    "narrativeRegenerate": "Luo yhteenveto uudelleen",
+    "narrativeFootnote": "Gemini on luonut tämän pisteistäsi. Ei lääketieteellinen eikä taloudellinen neuvo.",
     "notCountedYet": "Ei vielä laskettu",
     "title": "Elämänkuviot",
     "thisWeek": "Tällä viikolla",
@@ -198,6 +200,12 @@
     "languageBody": "Voit vaihtaa tämän milloin tahansa asetuksissa."
   },
   "settings": {
+    "computerTitle": "Käytä NCC:tä tietokoneella",
+    "computerSameAccount": "Kirjaudu samalla tilillä, niin kaikki synkronoituu.",
+    "computerWeb": "Verkkosovellus",
+    "computerWebSub": "nexus.limecore.dev, missä tahansa selaimessa",
+    "computerDesktop": "Windows-sovellus",
+    "computerDesktopSub": "Lataa asennusohjelma GitHubista",
     "errorReports": "Lähetä virheraportit",
     "errorReportsSub": "Oletuksena pois · vain tilillä",
     "errorReportsNote": "Kun sovellus kohtaa virheen, josta se ei toivu, se lähettää meille virheen tyypin, kohdan koodissamme, sovelluksen ja Androidin tai selaimen version sekä avoinna olleen näkymän. Ei koskaan syöttämiäsi tietoja. Säilytetään 90 päivää.",
@@ -422,6 +430,13 @@
     "todayShort": "TÄNÄÄN"
   },
   "dash": {
+    "reviewReadyTitle": "Viikkokatsauksesi",
+    "reviewReadySub": "Opiskelu, treeni, raha, tavat ja tehtävät rinnakkain sekä ensi viikon erääntyvät.",
+    "reviewReadyOpen": "Avaa katsaus",
+    "computerNoteTitle": "NCC toimii myös tietokoneella",
+    "computerNoteBody": "Avaa nexus.limecore.dev tai asenna Windows-sovellus ja kirjaudu tällä tilillä. Kaikki synkronoituu.",
+    "computerNoteOpen": "Näytä",
+    "computerNoteDismiss": "Ei nyt",
     "postedToday": "Kirjattu tänään",
     "postedTodaySub": "Toistuvat säännöt lisäsivät nämä. Napauta tarkistaaksesi tai muuttaaksesi.",
     "habitsToday": "Tämän päivän tavat",
@@ -450,6 +465,7 @@
     "workoutsWk": "Tällä viikolla",
     "onTarget": "Tavoitteessa",
     "pushHarder": "Purista lisää",
+    "noWorkoutsYet": "Ei vielä kirjattuja tällä viikolla",
     "tasksToday": "Tänään",
     "overdueWarn": "{{count}} myöhässä",
     "allOnTrack": "Kaikki aikataulussa",
@@ -1211,6 +1227,35 @@
     "workoutTargetMore": "Yksi lisää"
   },
   "weeklyReview": {
+    "deadlines": "Kokeet ja määräajat",
+    "noDeadlines": "Ei kokeita eikä määräaikoja",
+    "exam": "Koe",
+    "dueToday": "tänään",
+    "dueTomorrow": "huomenna",
+    "dueInDays_one": "{{count}} päivän päästä",
+    "dueInDays_other": "{{count}} päivän päästä",
+    "budgetUsed": "Budjeteista käytetty {{pct}} % tässä kuussa",
+    "habitsKept": "Pidetyt tavat",
+    "habitsKeptValue": "{{hit}}/{{due}}",
+    "newBests": "Uudet ennätykset",
+    "nextWeek": "Ensi viikko",
+    "billsDue": "Erääntyvät laskut",
+    "nothingDue": "Ei mitään ajastettuna",
+    "delta": {
+      "first": "ensimmäistä kertaa tällä jaksolla",
+      "same": "sama kuin viime viikolla",
+      "pct": "{{pct}} % viime viikkoon",
+      "count": "{{n}} viime viikkoon"
+    },
+    "ins": {
+      "busyNoWorkout": "Kiireinen tehtäväviikko ({{count}} tehty), mutta ei treenejä. Palautuminenkin on tärkeää.",
+      "workouts": "{{count}} treeniä tällä viikolla. Hyvää johdonmukaisuutta.",
+      "spendUp": "Kulutus nousi {{pct}} % viime viikosta. Kannattaa vilkaista suurinta luokkaa.",
+      "spendDown": "Kulutus laski selvästi viime viikosta. Säästäväinen jakso.",
+      "studied": "Opiskelit {{hours}} h tällä viikolla. Vahva panostus.",
+      "overdue": "{{count}} myöhässä olevaa tehtävää kasautuu. Varaa 30 minuuttia niiden läpikäyntiin.",
+      "light": "Kevyt viikko joka osa-alueella. Puhdas pöytä maanantaille."
+    },
     "title": "Viikkokatsaus",
     "week": "Viikko",
     "prev": "← Edell.",
@@ -1489,5 +1534,47 @@
     "body": "Jos jokin menee rikki, NCC voi lähettää meille tekniset tiedot: sovelluksen version, virheen ja näkymän, jossa se tapahtui. Ei koskaan sitä, mitä kirjoitat. Voit muuttaa tätä asetuksista.",
     "yes": "Kyllä, lähetä",
     "notNow": "Ei nyt"
+  },
+  "ql": {
+    "title": "Pikakirjaus",
+    "task": "Tehtävä",
+    "saveExpense": "Tallenna kulu",
+    "workQuestion": "Miten työpäivä meni?",
+    "workToday": "Työpäivä tänään — napauta muuttaaksesi",
+    "rateGroup": "Arvioi työpäiväsi asteikolla 1–5",
+    "ratingOf": "{{n}}/5",
+    "notePh": "Lisää muistiinpano… (valinnainen)",
+    "addNote": "+ Lisää muistiinpano",
+    "saveRating": "Tallenna arvio",
+    "updateRating": "Päivitä arvio"
+  },
+  "notifIntro": {
+    "title": "Pysy ajan tasalla",
+    "body": "NCC voi lähettää laitteella muistutuksia asioista, joita muuten tarkistaisit avaamalla sovelluksen. Ne ajastetaan puhelimessasi.",
+    "tasksSub": "kun jokin erääntyy",
+    "budgetsSub": "kun lähestyt tai ylität luokan rajan",
+    "portfolio": "Salkun päätös",
+    "portfolioSub": "päivittäinen yhteenveto päivän muutoksesta",
+    "newsSub": "uutiset omistamistasi ja suurista indeksiliikkeistä",
+    "muteHint": "Voit poistaa jokaisen lajin käytöstä kohdassa Asetukset → Ilmoitukset.",
+    "enable": "Ota ilmoitukset käyttöön",
+    "alreadyGranted": "Olen jo sallinut ilmoitukset",
+    "denied": "NCC:n ilmoituksia ei ole sallittu. Voit sallia ne puhelimen asetuksista.",
+    "failed": "Ilmoituksia ei saatu käyttöön. Yritä uudelleen tai käytä kohtaa Asetukset → Ilmoitukset."
+  },
+  "share": {
+    "none": "Ei vielä jaettu kenellekään.",
+    "canEdit": "Voi muokata",
+    "readOnly": "Vain luku"
+  },
+  "sync": {
+    "status": "Synkronoinnin tila",
+    "allSynced": "Kaikki on synkronoitu.",
+    "failed": "Viimeisin synkronointi epäonnistui. Muutoksesi ovat tallessa tällä laitteella.",
+    "conversion": "Valuuttamuunnos on vielä kesken. Mitään ei synkronoida ennen kuin se valmistuu.",
+    "offline": "Olet offline-tilassa. Muutokset pysyvät tällä laitteella ja synkronoituvat, kun yhteys palaa.",
+    "pending_one": "{{count}} muutos odottaa synkronointia",
+    "pending_other": "{{count}} muutosta odottaa synkronointia",
+    "never": "ei vielä"
   }
 }

@@ -30,6 +30,7 @@
     "@capacitor/app": "^8.0.0",
     "@capacitor/browser": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/preferences": "^8.0.0",
     "@devmaxime/capacitor-health-connect": "^1.1.0",
     "@supabase/supabase-js": "^2.105.4",

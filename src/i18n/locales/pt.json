@@ -133,6 +133,8 @@
     "updateReady": "Reiniciar para atualizar"
   },
   "life": {
+    "narrativeRegenerate": "Gerar o resumo de novo",
+    "narrativeFootnote": "Gerado pelo Gemini a partir das suas pontuações. Não é aconselhamento médico nem financeiro.",
     "notCountedYet": "Ainda não contabilizado",
     "title": "Padrões de vida",
     "thisWeek": "Esta semana",
@@ -259,6 +261,12 @@
     "todayShort": "HOJE"
   },
   "settings": {
+    "computerTitle": "Use o NCC no computador",
+    "computerSameAccount": "Inicie sessão com esta mesma conta e tudo é sincronizado.",
+    "computerWeb": "Aplicação web",
+    "computerWebSub": "nexus.limecore.dev, em qualquer navegador",
+    "computerDesktop": "Aplicação para Windows",
+    "computerDesktopSub": "Transfira o instalador do GitHub",
     "errorReports": "Enviar relatórios de erro",
     "errorReportsSub": "Desativado por padrão · só com conta",
     "errorReportsNote": "Quando o app encontra um erro do qual não consegue se recuperar, ele nos envia qual foi o erro, onde no nosso código, a versão do app e do Android ou do navegador, e a tela aberta. Nunca o que você digitou. Guardados por 90 dias.",
@@ -521,6 +529,13 @@
     "queued": "Na fila local · sincroniza quando houver conexão"
   },
   "dash": {
+    "reviewReadyTitle": "O resumo da sua semana",
+    "reviewReadySub": "Estudo, treino, dinheiro, hábitos e tarefas lado a lado, e o que vence na próxima semana.",
+    "reviewReadyOpen": "Abrir resumo",
+    "computerNoteTitle": "O NCC também funciona no computador",
+    "computerNoteBody": "Abra nexus.limecore.dev ou instale a aplicação para Windows e inicie sessão com esta conta. Tudo é sincronizado.",
+    "computerNoteOpen": "Mostrar",
+    "computerNoteDismiss": "Agora não",
     "postedToday": "Registado hoje",
     "postedTodaySub": "Adicionado pelas suas regras recorrentes. Toque num para verificar ou alterar.",
     "habitsToday": "Hábitos de hoje",
@@ -549,6 +564,7 @@
     "workoutsWk": "Esta semana",
     "onTarget": "No alvo",
     "pushHarder": "Acelere",
+    "noWorkoutsYet": "Nenhum registado esta semana",
     "tasksToday": "Vencem hoje",
     "overdueWarn": "{{count}} atrasadas",
     "allOnTrack": "Tudo em dia",
@@ -677,6 +693,35 @@
     "paceDone": "objetivo alcançado"
   },
   "weeklyReview": {
+    "deadlines": "Exames e prazos",
+    "noDeadlines": "Sem exames nem prazos",
+    "exam": "Exame",
+    "dueToday": "hoje",
+    "dueTomorrow": "amanhã",
+    "dueInDays_one": "daqui a {{count}} dia",
+    "dueInDays_other": "daqui a {{count}} dias",
+    "budgetUsed": "Orçamentos {{pct}}% usados este mês",
+    "habitsKept": "Hábitos cumpridos",
+    "habitsKeptValue": "{{hit}} de {{due}}",
+    "newBests": "Novos recordes",
+    "nextWeek": "Próxima semana",
+    "billsDue": "Contas a vencer",
+    "nothingDue": "Nada agendado",
+    "delta": {
+      "first": "primeira vez neste período",
+      "same": "igual à semana passada",
+      "pct": "{{pct}}% vs semana passada",
+      "count": "{{n}} vs semana passada"
+    },
+    "ins": {
+      "busyNoWorkout": "Semana cheia de tarefas ({{count}} feitas) mas sem treinos registados. A recuperação também conta.",
+      "workouts": "{{count}} treinos esta semana. Boa consistência.",
+      "spendUp": "Despesa subiu {{pct}}% face à semana passada. Vale a pena ver a categoria principal.",
+      "spendDown": "Despesa desceu bastante face à semana passada. Uma fase poupada.",
+      "studied": "Estudou {{hours}} h esta semana. Grande esforço.",
+      "overdue": "{{count}} tarefas em atraso a acumular. Reserve 30 minutos para as organizar.",
+      "light": "Semana leve em tudo. Um recomeço na segunda-feira."
+    },
     "title": "Revisão semanal",
     "week": "Semana",
     "prev": "← Anterior",
@@ -1509,5 +1554,47 @@
     "body": "Se algo falhar, o NCC pode enviar-nos os detalhes técnicos: a versão da app, o erro e o ecrã onde aconteceu. Nunca o que escreve. Pode alterar isto nas Definições.",
     "yes": "Sim, enviar",
     "notNow": "Agora não"
+  },
+  "ql": {
+    "title": "Registo rápido",
+    "task": "Tarefa",
+    "saveExpense": "Guardar despesa",
+    "workQuestion": "Como correu o trabalho hoje?",
+    "workToday": "Trabalho de hoje — toque para alterar",
+    "rateGroup": "Avalie o seu dia de trabalho de 1 a 5",
+    "ratingOf": "{{n}} de 5",
+    "notePh": "Adicionar uma nota… (opcional)",
+    "addNote": "+ Adicionar uma nota",
+    "saveRating": "Guardar avaliação",
+    "updateRating": "Atualizar avaliação"
+  },
+  "notifIntro": {
+    "title": "Mantenha-se a par",
+    "body": "O NCC pode enviar lembretes no dispositivo sobre o que, de outra forma, teria de abrir a app para verificar. São agendados no seu telemóvel.",
+    "tasksSub": "quando algo vence",
+    "budgetsSub": "quando se aproxima ou ultrapassa o limite de uma categoria",
+    "portfolio": "Fecho da carteira",
+    "portfolioSub": "um resumo diário da variação de hoje",
+    "newsSub": "notícias sobre o que detém e grandes movimentos de índices",
+    "muteHint": "Pode desativar cada tipo em Definições → Notificações.",
+    "enable": "Ativar notificações",
+    "alreadyGranted": "Já permiti as notificações",
+    "denied": "As notificações do NCC não estão permitidas. Pode permiti-las nas definições do telemóvel.",
+    "failed": "Não foi possível ativar as notificações. Tente de novo ou use Definições → Notificações."
+  },
+  "share": {
+    "none": "Ainda não partilhado com ninguém.",
+    "canEdit": "Pode editar",
+    "readOnly": "Só leitura"
+  },
+  "sync": {
+    "status": "Estado da sincronização",
+    "allSynced": "Está tudo sincronizado.",
+    "failed": "A última sincronização não foi concluída. As suas alterações estão seguras neste dispositivo.",
+    "conversion": "Uma conversão de moeda ainda está a terminar. Nada é sincronizado até acabar.",
+    "offline": "Está offline. As alterações ficam neste dispositivo e são sincronizadas quando voltar a estar online.",
+    "pending_one": "{{count}} alteração à espera de sincronizar",
+    "pending_other": "{{count}} alterações à espera de sincronizar",
+    "never": "ainda não"
   }
 }

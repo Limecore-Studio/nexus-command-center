@@ -33,7 +33,8 @@ const data = (amount: number, base: string, fxRates: Record<string, number> | nu
   portfolioLots: [],
   stockQuotes: [],
   cryptoPrices: null,
-  manualAssets: [{ id: 'a', name: 'Cash', assetType: 'cash', value: amount, currency: base }],
+  // v1.22 (NCC#252): net worth reads the derived balance (startingBalance).
+  manualAssets: [{ id: 'a', name: 'Cash', accountType: 'cash', assetType: 'cash', startingBalance: amount, value: amount, currency: base }],
   tasks: [],
   workouts: [],
   studySessions: [],

@@ -12,8 +12,8 @@
 // The screen is fully derived data — no Dexie writes. Each card tap routes
 // to that module's overview so the user can drill in.
 
-import { useMemo, useState } from 'react';
-import { formatLocale } from '../utils/formatters';
+import { useEffect, useMemo, useState } from 'react';
+import { formatLocale, formatShortDate, localDateKey } from '../utils/formatters';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
@@ -22,7 +22,13 @@ import { useStudiesStore } from '../store/useStudiesStore';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useTaskStore } from '../store/useTaskStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useHabitsStore } from '../store/useHabitsStore';
+import { useSessionStore } from '../store/useSessionStore';
+import { db } from '../db/database';
+import type { RecurringRule } from '../types/recurring';
 import { buildWeeklyReview, startOfWeek } from '../lib/weeklyReview';
+import { buildWeeklyExtras } from '../lib/weeklyExtras';
+import { daysUntil, fetchStudyDeadlines, type StudyDeadline } from '../lib/studyDeadlines';
 import { RackLevels, RackLog, type LevelRow } from '../components/RackWeekly';
 import { useActiveTheme } from '../lib/theme';
 import Glyph from '../components/Glyph';
@@ -65,6 +71,14 @@ export default function WeeklyReview() {
   const workouts = useFitnessStore((s) => s.sessions);
   const tasks = useTaskStore((s) => s.tasks);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  // v1.22 (NCC#278): the suite view's extra inputs.
+  const habits = useHabitsStore((s) => s.habits);
+  const completions = useHabitsStore((s) => s.completions);
+  const userId = useSessionStore((s) => s.user?.id);
+  const [rules, setRules] = useState<RecurringRule[]>([]);
+  useEffect(() => {
+    void db.recurringRules.toArray().then(setRules).catch(() => setRules([]));
+  }, []);
 
   // Allow stepping backwards through prior weeks (useful for catching up on
   // a missed Sunday). +N moves forward; we clamp at the current week so the
@@ -98,6 +112,46 @@ export default function WeeklyReview() {
       currentImport,
       holdings,
     ],
+  );
+  // v1.22 (NCC#278): the suite view (lib/weeklyExtras).
+  // v1.22 (NCC#278): exams and assignments from StudyDesk, read on demand for
+  // the current week (lib/studyDeadlines; NCC only reads them).
+  const [deadlines, setDeadlines] = useState<StudyDeadline[]>([]);
+  const today = localDateKey(new Date());
+  useEffect(() => {
+    // Shown only for the current week and a signed-in user, so other cases
+    // need no fetch (and no clearing).
+    if (weekOffset !== 0 || !userId) return;
+    const end = new Date(currentWeekStart);
+    end.setDate(end.getDate() + 13);
+    let cancelled = false;
+    void fetchStudyDeadlines(userId, today, localDateKey(end)).then((d) => {
+      if (!cancelled) setDeadlines(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [weekOffset, userId, currentWeekStart, today]);
+  const dueLabel = (due: string) => {
+    const n = daysUntil(due, today);
+    return n <= 0 ? t('weeklyReview.dueToday') : n === 1 ? t('weeklyReview.dueTomorrow') : t('weeklyReview.dueInDays', { count: n });
+  };
+
+  const extras = useMemo(
+    () =>
+      buildWeeklyExtras({
+        weekStart: currentWeekStart,
+        transactions,
+        budgets: budgetCategories,
+        userId,
+        courses,
+        sessions: studySessions,
+        workouts,
+        habits,
+        completions,
+        rules,
+      }),
+    [currentWeekStart, transactions, budgetCategories, userId, courses, studySessions, workouts, habits, completions, rules],
   );
 
   // v1.15 (Item 13) — Rack's held peak is simply last week's report.
@@ -234,6 +288,12 @@ export default function WeeklyReview() {
               {t('weeklyReview.topCategory', { name: topCategoryName, amount: fmtMoney(data.finance.topCategoryAmount) })}
             </div>
           )}
+          {/* v1.22 (NCC#278): the Life Score's budget rule, month to date. */}
+          {extras.budgetUsed != null && (
+            <div className={`text-[0.625rem] mt-1 ${extras.budgetUsed > 1 ? 'text-warning' : 'text-text-muted'}`}>
+              {t('weeklyReview.budgetUsed', { pct: Math.round(extras.budgetUsed * 100) })}
+            </div>
+          )}
         </button>
 
         {/* Studies — read-only summary (the dedicated screen was removed in
@@ -261,6 +321,17 @@ export default function WeeklyReview() {
               </div>
             </div>
           </div>
+          {/* v1.22 (NCC#278): hours per course. */}
+          {extras.studyByCourse.length > 0 && (
+            <div className="mt-2 space-y-0.5">
+              {extras.studyByCourse.slice(0, 4).map((c) => (
+                <div key={c.courseId} className="flex justify-between text-[0.625rem] text-text-muted">
+                  <span className="truncate">{c.name}</span>
+                  <span className="font-mono">{formatHours(c.minutes)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Fitness — read-only summary (the dedicated screen was removed in
@@ -293,7 +364,27 @@ export default function WeeklyReview() {
               {t('weeklyReview.mostTrained', { name: data.fitness.topExercise, sets: data.fitness.topExerciseSets })}
             </div>
           )}
+          {/* v1.22 (NCC#278): heaviest sets that beat every earlier one. */}
+          {extras.newBests.length > 0 && (
+            <div className="text-[0.625rem] text-success mt-1">
+              {t('weeklyReview.newBests')}:{' '}
+              {extras.newBests.map((b) => `${b.exercise} ${b.weightKg.toLocaleString(formatLocale())} kg`).join(' · ')}
+            </div>
+          )}
         </div>
+
+        {/* v1.22 (NCC#278): habits kept this week. */}
+        {extras.habitsKept && (
+          <button
+            onClick={() => navigate('/habits')}
+            className="card text-start w-full active:bg-surface2/40 flex items-center justify-between"
+          >
+            <span className="font-heading font-semibold text-sm">{t('weeklyReview.habitsKept')}</span>
+            <span className="font-heading font-bold text-base">
+              {t('weeklyReview.habitsKeptValue', { hit: extras.habitsKept.hit, due: extras.habitsKept.due })}
+            </span>
+          </button>
+        )}
 
         {/* Tasks */}
         <button
@@ -329,6 +420,51 @@ export default function WeeklyReview() {
         </button>
 
         </>)}
+
+        {/* v1.22 (NCC#278): what's coming, for the current week only. */}
+        {weekOffset === 0 && (
+          <div className="card">
+            <div className="font-heading font-semibold text-sm mb-2">{t('weeklyReview.nextWeek')}</div>
+            <div className="text-[0.5625rem] uppercase tracking-wider text-text-muted mb-1">{t('weeklyReview.billsDue')}</div>
+            {extras.billsNextWeek.length === 0 ? (
+              <div className="text-xs text-text-muted">{t('weeklyReview.nothingDue')}</div>
+            ) : (
+              <div className="space-y-0.5">
+                {extras.billsNextWeek.slice(0, 8).map((b) => (
+                  <div key={`${b.ruleId}:${b.date}`} className="flex justify-between gap-2 text-xs">
+                    <span className="truncate">{formatShortDate(b.date)} · {b.description}</span>
+                    <span className="font-mono text-text-muted whitespace-nowrap">−{fmtMoney(b.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* v1.22 (NCC#278): StudyDesk's open exams and assignments, signed in only. */}
+            {userId && (
+              <>
+                <div className="text-[0.5625rem] uppercase tracking-wider text-text-muted mt-3 mb-1">{t('weeklyReview.deadlines')}</div>
+                {deadlines.length === 0 ? (
+                  <div className="text-xs text-text-muted">{t('weeklyReview.noDeadlines')}</div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {deadlines.slice(0, 8).map((d) => {
+                      const course = courses.find((c) => c.id === d.subjectId)?.name;
+                      return (
+                        <div key={`${d.kind}:${d.id}`} className="flex justify-between gap-2 text-xs">
+                          <span className="truncate">
+                            {d.kind === 'exam' && <span className="text-warning me-1">{t('weeklyReview.exam')}</span>}
+                            {course ? `${course} · ` : ''}
+                            {d.title}
+                          </span>
+                          <span className="text-text-muted whitespace-nowrap">{dueLabel(d.dueDate)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
         <button
           onClick={() => navigate('/review/year')}

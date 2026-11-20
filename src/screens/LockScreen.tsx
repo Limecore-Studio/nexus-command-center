@@ -139,7 +139,10 @@ export default function LockScreen() {
       return;
     }
     if (!bioAvailable) {
-      setError(bioReason || t('lock.bioUnavailable'));
+      // v1.22 (NCC#298): the plugin's reason is untranslated developer text
+      // ("The user does not have any biometrics enrolled."); log it, show ours.
+      if (bioReason) console.info('[lock] biometrics unavailable:', bioReason);
+      setError(t('lock.bioUnavailable'));
       return;
     }
     if (!hasPin) {
@@ -191,7 +194,7 @@ export default function LockScreen() {
             ? t('lock.bioDisabled')
             : bioAvailable
             ? t('lock.tapOrPin')
-            : bioReason || t('lock.usePin')}
+            : t('lock.usePin')}
         </div>
 
         <div className={`flex flex-col items-center gap-4 desktop:tall:gap-6 w-full ${shake ? 'animate-pulse' : ''}`}>

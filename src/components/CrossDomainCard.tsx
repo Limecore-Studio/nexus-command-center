@@ -20,6 +20,7 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useFitnessStore } from '../store/useFitnessStore';
 import { useStudiesStore } from '../store/useStudiesStore';
 import { useHabitsStore } from '../store/useHabitsStore';
+import { useSessionStore } from '../store/useSessionStore';
 import { buildCrossDomainReport, type Insight } from '../lib/crossDomainSignals';
 
 const ROTATE_MS = 6000;
@@ -41,6 +42,7 @@ export default function CrossDomainCard() {
   const { t } = useTranslation();
   const txns = useFinanceStore((s) => s.transactions);
   const budgets = useFinanceStore((s) => s.budgetCategories);
+  const userId = useSessionStore((s) => s.user?.id);
   const workouts = useFitnessStore((s) => s.sessions);
   const studies = useStudiesStore((s) => s.studySessions);
   const habits = useHabitsStore((s) => s.habits);
@@ -48,8 +50,9 @@ export default function CrossDomainCard() {
 
   const report = useMemo(
     () =>
-      buildCrossDomainReport(workouts, studies, txns, budgets, habits, completions),
-    [workouts, studies, txns, budgets, habits, completions],
+      // v1.22 (NCC#253): a budget shared to this user is not theirs.
+      buildCrossDomainReport(workouts, studies, txns, budgets, habits, completions, 8, new Date(), { userId }),
+    [workouts, studies, txns, budgets, habits, completions, userId],
   );
 
   const [idx, setIdx] = useState(0);

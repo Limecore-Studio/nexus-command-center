@@ -56,6 +56,9 @@ export interface GradeImport {
   /** v1.19 (NCC#213) — the average counts a subject that is between two
    *  report grades, so it is a projection ("≈"). In-memory only. */
   gpaProjection?: boolean;
+  /** v1.22 (NCC#262) — no live course has a grade yet, so there is no GPA:
+   *  `calculatedGpa` is a placeholder 0 (read through liveGpa). In-memory only. */
+  noGrades?: boolean;
   courses: Course[];
 }
 

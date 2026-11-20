@@ -65,6 +65,8 @@
     "updateReady": "Neu starten und aktualisieren"
   },
   "life": {
+    "narrativeRegenerate": "Zusammenfassung neu erstellen",
+    "narrativeFootnote": "Von Gemini aus deinen Werten erstellt. Keine medizinische oder finanzielle Beratung.",
     "notCountedYet": "Noch nicht gezählt",
     "title": "Lebensmuster",
     "thisWeek": "Diese Woche",
@@ -198,6 +200,12 @@
     "languageBody": "Du kannst dies jederzeit in den Einstellungen ändern."
   },
   "settings": {
+    "computerTitle": "NCC am Computer nutzen",
+    "computerSameAccount": "Melde dich mit demselben Konto an, dann wird alles synchronisiert.",
+    "computerWeb": "Web-App",
+    "computerWebSub": "nexus.limecore.dev, in jedem Browser",
+    "computerDesktop": "Windows-App",
+    "computerDesktopSub": "Installationsprogramm von GitHub laden",
     "errorReports": "Fehlerberichte senden",
     "errorReportsSub": "Standardmäßig aus · nur mit Konto",
     "errorReportsNote": "Wenn die App auf einen Fehler stößt, von dem sie sich nicht erholt, sendet sie uns, welcher Fehler es war, wo in unserem Code, die App- und Android- bzw. Browserversion und den geöffneten Bildschirm. Nie, was du eingegeben hast. 90 Tage gespeichert.",
@@ -422,6 +430,13 @@
     "todayShort": "HEUTE"
   },
   "dash": {
+    "reviewReadyTitle": "Dein Wochenrückblick",
+    "reviewReadySub": "Lernen, Training, Geld, Gewohnheiten und Aufgaben nebeneinander, dazu was nächste Woche fällig ist.",
+    "reviewReadyOpen": "Rückblick öffnen",
+    "computerNoteTitle": "NCC läuft auch auf deinem Computer",
+    "computerNoteBody": "Öffne nexus.limecore.dev oder installiere die Windows-App und melde dich mit diesem Konto an. Alles wird synchronisiert.",
+    "computerNoteOpen": "Zeigen",
+    "computerNoteDismiss": "Nicht jetzt",
     "postedToday": "Heute gebucht",
     "postedTodaySub": "Von deinen wiederkehrenden Regeln hinzugefügt. Tippe, um zu prüfen oder zu ändern.",
     "habitsToday": "Heutige Gewohnheiten",
@@ -450,6 +465,7 @@
     "workoutsWk": "Diese Woche",
     "onTarget": "Im Plan",
     "pushHarder": "Gib mehr",
+    "noWorkoutsYet": "Diese Woche noch keine erfasst",
     "tasksToday": "Heute fällig",
     "overdueWarn": "{{count}} überfällig",
     "allOnTrack": "Alles im Plan",
@@ -1211,6 +1227,35 @@
     "workoutTargetMore": "Eins mehr"
   },
   "weeklyReview": {
+    "deadlines": "Prüfungen und Fristen",
+    "noDeadlines": "Keine Prüfungen oder Fristen",
+    "exam": "Prüfung",
+    "dueToday": "heute",
+    "dueTomorrow": "morgen",
+    "dueInDays_one": "in {{count}} Tag",
+    "dueInDays_other": "in {{count}} Tagen",
+    "budgetUsed": "Budgets diesen Monat zu {{pct}} % genutzt",
+    "habitsKept": "Gewohnheiten gehalten",
+    "habitsKeptValue": "{{hit}} von {{due}}",
+    "newBests": "Neue Bestwerte",
+    "nextWeek": "Nächste Woche",
+    "billsDue": "Fällige Rechnungen",
+    "nothingDue": "Nichts geplant",
+    "delta": {
+      "first": "erstmals in diesem Zeitraum",
+      "same": "wie letzte Woche",
+      "pct": "{{pct}} % ggü. letzter Woche",
+      "count": "{{n}} ggü. letzter Woche"
+    },
+    "ins": {
+      "busyNoWorkout": "Volle Aufgabenwoche ({{count}} erledigt), aber kein Training. Erholung zählt auch.",
+      "workouts": "{{count}} Trainings diese Woche. Starke Beständigkeit.",
+      "spendUp": "Ausgaben {{pct}} % höher als letzte Woche. Ein Blick auf die größte Kategorie lohnt sich.",
+      "spendDown": "Ausgaben deutlich niedriger als letzte Woche. Eine sparsame Phase.",
+      "studied": "Diese Woche {{hours}} h gelernt. Starker Einsatz.",
+      "overdue": "{{count}} überfällige Aufgaben stapeln sich. Plane 30 Minuten zum Sortieren ein.",
+      "light": "Ruhige Woche in allen Bereichen. Ein frischer Start am Montag."
+    },
     "title": "Wochenrückblick",
     "week": "Woche",
     "prev": "← Zurück",
@@ -1489,5 +1534,47 @@
     "body": "Wenn etwas schiefgeht, kann NCC uns die technischen Details senden: App-Version, Fehler und den Bildschirm, auf dem er auftrat. Nie das, was du eingibst. Du kannst das in den Einstellungen ändern.",
     "yes": "Ja, senden",
     "notNow": "Nicht jetzt"
+  },
+  "ql": {
+    "title": "Schnellerfassung",
+    "task": "Aufgabe",
+    "saveExpense": "Ausgabe speichern",
+    "workQuestion": "Wie war die Arbeit heute?",
+    "workToday": "Arbeit heute — tippen zum Ändern",
+    "rateGroup": "Bewerte deinen Arbeitstag von 1 bis 5",
+    "ratingOf": "{{n}} von 5",
+    "notePh": "Notiz hinzufügen… (optional)",
+    "addNote": "+ Notiz hinzufügen",
+    "saveRating": "Bewertung speichern",
+    "updateRating": "Bewertung aktualisieren"
+  },
+  "notifIntro": {
+    "title": "Auf dem Laufenden bleiben",
+    "body": "NCC kann dich auf dem Gerät an Dinge erinnern, für die du sonst die App öffnen müsstest. Die Erinnerungen werden auf deinem Handy geplant.",
+    "tasksSub": "wenn etwas fällig ist",
+    "budgetsSub": "wenn du dich einem Kategorielimit näherst oder es überschreitest",
+    "portfolio": "Depot-Tagesabschluss",
+    "portfolioSub": "eine tägliche Zusammenfassung der heutigen Veränderung",
+    "newsSub": "Meldungen zu deinen Werten und großen Indexbewegungen",
+    "muteHint": "Du kannst jede Art unter Einstellungen → Benachrichtigungen ausschalten.",
+    "enable": "Benachrichtigungen einschalten",
+    "alreadyGranted": "Ich habe Benachrichtigungen schon erlaubt",
+    "denied": "Benachrichtigungen sind für NCC nicht erlaubt. Du kannst sie in den Einstellungen deines Handys erlauben.",
+    "failed": "Benachrichtigungen konnten nicht eingeschaltet werden. Versuche es erneut oder nutze Einstellungen → Benachrichtigungen."
+  },
+  "share": {
+    "none": "Noch mit niemandem geteilt.",
+    "canEdit": "Kann bearbeiten",
+    "readOnly": "Nur lesen"
+  },
+  "sync": {
+    "status": "Synchronisierungsstatus",
+    "allSynced": "Alles ist synchronisiert.",
+    "failed": "Die letzte Synchronisierung hat nicht geklappt. Deine Änderungen sind auf diesem Gerät sicher.",
+    "conversion": "Eine Währungsumrechnung läuft noch. Bis sie fertig ist, wird nichts synchronisiert.",
+    "offline": "Du bist offline. Änderungen bleiben auf diesem Gerät und werden synchronisiert, sobald du wieder online bist.",
+    "pending_one": "{{count}} Änderung wartet auf die Synchronisierung",
+    "pending_other": "{{count}} Änderungen warten auf die Synchronisierung",
+    "never": "noch nicht"
   }
 }

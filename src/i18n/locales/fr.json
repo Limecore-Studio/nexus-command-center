@@ -1229,6 +1229,28 @@
     "workoutTargetMore": "Un de plus"
   },
   "weeklyReview": {
+    "budgetUsed": "Budgets utilisés à {{pct}} % ce mois-ci",
+    "habitsKept": "Habitudes tenues",
+    "habitsKeptValue": "{{hit}} sur {{due}}",
+    "newBests": "Nouveaux records",
+    "nextWeek": "La semaine prochaine",
+    "billsDue": "Prélèvements à venir",
+    "nothingDue": "Rien de prévu",
+    "delta": {
+      "first": "première fois sur la période",
+      "same": "comme la semaine dernière",
+      "pct": "{{pct}} % vs la semaine dernière",
+      "count": "{{n}} vs la semaine dernière"
+    },
+    "ins": {
+      "busyNoWorkout": "Semaine chargée en tâches ({{count}} terminées) mais aucun entraînement. La récupération compte aussi.",
+      "workouts": "{{count}} entraînements cette semaine. Belle régularité.",
+      "spendUp": "Dépenses en hausse de {{pct}} % sur la semaine dernière. Un coup d’œil à la catégorie principale s’impose.",
+      "spendDown": "Dépenses en forte baisse sur la semaine dernière. Une période économe.",
+      "studied": "{{hours}} h d’étude cette semaine. Bel effort.",
+      "overdue": "{{count}} tâches en retard s’accumulent. Prévoyez 30 minutes pour faire le tri.",
+      "light": "Semaine calme partout. Une page blanche pour lundi."
+    },
     "title": "Bilan hebdo",
     "week": "Semaine",
     "prev": "← Préc.",

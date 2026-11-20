@@ -688,6 +688,28 @@
     "paceDone": "objetivo alcançado"
   },
   "weeklyReview": {
+    "budgetUsed": "Orçamentos {{pct}}% usados este mês",
+    "habitsKept": "Hábitos cumpridos",
+    "habitsKeptValue": "{{hit}} de {{due}}",
+    "newBests": "Novos recordes",
+    "nextWeek": "Próxima semana",
+    "billsDue": "Contas a vencer",
+    "nothingDue": "Nada agendado",
+    "delta": {
+      "first": "primeira vez neste período",
+      "same": "igual à semana passada",
+      "pct": "{{pct}}% vs semana passada",
+      "count": "{{n}} vs semana passada"
+    },
+    "ins": {
+      "busyNoWorkout": "Semana cheia de tarefas ({{count}} feitas) mas sem treinos registados. A recuperação também conta.",
+      "workouts": "{{count}} treinos esta semana. Boa consistência.",
+      "spendUp": "Despesa subiu {{pct}}% face à semana passada. Vale a pena ver a categoria principal.",
+      "spendDown": "Despesa desceu bastante face à semana passada. Uma fase poupada.",
+      "studied": "Estudou {{hours}} h esta semana. Grande esforço.",
+      "overdue": "{{count}} tarefas em atraso a acumular. Reserve 30 minutos para as organizar.",
+      "light": "Semana leve em tudo. Um recomeço na segunda-feira."
+    },
     "title": "Revisão semanal",
     "week": "Semana",
     "prev": "← Anterior",

@@ -1222,6 +1222,28 @@
     "workoutTargetMore": "Yksi lisää"
   },
   "weeklyReview": {
+    "budgetUsed": "Budjeteista käytetty {{pct}} % tässä kuussa",
+    "habitsKept": "Pidetyt tavat",
+    "habitsKeptValue": "{{hit}}/{{due}}",
+    "newBests": "Uudet ennätykset",
+    "nextWeek": "Ensi viikko",
+    "billsDue": "Erääntyvät laskut",
+    "nothingDue": "Ei mitään ajastettuna",
+    "delta": {
+      "first": "ensimmäistä kertaa tällä jaksolla",
+      "same": "sama kuin viime viikolla",
+      "pct": "{{pct}} % viime viikkoon",
+      "count": "{{n}} viime viikkoon"
+    },
+    "ins": {
+      "busyNoWorkout": "Kiireinen tehtäväviikko ({{count}} tehty), mutta ei treenejä. Palautuminenkin on tärkeää.",
+      "workouts": "{{count}} treeniä tällä viikolla. Hyvää johdonmukaisuutta.",
+      "spendUp": "Kulutus nousi {{pct}} % viime viikosta. Kannattaa vilkaista suurinta luokkaa.",
+      "spendDown": "Kulutus laski selvästi viime viikosta. Säästäväinen jakso.",
+      "studied": "Opiskelit {{hours}} h tällä viikolla. Vahva panostus.",
+      "overdue": "{{count}} myöhässä olevaa tehtävää kasautuu. Varaa 30 minuuttia niiden läpikäyntiin.",
+      "light": "Kevyt viikko joka osa-alueella. Puhdas pöytä maanantaille."
+    },
     "title": "Viikkokatsaus",
     "week": "Viikko",
     "prev": "← Edell.",

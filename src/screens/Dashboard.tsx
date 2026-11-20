@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
 import SyncStatusChip from '../components/SyncStatusChip';
@@ -11,6 +11,11 @@ import ModuleSummaryCard from '../components/ModuleSummaryCard';
 import HabitsDashboardStrip from '../components/HabitsDashboardStrip';
 import WorkRatingCard from '../components/WorkRatingCard';
 import CrossDomainCard from '../components/CrossDomainCard';
+import { computerNoteDue } from '../lib/computerApps';
+import { useSessionStore } from '../store/useSessionStore';
+import { useSyncStore } from '../store/useSyncStore';
+// v1.22 (StudyDesk#260): loaded only when due, outside the startup bundle.
+const ComputerAppsNote = lazy(() => import('../components/ComputerAppsNote'));
 import ListRow from '../components/ListRow';
 import ProgressBar from '../components/ProgressBar';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -32,6 +37,10 @@ export default function Dashboard() {
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
 
   const studies = useStudiesStore((s) => s.currentImport);
+  const user = useSessionStore((s) => s.user);
+  const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt);
+  // Decided once per mount; dismissing hides it at once.
+  const [computerNote, setComputerNote] = useState(() => computerNoteDue(user, lastSyncedAt));
   const studyCourses = useStudiesStore((s) => s.courses);
   const previousGpa = useStudiesStore((s) => s.previousGpa);
   // v1.18.2 — StudyDesk's scale from the account (or NCC's guess without one).
@@ -164,6 +173,14 @@ export default function Dashboard() {
           {/* Rack: the inputs row — the suite made visible. Dashboard only. */}
           {rack && <RoutingStrip />}
           <SyncStatusChip />
+
+          {/* v1.22 (StudyDesk#260): once, after the first week: NCC also runs
+              on a computer with this account. */}
+          {computerNote && user && (
+            <Suspense fallback={null}>
+              <ComputerAppsNote userId={user.id} onDone={() => setComputerNote(false)} />
+            </Suspense>
+          )}
 
           {/* v1.2 — daily habits surface above the stat grid. The strip itself
               handles all empty/eligible/all-rest-day states; we render it

@@ -259,6 +259,12 @@
     "todayShort": "اليوم"
   },
   "settings": {
+    "computerTitle": "استخدم NCC على حاسوبك",
+    "computerSameAccount": "سجّل الدخول بالحساب نفسه وستتم مزامنة كل شيء.",
+    "computerWeb": "تطبيق الويب",
+    "computerWebSub": "nexus.limecore.dev، في أي متصفح",
+    "computerDesktop": "تطبيق Windows",
+    "computerDesktopSub": "نزّل برنامج التثبيت من GitHub",
     "errorReports": "إرسال تقارير الأخطاء",
     "errorReportsSub": "متوقف افتراضيًا · للحسابات فقط",
     "errorReportsNote": "عندما يواجه التطبيق خطأً لا يستطيع التعافي منه، يرسل إلينا نوع الخطأ وموضعه في شيفرتنا وإصدار التطبيق وإصدار Android أو المتصفح والشاشة المفتوحة. ولا يرسل أبدًا ما أدخلته. تُحفظ 90 يومًا.",
@@ -524,6 +530,10 @@
     "queued": "في قائمة انتظار محلية · تتزامن عند الاتصال"
   },
   "dash": {
+    "computerNoteTitle": "يعمل NCC على حاسوبك أيضًا",
+    "computerNoteBody": "افتح nexus.limecore.dev أو ثبّت تطبيق Windows، وسجّل الدخول بهذا الحساب. ستتم مزامنة كل شيء.",
+    "computerNoteOpen": "أرني",
+    "computerNoteDismiss": "ليس الآن",
     "habitsToday": "عادات اليوم",
     "doneOfTotal": "{{done}} من {{total}} منجزة",
     "buildHabitTitle": "ابنِ عادة",

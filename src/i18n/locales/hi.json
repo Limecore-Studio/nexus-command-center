@@ -259,6 +259,12 @@
     "todayShort": "आज"
   },
   "settings": {
+    "computerTitle": "अपने कंप्यूटर पर NCC इस्तेमाल करें",
+    "computerSameAccount": "इसी खाते से साइन इन करें, सब कुछ सिंक हो जाएगा।",
+    "computerWeb": "वेब ऐप",
+    "computerWebSub": "nexus.limecore.dev, किसी भी ब्राउज़र में",
+    "computerDesktop": "Windows ऐप",
+    "computerDesktopSub": "GitHub से इंस्टॉलर डाउनलोड करें",
     "errorReports": "त्रुटि रिपोर्ट भेजें",
     "errorReportsSub": "डिफ़ॉल्ट रूप से बंद · केवल खाते के साथ",
     "errorReportsNote": "जब ऐप ऐसी त्रुटि में फँसता है जिससे वह उबर नहीं पाता, तो वह हमें त्रुटि का प्रकार, हमारे कोड में उसका स्थान, ऐप और Android या ब्राउज़र का संस्करण, और खुली स्क्रीन भेजता है। आपकी दर्ज की गई जानकारी कभी नहीं। 90 दिन तक रखी जाती है।",
@@ -520,6 +526,10 @@
     "queued": "स्थानीय रूप से कतार में · ऑनलाइन होने पर सिंक होगा"
   },
   "dash": {
+    "computerNoteTitle": "NCC आपके कंप्यूटर पर भी चलता है",
+    "computerNoteBody": "nexus.limecore.dev खोलें या Windows ऐप इंस्टॉल करें, और इसी खाते से साइन इन करें। सब कुछ सिंक हो जाएगा।",
+    "computerNoteOpen": "दिखाएँ",
+    "computerNoteDismiss": "अभी नहीं",
     "habitsToday": "आज की आदतें",
     "doneOfTotal": "{{total}} में से {{done}} पूरी",
     "buildHabitTitle": "कोई आदत बनाएँ",

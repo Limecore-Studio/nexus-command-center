@@ -198,6 +198,12 @@
     "languageBody": "你可以随时在设置中更改。"
   },
   "settings": {
+    "computerTitle": "在电脑上使用 NCC",
+    "computerSameAccount": "用同一个账户登录，所有内容都会同步。",
+    "computerWeb": "网页版",
+    "computerWebSub": "nexus.limecore.dev，任意浏览器均可",
+    "computerDesktop": "Windows 应用",
+    "computerDesktopSub": "从 GitHub 下载安装程序",
     "errorReports": "发送错误报告",
     "errorReportsSub": "默认关闭 · 仅限账户",
     "errorReportsNote": "当应用遇到无法恢复的错误时，会向我们发送错误类型、出错的代码位置、应用及 Android 或浏览器版本，以及当时打开的页面。绝不包含你输入的内容。保留 90 天。",
@@ -421,6 +427,10 @@
     "todayShort": "今天"
   },
   "dash": {
+    "computerNoteTitle": "NCC 也能在电脑上使用",
+    "computerNoteBody": "打开 nexus.limecore.dev 或安装 Windows 应用，并用此账户登录。所有内容都会同步。",
+    "computerNoteOpen": "查看方法",
+    "computerNoteDismiss": "以后再说",
     "habitsToday": "今日习惯",
     "doneOfTotal": "{{total}} 个中已完成 {{done}}",
     "buildHabitTitle": "建立习惯",

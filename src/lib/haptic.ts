@@ -13,13 +13,23 @@ type HapticsModule = typeof import('@capacitor/haptics');
 let mod: Promise<HapticsModule> | null = null;
 const load = () => (mod ??= import('@capacitor/haptics'));
 
+// Every call chains onto this, so tests can wait for the lazy import and the
+// calls to finish (hapticSettled) instead of guessing a delay.
+let settled: Promise<void> = Promise.resolve();
+
 function run(fn: (m: HapticsModule) => Promise<void>): void {
   if (!Capacitor.isNativePlatform()) return;
-  void load()
+  const call = load()
     .then(fn)
     .catch(() => {
       /* no vibrator, or the plugin is unavailable: feedback is optional */
     });
+  settled = settled.then(() => call);
+}
+
+/** Test seam: resolves once every haptic call made so far has finished. */
+export function hapticSettled(): Promise<void> {
+  return settled;
 }
 
 export const haptic = {

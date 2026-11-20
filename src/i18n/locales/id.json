@@ -545,6 +545,7 @@
     "workoutsWk": "Minggu ini",
     "onTarget": "Sesuai target",
     "pushHarder": "Tambah usaha",
+    "noWorkoutsYet": "Belum ada yang dicatat minggu ini",
     "tasksToday": "Jatuh tempo hari ini",
     "overdueWarn": "{{count}} terlambat",
     "allOnTrack": "Semua sesuai rencana",

@@ -448,6 +448,7 @@
     "workoutsWk": "Tällä viikolla",
     "onTarget": "Tavoitteessa",
     "pushHarder": "Purista lisää",
+    "noWorkoutsYet": "Ei vielä kirjattuja tällä viikolla",
     "tasksToday": "Tänään",
     "overdueWarn": "{{count}} myöhässä",
     "allOnTrack": "Kaikki aikataulussa",

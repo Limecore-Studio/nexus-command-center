@@ -550,6 +550,7 @@
     "workoutsWk": "هذا الأسبوع",
     "onTarget": "على الهدف",
     "pushHarder": "ابذل أكثر",
+    "noWorkoutsYet": "لم يُسجَّل شيء هذا الأسبوع بعد",
     "tasksToday": "مستحقة اليوم",
     "overdueWarn": "{{count}} متأخرة",
     "allOnTrack": "كل شيء على المسار",

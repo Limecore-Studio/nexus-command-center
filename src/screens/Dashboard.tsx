@@ -222,7 +222,7 @@ export default function Dashboard() {
             <StatCard
               value={`${workoutsThisWeek}×`}
               label={t('dash.workoutsWk')}
-              sub={workoutsThisWeek >= 4 ? t('dash.onTarget') : t('dash.pushHarder')}
+              sub={workoutsThisWeek >= 4 ? t('dash.onTarget') : workoutsThisWeek === 0 ? t('dash.noWorkoutsYet') : t('dash.pushHarder')}
             />
             <StatCard
               value={tasksToday}

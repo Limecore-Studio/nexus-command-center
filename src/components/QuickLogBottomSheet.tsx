@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import BottomSheet from './BottomSheet';
 import TemplateChips from './TemplateChips';
@@ -58,9 +60,6 @@ export default function QuickLogBottomSheet({ open, onClose }: QuickLogBottomShe
       {tab === 'expense' && <QuickExpense onDone={onClose} />}
       {tab === 'work' && <QuickWork onDone={onClose} />}
       {tab === 'task' && <QuickTask onDone={onClose} />}
-      <div className="text-[0.625rem] text-text-muted text-center mt-3">
-        DIFS target &lt;15 sec · queued locally
-      </div>
     </BottomSheet>
   );
 }
@@ -76,9 +75,12 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
   // undefined, so QuickLog transactions never appeared in any account's
   // running balance. Picker is required (disabled submit until set) to match
   // the AddTransaction posture — no silent defaulting.
-  const [accountId, setAccountId] = useState<string>('');
+  const { t } = useTranslation();
+  const navigate = useNavigate();
   const categories = useFinanceStore((s) => s.budgetCategories);
   const accounts = useFinanceStore((s) => s.manualAssets);
+  // v1.22 (NCC#289): the only account is the account; nothing to choose.
+  const [accountId, setAccountId] = useState<string>(() => (accounts.length === 1 ? accounts[0].id : ''));
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const addTransaction = useFinanceStore((s) => s.addTransaction);
   // Only expense-type templates show on this tab (the tab is hard-coded
@@ -176,18 +178,37 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
           </option>
         ))}
       </select>
-      <select
-        className="input"
-        value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
-      >
-        <option value="">Account…</option>
-        {accounts.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.name}
-          </option>
-        ))}
-      </select>
+      {/* v1.22 (NCC#289): with no account, Save could never enable and nothing
+          said why. The same hint and link as Add Transaction. */}
+      {accounts.length === 0 ? (
+        <div className="panel-2 p-3 text-[0.6875rem] text-text-muted">
+          {t('fin.tx.noAccounts1')}
+          <button
+            type="button"
+            onClick={() => {
+              onDone();
+              navigate('/finance/networth');
+            }}
+            className="text-primary underline"
+          >
+            {t('fin.tx.addInNetWorth')}
+          </button>
+          {t('fin.tx.noAccounts2')}
+        </div>
+      ) : (
+        <select
+          className="input"
+          value={accountId}
+          onChange={(e) => setAccountId(e.target.value)}
+        >
+          <option value="">Account…</option>
+          {accounts.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.name}
+            </option>
+          ))}
+        </select>
+      )}
       <button
         className="btn w-full"
         onClick={submit}

@@ -448,6 +448,7 @@
     "workoutsWk": "This week",
     "onTarget": "On target",
     "pushHarder": "Push harder",
+    "noWorkoutsYet": "None logged yet this week",
     "tasksToday": "Due today",
     "overdueWarn": "{{count}} overdue",
     "allOnTrack": "All on track",

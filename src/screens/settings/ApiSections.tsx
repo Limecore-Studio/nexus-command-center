@@ -202,6 +202,7 @@ function FinnhubKeyRow({
         {value && (
           <button
             onClick={onClear}
+            aria-label={t('common.delete')}
             className="chip-micro py-1 active:text-danger active:border-danger"
           >
             <Glyph name="close" size={11} />

@@ -9,6 +9,7 @@ import NewsCard from '../../components/NewsCard';
 import HeatmapCalendar from '../../components/HeatmapCalendar';
 import CashFlowForecastCard from '../../components/CashFlowForecastCard';
 import MarketsSegment from '../../components/MarketsSegment';
+import { deleteWithUndo, useUndoStore } from '../../store/useUndoStore';
 import { useFinanceStore } from '../../store/useFinanceStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { convertSync, normalizeCurrency } from '../../api/fxRates';
@@ -201,16 +202,22 @@ export default function FinanceOverview() {
   // the synthetic ones ("Left over", "From reserves") are derived totals, not
   // a set of transactions, so selecting them clears instead of filtering to
   // nothing, which would read as "no data" rather than "not applicable".
+  // v1.22 (NCC#293): a deleted transaction is hidden while its Undo waits.
+  const undoHidden = useUndoStore((s) => s.hidden);
   const visibleTx = useMemo(() => {
-    if (!txFilter) return transactions;
+    const shown = undoHidden.size ? transactions.filter((tx) => !undoHidden.has(tx.id)) : transactions;
+    if (!txFilter) return shown;
     const { from, to } = monthRange(txFilter.month);
-    return transactions.filter(
+    return shown.filter(
       (tx) =>
         tx.date >= from &&
         tx.date <= to &&
         (txFilter.categoryId === null ? !tx.categoryId : tx.categoryId === txFilter.categoryId),
     );
-  }, [transactions, txFilter]);
+  }, [transactions, txFilter, undoHidden]);
+  // A portfolio move is a transfer plus a linked cash entry; deleting one
+  // half alone moves money (NCC#286), so those keep the confirm.
+  const movedIds = useMemo(() => new Set(portfolioCashEntries.map((e) => e.relatedId).filter(Boolean)), [portfolioCashEntries]);
 
   const { income, expenses } = useMemo(() => {
     const now = new Date();
@@ -546,7 +553,12 @@ export default function FinanceOverview() {
                     </span>
                     <RowActions
                       onEdit={() => navigate(`/finance/add?id=${tx.id}`)}
-                      onDelete={() => deleteTransaction(tx.id)}
+                      onDelete={() =>
+                        movedIds.has(tx.id)
+                          ? void deleteTransaction(tx.id)
+                          : deleteWithUndo(tx.id, tx.description, () => deleteTransaction(tx.id))
+                      }
+                      noConfirm={!movedIds.has(tx.id)}
                       confirmMsg={t('fin.ov.deleteConfirm', { name: tx.description })}
                     />
                   </div>

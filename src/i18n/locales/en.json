@@ -1487,5 +1487,9 @@
     "body": "If something breaks, NCC can send us the technical details: the app version, the error and the screen it happened on. Never what you type. You can change this in Settings.",
     "yes": "Yes, send reports",
     "notNow": "Not now"
+  },
+  "undo": {
+    "deleted": "“{{name}}” deleted",
+    "undo": "Undo"
   }
 }

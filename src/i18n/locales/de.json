@@ -1487,5 +1487,9 @@
     "body": "Wenn etwas schiefgeht, kann NCC uns die technischen Details senden: App-Version, Fehler und den Bildschirm, auf dem er auftrat. Nie das, was du eingibst. Du kannst das in den Einstellungen ändern.",
     "yes": "Ja, senden",
     "notNow": "Nicht jetzt"
+  },
+  "undo": {
+    "deleted": "„{{name}}“ gelöscht",
+    "undo": "Rückgängig"
   }
 }

@@ -1507,5 +1507,9 @@
     "body": "Se algo falhar, o NCC pode enviar-nos os detalhes técnicos: a versão da app, o erro e o ecrã onde aconteceu. Nunca o que escreve. Pode alterar isto nas Definições.",
     "yes": "Sim, enviar",
     "notNow": "Agora não"
+  },
+  "undo": {
+    "deleted": "«{{name}}» eliminado",
+    "undo": "Anular"
   }
 }

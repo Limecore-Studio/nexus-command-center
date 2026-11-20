@@ -458,6 +458,7 @@
     "workoutsWk": "Diese Woche",
     "onTarget": "Im Plan",
     "pushHarder": "Gib mehr",
+    "noWorkoutsYet": "Diese Woche noch keine erfasst",
     "tasksToday": "Heute fällig",
     "overdueWarn": "{{count}} überfällig",
     "allOnTrack": "Alles im Plan",

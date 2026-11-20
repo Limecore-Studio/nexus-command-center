@@ -457,6 +457,7 @@
     "workoutsWk": "本周",
     "onTarget": "达标",
     "pushHarder": "再加把劲",
+    "noWorkoutsYet": "本周尚未记录",
     "tasksToday": "今天",
     "overdueWarn": "{{count}} 项逾期",
     "allOnTrack": "一切正常",

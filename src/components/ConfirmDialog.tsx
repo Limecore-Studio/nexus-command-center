@@ -18,6 +18,7 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { haptic } from '../lib/haptic';
 import { whenLocked } from '../store/useAuthStore';
 
 interface ConfirmOptions {
@@ -105,7 +106,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                     ? 'bg-primary text-bg'
                     : 'bg-danger text-white'
                 }`}
-                onClick={() => settle(true)}
+                onClick={() => {
+                  // v1.22 (limecore#130): confirming a destructive action.
+                  if (!pending.alert && pending.destructive !== false) haptic.warning();
+                  settle(true);
+                }}
                 autoFocus
               >
                 {pending.confirmLabel ?? t('common.confirm')}

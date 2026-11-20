@@ -3,7 +3,7 @@ import { useConfirm } from '../components/ConfirmDialog';
 import { currencyOptions } from '../lib/currencies';
 import { formatLocale } from '../utils/formatters';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { type Lang } from '../i18n';
 import LanguageGrid from '../components/LanguageGrid';
@@ -16,6 +16,7 @@ import pkg from '../../package.json';
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/useAuthStore';
 import { APP_LOCK_APPLIES } from '../lib/isDesktop';
+import { computerAppsOffered, DESKTOP_DOWNLOAD_URL, WEB_APP_URL } from '../lib/computerApps';
 import '../i18n/lazy/pin'; // settings.changePin* (loaded with this screen)
 
 // v1.21.1 (NCC#259) — Change PIN, loaded when opened.
@@ -66,6 +67,13 @@ export default function Settings() {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
+  // v1.22 (StudyDesk#260): the Dashboard note opens this screen at the
+  // computer section.
+  const computerApps = computerAppsOffered();
+  const scrollTo = (useLocation().state as { scrollTo?: string } | null)?.scrollTo;
+  useEffect(() => {
+    if (scrollTo) document.getElementById(scrollTo)?.scrollIntoView({ block: 'start' });
+  }, [scrollTo]);
   const currentLang = (i18n.language || 'en').split('-')[0] as Lang;
   const lifeProfile = useLifeProfileStore((s) => s.profile);
   const biometricEnabled = useAuthStore((s) => s.biometricEnabled);
@@ -604,6 +612,45 @@ export default function Settings() {
              Buttons rather than a "write to us" address: a right the user has
              to request is a right most of them never exercise. */}
         <YourDataSection />
+
+        {/* ── v1.22 (StudyDesk#260): NCC on a computer ─────────────────────
+             The web app and the Windows app sign in to the same account and
+             sync. Plain outbound links; the edition already in use is left out. */}
+        {(computerApps.web || computerApps.desktop) && (
+          <div id="computer">
+            <Section title={t('settings.computerTitle')}>
+              <p className="text-[0.625rem] text-text-muted py-1">{t('settings.computerSameAccount')}</p>
+              {computerApps.web && (
+                <a
+                  className="py-2 flex items-center justify-between gap-3 active:opacity-80"
+                  href={WEB_APP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm">{t('settings.computerWeb')}</div>
+                    <div className="text-[0.625rem] text-text-muted">{t('settings.computerWebSub')}</div>
+                  </div>
+                  <span className="text-text-muted text-lg flex-shrink-0">›</span>
+                </a>
+              )}
+              {computerApps.desktop && (
+                <a
+                  className="py-2 flex items-center justify-between gap-3 active:opacity-80"
+                  href={DESKTOP_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm">{t('settings.computerDesktop')}</div>
+                    <div className="text-[0.625rem] text-text-muted">{t('settings.computerDesktopSub')}</div>
+                  </div>
+                  <span className="text-text-muted text-lg flex-shrink-0">›</span>
+                </a>
+              )}
+            </Section>
+          </div>
+        )}
 
         {/* ── Support ────────────────────────────────────────────────────
              A link out, nothing more. No entitlements, no supporter-only

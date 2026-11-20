@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
 import SyncStatusChip from '../components/SyncStatusChip';
@@ -11,6 +11,11 @@ import ModuleSummaryCard from '../components/ModuleSummaryCard';
 import HabitsDashboardStrip from '../components/HabitsDashboardStrip';
 import WorkRatingCard from '../components/WorkRatingCard';
 import CrossDomainCard from '../components/CrossDomainCard';
+import { computerNoteDue } from '../lib/computerApps';
+import { useSessionStore } from '../store/useSessionStore';
+import { useSyncStore } from '../store/useSyncStore';
+// v1.22 (StudyDesk#260): loaded only when due, outside the startup bundle.
+const ComputerAppsNote = lazy(() => import('../components/ComputerAppsNote'));
 import ListRow from '../components/ListRow';
 import ProgressBar from '../components/ProgressBar';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -33,6 +38,10 @@ export default function Dashboard() {
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
 
   const studies = useStudiesStore((s) => s.currentImport);
+  const user = useSessionStore((s) => s.user);
+  const lastSyncedAt = useSyncStore((s) => s.lastSyncedAt);
+  // Decided once per mount; dismissing hides it at once.
+  const [computerNote, setComputerNote] = useState(() => computerNoteDue(user, lastSyncedAt));
   const studyCourses = useStudiesStore((s) => s.courses);
   const previousGpa = useStudiesStore((s) => s.previousGpa);
   // v1.18.2 — StudyDesk's scale from the account (or NCC's guess without one).
@@ -46,6 +55,8 @@ export default function Dashboard() {
   const goals = useGoalsStore((s) => s.goals);
   const holdings = useFinanceStore((s) => s.holdings);
   const manualAssets = useFinanceStore((s) => s.manualAssets);
+  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
+  const portfolioCashEntries = useFinanceStore((s) => s.portfolioCashEntries);
   const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
   const fxRates = useFinanceStore((s) => s.fxRates);
   const studySessions = useStudiesStore((s) => s.studySessions);
@@ -119,13 +130,14 @@ export default function Dashboard() {
   const activeGoals = useMemo(() => {
     const data = {
       transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency,
+      portfolioLots, portfolioCashEntries, // v1.22 (NCC#252)
       tasks, studySessions, workouts: sessions, currentGpa: gpa,
       gradeScale, // v1.19 (NCC#197)
     };
     return goals
       .filter((g) => !g.completed && !g.deletedAt)
       .map((g) => ({ goal: g, pct: Math.max(0, Math.min(100, Math.round(computeGoalProgress(g, data).percent))) }));
-  }, [goals, transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, gpa, gradeScale]);
+  }, [goals, transactions, holdings, manualAssets, portfolioLots, portfolioCashEntries, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, gpa, gradeScale]);
 
   // This week so far, from the builder the Review screen itself uses.
   const week = useMemo(
@@ -164,6 +176,14 @@ export default function Dashboard() {
           {/* Rack: the inputs row — the suite made visible. Dashboard only. */}
           {rack && <RoutingStrip />}
           <SyncStatusChip />
+
+          {/* v1.22 (StudyDesk#260): once, after the first week: NCC also runs
+              on a computer with this account. */}
+          {computerNote && user && (
+            <Suspense fallback={null}>
+              <ComputerAppsNote userId={user.id} onDone={() => setComputerNote(false)} />
+            </Suspense>
+          )}
 
           {/* v1.2 — daily habits surface above the stat grid. The strip itself
               handles all empty/eligible/all-rest-day states; we render it

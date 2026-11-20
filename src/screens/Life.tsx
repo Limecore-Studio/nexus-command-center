@@ -34,6 +34,7 @@ import { useGoalsStore } from '../store/useGoalsStore';
 import { useWorkQualityStore } from '../store/useWorkQualityStore';
 import { useLifeProfileStore } from '../store/useLifeProfileStore';
 import { useSettingsStore } from '../store/useSettingsStore';
+import { useSessionStore } from '../store/useSessionStore';
 import {
   buildCrossDomainReport,
   bucketHabitsByWeek,
@@ -99,6 +100,7 @@ export default function Life() {
   const { t } = useTranslation();
   const txns = useFinanceStore((s) => s.transactions);
   const budgets = useFinanceStore((s) => s.budgetCategories);
+  const userId = useSessionStore((s) => s.user?.id);
   const workouts = useFitnessStore((s) => s.sessions);
   const bodyMetrics = useBodyMetricsStore((s) => s.metrics);
   const body = useMemo(() => bodySummary(bodyMetrics), [bodyMetrics]);
@@ -182,8 +184,9 @@ export default function Life() {
         profile,
         currentWorkScore: workScore,
         workHasData: workLogs.length > 0,
+        userId, // v1.22 (NCC#253): a budget shared to this user is not theirs
       }),
-    [workouts, studies, txns, budgets, habits, completions, profile, workScore, workLogs.length],
+    [workouts, studies, txns, budgets, habits, completions, profile, workScore, workLogs.length, userId],
   );
 
   const historyScrollRef = useRef<HTMLDivElement | null>(null);

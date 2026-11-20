@@ -259,6 +259,12 @@
     "todayShort": "HOJE"
   },
   "settings": {
+    "computerTitle": "Use o NCC no computador",
+    "computerSameAccount": "Inicie sessão com esta mesma conta e tudo é sincronizado.",
+    "computerWeb": "Aplicação web",
+    "computerWebSub": "nexus.limecore.dev, em qualquer navegador",
+    "computerDesktop": "Aplicação para Windows",
+    "computerDesktopSub": "Transfira o instalador do GitHub",
     "errorReports": "Enviar relatórios de erro",
     "errorReportsSub": "Desativado por padrão · só com conta",
     "errorReportsNote": "Quando o app encontra um erro do qual não consegue se recuperar, ele nos envia qual foi o erro, onde no nosso código, a versão do app e do Android ou do navegador, e a tela aberta. Nunca o que você digitou. Guardados por 90 dias.",
@@ -521,6 +527,10 @@
     "queued": "Na fila local · sincroniza quando houver conexão"
   },
   "dash": {
+    "computerNoteTitle": "O NCC também funciona no computador",
+    "computerNoteBody": "Abra nexus.limecore.dev ou instale a aplicação para Windows e inicie sessão com esta conta. Tudo é sincronizado.",
+    "computerNoteOpen": "Mostrar",
+    "computerNoteDismiss": "Agora não",
     "habitsToday": "Hábitos de hoje",
     "doneOfTotal": "{{done}} de {{total}} concluídos",
     "buildHabitTitle": "Crie um hábito",

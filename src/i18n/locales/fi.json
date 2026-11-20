@@ -1219,6 +1219,13 @@
     "workoutTargetMore": "Yksi lisää"
   },
   "weeklyReview": {
+    "deadlines": "Kokeet ja määräajat",
+    "noDeadlines": "Ei kokeita eikä määräaikoja",
+    "exam": "Koe",
+    "dueToday": "tänään",
+    "dueTomorrow": "huomenna",
+    "dueInDays_one": "{{count}} päivän päästä",
+    "dueInDays_other": "{{count}} päivän päästä",
     "budgetUsed": "Budjeteista käytetty {{pct}} % tässä kuussa",
     "habitsKept": "Pidetyt tavat",
     "habitsKeptValue": "{{hit}}/{{due}}",

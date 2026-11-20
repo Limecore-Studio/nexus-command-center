@@ -685,6 +685,13 @@
     "paceDone": "objetivo alcançado"
   },
   "weeklyReview": {
+    "deadlines": "Exames e prazos",
+    "noDeadlines": "Sem exames nem prazos",
+    "exam": "Exame",
+    "dueToday": "hoje",
+    "dueTomorrow": "amanhã",
+    "dueInDays_one": "daqui a {{count}} dia",
+    "dueInDays_other": "daqui a {{count}} dias",
     "budgetUsed": "Orçamentos {{pct}}% usados este mês",
     "habitsKept": "Hábitos cumpridos",
     "habitsKeptValue": "{{hit}} de {{due}}",

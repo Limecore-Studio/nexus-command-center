@@ -684,6 +684,13 @@
     "paceDone": "लक्ष्य पूरा"
   },
   "weeklyReview": {
+    "deadlines": "परीक्षाएँ और समय-सीमाएँ",
+    "noDeadlines": "कोई परीक्षा या समय-सीमा नहीं",
+    "exam": "परीक्षा",
+    "dueToday": "आज",
+    "dueTomorrow": "कल",
+    "dueInDays_one": "{{count}} दिन में",
+    "dueInDays_other": "{{count}} दिनों में",
     "budgetUsed": "इस महीने बजट का {{pct}}% इस्तेमाल हुआ",
     "habitsKept": "निभाई गई आदतें",
     "habitsKeptValue": "{{due}} में से {{hit}}",

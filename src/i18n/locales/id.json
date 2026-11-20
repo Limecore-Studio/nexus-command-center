@@ -683,6 +683,13 @@
     "paceDone": "target tercapai"
   },
   "weeklyReview": {
+    "deadlines": "Ujian dan tenggat",
+    "noDeadlines": "Tidak ada ujian atau tenggat",
+    "exam": "Ujian",
+    "dueToday": "hari ini",
+    "dueTomorrow": "besok",
+    "dueInDays_one": "dalam {{count}} hari",
+    "dueInDays_other": "dalam {{count}} hari",
     "budgetUsed": "Anggaran terpakai {{pct}}% bulan ini",
     "habitsKept": "Kebiasaan terjaga",
     "habitsKeptValue": "{{hit}} dari {{due}}",

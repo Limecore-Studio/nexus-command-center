@@ -1218,6 +1218,13 @@
     "workoutTargetMore": "增加一次"
   },
   "weeklyReview": {
+    "deadlines": "考试和截止日期",
+    "noDeadlines": "没有考试或截止日期",
+    "exam": "考试",
+    "dueToday": "今天",
+    "dueTomorrow": "明天",
+    "dueInDays_one": "{{count}} 天后",
+    "dueInDays_other": "{{count}} 天后",
     "budgetUsed": "本月预算已用 {{pct}}%",
     "habitsKept": "坚持的习惯",
     "habitsKeptValue": "{{hit}}/{{due}}",

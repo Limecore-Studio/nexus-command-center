@@ -438,6 +438,8 @@
     "computerNoteBody": "Abre nexus.limecore.dev o instala la aplicación para Windows e inicia sesión con esta cuenta. Todo se sincroniza.",
     "computerNoteOpen": "Ver cómo",
     "computerNoteDismiss": "Ahora no",
+    "postedToday": "Registrado hoy",
+    "postedTodaySub": "Añadido por tus reglas recurrentes. Toca uno para revisarlo o cambiarlo.",
     "habitsToday": "Hábitos de hoy",
     "doneOfTotal": "{{done}} de {{total}} hecho",
     "buildHabitTitle": "Crear un hábito",

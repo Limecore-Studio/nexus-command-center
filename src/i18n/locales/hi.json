@@ -535,6 +535,8 @@
     "computerNoteBody": "nexus.limecore.dev खोलें या Windows ऐप इंस्टॉल करें, और इसी खाते से साइन इन करें। सब कुछ सिंक हो जाएगा।",
     "computerNoteOpen": "दिखाएँ",
     "computerNoteDismiss": "अभी नहीं",
+    "postedToday": "आज दर्ज हुआ",
+    "postedTodaySub": "आपके आवर्ती नियमों ने जोड़ा। जाँचने या बदलने के लिए किसी पर टैप करें।",
     "habitsToday": "आज की आदतें",
     "doneOfTotal": "{{total}} में से {{done}} पूरी",
     "buildHabitTitle": "कोई आदत बनाएँ",

@@ -437,6 +437,8 @@
     "computerNoteBody": "Avaa nexus.limecore.dev tai asenna Windows-sovellus ja kirjaudu tällä tilillä. Kaikki synkronoituu.",
     "computerNoteOpen": "Näytä",
     "computerNoteDismiss": "Ei nyt",
+    "postedToday": "Kirjattu tänään",
+    "postedTodaySub": "Toistuvat säännöt lisäsivät nämä. Napauta tarkistaaksesi tai muuttaaksesi.",
     "habitsToday": "Tämän päivän tavat",
     "doneOfTotal": "{{done}} / {{total}} tehty",
     "buildHabitTitle": "Rakenna tapa",

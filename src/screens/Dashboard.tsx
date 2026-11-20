@@ -32,10 +32,16 @@ import { useSettingsStore } from '../store/useSettingsStore';
 import { computeGoalProgress } from '../lib/goals';
 import { buildWeeklyReview } from '../lib/weeklyReview';
 import { formatCurrency, isOverdue, isToday, localDateKey, parseDateLocal } from '../utils/formatters';
+import { postedToday } from '../lib/postedToday';
+// v1.22 (NCC#294): loaded only on a day something was posted.
+const PostedTodayCard = lazy(() => import('../components/PostedTodayCard'));
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const transactions = useFinanceStore((s) => s.transactions);
+  // v1.22 (NCC#294): what recurring rules posted today; dismissing hides it.
+  const [postedDismissed, setPostedDismissed] = useState(false);
+  const posted = useMemo(() => (postedDismissed ? [] : postedToday(transactions)), [transactions, postedDismissed]);
   const budgetCategories = useFinanceStore((s) => s.budgetCategories);
   const stockQuotes = useFinanceStore((s) => s.stockQuotes);
 
@@ -194,6 +200,13 @@ export default function Dashboard() {
           {reviewCard && (
             <Suspense fallback={null}>
               <WeeklyReviewCard onDone={() => setReviewCard(false)} />
+            </Suspense>
+          )}
+
+          {/* v1.22 (NCC#294): what recurring rules posted today. */}
+          {posted.length > 0 && (
+            <Suspense fallback={null}>
+              <PostedTodayCard items={posted} baseCurrency={baseCurrency} onDone={() => setPostedDismissed(true)} />
             </Suspense>
           )}
 

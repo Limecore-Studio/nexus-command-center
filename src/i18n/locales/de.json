@@ -430,6 +430,9 @@
     "todayShort": "HEUTE"
   },
   "dash": {
+    "reviewReadyTitle": "Dein Wochenrückblick",
+    "reviewReadySub": "Lernen, Training, Geld, Gewohnheiten und Aufgaben nebeneinander, dazu was nächste Woche fällig ist.",
+    "reviewReadyOpen": "Rückblick öffnen",
     "computerNoteTitle": "NCC läuft auch auf deinem Computer",
     "computerNoteBody": "Öffne nexus.limecore.dev oder installiere die Windows-App und melde dich mit diesem Konto an. Alles wird synchronisiert.",
     "computerNoteOpen": "Zeigen",

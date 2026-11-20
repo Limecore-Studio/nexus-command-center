@@ -430,6 +430,9 @@
     "todayShort": "TÄNÄÄN"
   },
   "dash": {
+    "reviewReadyTitle": "Viikkokatsauksesi",
+    "reviewReadySub": "Opiskelu, treeni, raha, tavat ja tehtävät rinnakkain sekä ensi viikon erääntyvät.",
+    "reviewReadyOpen": "Avaa katsaus",
     "computerNoteTitle": "NCC toimii myös tietokoneella",
     "computerNoteBody": "Avaa nexus.limecore.dev tai asenna Windows-sovellus ja kirjaudu tällä tilillä. Kaikki synkronoituu.",
     "computerNoteOpen": "Näytä",

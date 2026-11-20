@@ -431,6 +431,9 @@
     "todayShort": "AUJ."
   },
   "dash": {
+    "reviewReadyTitle": "Votre bilan de la semaine",
+    "reviewReadySub": "Études, entraînement, argent, habitudes et tâches côte à côte, et ce qui arrive la semaine prochaine.",
+    "reviewReadyOpen": "Ouvrir le bilan",
     "computerNoteTitle": "NCC fonctionne aussi sur votre ordinateur",
     "computerNoteBody": "Ouvrez nexus.limecore.dev ou installez l’application Windows, puis connectez-vous avec ce compte. Tout se synchronise.",
     "computerNoteOpen": "Voir comment",

@@ -431,6 +431,9 @@
     "todayShort": "HOY"
   },
   "dash": {
+    "reviewReadyTitle": "Tu resumen de la semana",
+    "reviewReadySub": "Estudio, entrenamiento, dinero, hábitos y tareas juntos, y lo que vence la próxima semana.",
+    "reviewReadyOpen": "Abrir resumen",
     "computerNoteTitle": "NCC también funciona en tu ordenador",
     "computerNoteBody": "Abre nexus.limecore.dev o instala la aplicación para Windows e inicia sesión con esta cuenta. Todo se sincroniza.",
     "computerNoteOpen": "Ver cómo",

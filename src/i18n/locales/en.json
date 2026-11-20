@@ -430,6 +430,9 @@
     "todayShort": "TODAY"
   },
   "dash": {
+    "reviewReadyTitle": "Your week in review",
+    "reviewReadySub": "Study, training, money, habits and tasks side by side, and what is due next week.",
+    "reviewReadyOpen": "Open review",
     "computerNoteTitle": "NCC works on your computer too",
     "computerNoteBody": "Open nexus.limecore.dev or install the Windows app, and sign in with this account. Everything syncs.",
     "computerNoteOpen": "Show me",

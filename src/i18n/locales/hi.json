@@ -528,6 +528,9 @@
     "queued": "स्थानीय रूप से कतार में · ऑनलाइन होने पर सिंक होगा"
   },
   "dash": {
+    "reviewReadyTitle": "आपके हफ़्ते की समीक्षा",
+    "reviewReadySub": "पढ़ाई, ट्रेनिंग, पैसा, आदतें और कार्य एक साथ, और अगले हफ़्ते क्या देय है।",
+    "reviewReadyOpen": "समीक्षा खोलें",
     "computerNoteTitle": "NCC आपके कंप्यूटर पर भी चलता है",
     "computerNoteBody": "nexus.limecore.dev खोलें या Windows ऐप इंस्टॉल करें, और इसी खाते से साइन इन करें। सब कुछ सिंक हो जाएगा।",
     "computerNoteOpen": "दिखाएँ",

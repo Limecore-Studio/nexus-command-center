@@ -18,11 +18,13 @@ vi.mock('@capacitor/haptics', () => ({
   },
 }));
 
-const { haptic } = await import('./haptic');
-// The plugin is a dynamic import: under load it can take more than one tick.
-const settle = () => new Promise((r) => setTimeout(r, 50));
+const { haptic, hapticSettled } = await import('./haptic');
 
-beforeEach(() => {
+// The plugin is a dynamic import whose timing depends on load: wait for the
+// calls themselves (hapticSettled) before asserting, and before the next test
+// starts, so nothing from one test lands in another's `calls`.
+beforeEach(async () => {
+  await hapticSettled();
   calls.length = 0;
   native.on = true;
 });
@@ -32,14 +34,14 @@ describe('haptic', () => {
     haptic.light();
     haptic.success();
     haptic.warning();
-    await vi.waitFor(() => expect(calls).toHaveLength(3));
+    await hapticSettled();
     expect(calls).toEqual(['impact:LIGHT', 'notification:SUCCESS', 'notification:WARNING']);
   });
 
   it('does nothing on web or desktop', async () => {
     native.on = false;
     haptic.light();
-    await settle();
+    await hapticSettled();
     expect(calls).toEqual([]);
   });
 });

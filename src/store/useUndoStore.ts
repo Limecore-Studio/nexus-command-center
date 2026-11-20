@@ -7,9 +7,14 @@
 // the sync. Here the row is only hidden; when the window ends the real delete
 // runs (and queues its push); Undo just shows the row again. Nothing is pushed
 // unless the delete stands. One at a time: a second delete commits the first.
-// If the app is closed inside the window, the delete never ran and the row is
-// still there, which is the safe side.
+//
+// Leaving the app commits it at once (the page going hidden, or Capacitor's
+// `pause`): Android may kill a backgrounded app inside the window, and a
+// delete the user made must not come back because of that. Undo is only
+// offered while the app is in front.
 import { create } from 'zustand';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 
 export const UNDO_WINDOW_MS = 5000;
 
@@ -51,8 +56,25 @@ export async function commitPendingDelete(): Promise<void> {
   }
 }
 
-/** Hides the row now and deletes it when the undo window ends. */
+let backgroundCommitInstalled = false;
+/** Once, on the first held delete: going to the background commits it. */
+function installBackgroundCommit(): void {
+  if (backgroundCommitInstalled) return;
+  backgroundCommitInstalled = true;
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') void commitPendingDelete();
+    });
+  }
+  if (Capacitor.isNativePlatform()) {
+    void CapacitorApp.addListener('pause', () => void commitPendingDelete()).catch(() => {});
+  }
+}
+
+/** Hides the row now and deletes it when the undo window ends, or when the
+ *  app goes to the background, whichever comes first. */
 export function deleteWithUndo(id: string, label: string, commit: () => Promise<void> | void): void {
+  installBackgroundCommit();
   void commitPendingDelete();
   const hidden = new Set(useUndoStore.getState().hidden);
   hidden.add(id);

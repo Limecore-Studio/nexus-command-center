@@ -150,8 +150,16 @@ function bucketFinanceByWeek(
   txns: Transaction[],
   budgets: BudgetCategory[],
   weeks: Date[],
+  userId?: string,
 ): WeeklyFinance[] {
-  const monthlyBudgetTotal = budgets.reduce((s, b) => s + b.monthlyLimit, 0);
+  // v1.22 (NCC#253): like with like. Only this user's categories that have a
+  // limit count, and only the spending booked to them: all spending over the
+  // limits of the few budgeted categories read rent and every unbudgeted
+  // expense as overspending, and one 300 budget beside 900 of rent scored 0.
+  // A budget shared by someone else is theirs (in their currency).
+  const limited = budgets.filter((b) => b.monthlyLimit > 0 && (!userId || !b.ownerId || b.ownerId === userId));
+  const limitedIds = new Set(limited.map((b) => b.id));
+  const monthlyBudgetTotal = limited.reduce((s, b) => s + b.monthlyLimit, 0);
 
   // A MONTHLY budget is measured against the MONTH, not against a prorated
   // slice of it. This used to divide the monthly total by 30 and compare one
@@ -191,6 +199,7 @@ function bucketFinanceByWeek(
 
     const monthToDate = expenses
       .filter((t) => {
+        if (!t.categoryId || !limitedIds.has(t.categoryId)) return false;
         const d = parseDateLocal(t.date);
         return d >= monthStart && d <= weekEnd;
       })
@@ -590,12 +599,12 @@ export function buildCrossDomainReport(
   completions: HabitCompletion[],
   weeksWindow: number = 8,
   today: Date = new Date(),
-  opts?: { profile?: LifeProfile; currentWorkScore?: number; workHasData?: boolean },
+  opts?: { profile?: LifeProfile; currentWorkScore?: number; workHasData?: boolean; userId?: string },
 ): CrossDomainReport {
   const weeks = lastNWeeks(weeksWindow, today);
   const fitness = bucketFitnessByWeek(workouts, weeks);
   const study = bucketStudyByWeek(studies, weeks, fitness);
-  const finance = bucketFinanceByWeek(txns, budgets, weeks);
+  const finance = bucketFinanceByWeek(txns, budgets, weeks, opts?.userId);
   const habitsW = bucketHabitsByWeek(habits, completions, weeks);
   // v1.5.2 — "ever used" per domain, from the full history. A domain counts
   // toward the score once it has any record at all; until then it's excluded

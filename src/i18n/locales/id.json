@@ -683,6 +683,28 @@
     "paceDone": "target tercapai"
   },
   "weeklyReview": {
+    "budgetUsed": "Anggaran terpakai {{pct}}% bulan ini",
+    "habitsKept": "Kebiasaan terjaga",
+    "habitsKeptValue": "{{hit}} dari {{due}}",
+    "newBests": "Rekor baru",
+    "nextWeek": "Minggu depan",
+    "billsDue": "Tagihan jatuh tempo",
+    "nothingDue": "Tidak ada yang terjadwal",
+    "delta": {
+      "first": "pertama kali di periode ini",
+      "same": "sama dengan minggu lalu",
+      "pct": "{{pct}}% vs minggu lalu",
+      "count": "{{n}} vs minggu lalu"
+    },
+    "ins": {
+      "busyNoWorkout": "Minggu penuh tugas ({{count}} selesai) tapi tanpa latihan. Pemulihan juga penting.",
+      "workouts": "{{count}} latihan minggu ini. Konsistensi yang bagus.",
+      "spendUp": "Pengeluaran naik {{pct}}% dari minggu lalu. Coba lihat kategori teratas.",
+      "spendDown": "Pengeluaran turun tajam dari minggu lalu. Masa hemat.",
+      "studied": "Belajar {{hours}} jam minggu ini. Usaha yang kuat.",
+      "overdue": "{{count}} tugas terlambat menumpuk. Sisihkan 30 menit untuk merapikannya.",
+      "light": "Minggu yang ringan di semua bidang. Awal baru untuk Senin."
+    },
     "title": "Tinjauan mingguan",
     "week": "Minggu",
     "prev": "← Sebelumnya",

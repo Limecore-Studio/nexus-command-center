@@ -1218,6 +1218,28 @@
     "workoutTargetMore": "增加一次"
   },
   "weeklyReview": {
+    "budgetUsed": "本月预算已用 {{pct}}%",
+    "habitsKept": "坚持的习惯",
+    "habitsKeptValue": "{{hit}}/{{due}}",
+    "newBests": "新纪录",
+    "nextWeek": "下周",
+    "billsDue": "待付账单",
+    "nothingDue": "没有安排",
+    "delta": {
+      "first": "本期首次",
+      "same": "与上周持平",
+      "pct": "较上周 {{pct}}%",
+      "count": "较上周 {{n}}"
+    },
+    "ins": {
+      "busyNoWorkout": "任务繁忙的一周（完成 {{count}} 项），但没有记录训练。恢复同样重要。",
+      "workouts": "本周 {{count}} 次训练。坚持得很好。",
+      "spendUp": "支出较上周增加 {{pct}}%。值得看看最高的类别。",
+      "spendDown": "支出较上周大幅下降。节俭的一段时间。",
+      "studied": "本周学习了 {{hours}} 小时。很努力。",
+      "overdue": "{{count}} 项逾期任务正在堆积。抽 30 分钟整理一下。",
+      "light": "各方面都很轻松的一周。周一重新开始。"
+    },
     "title": "每周回顾",
     "week": "周",
     "prev": "← 上一周",

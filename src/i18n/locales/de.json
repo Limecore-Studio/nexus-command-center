@@ -1219,6 +1219,28 @@
     "workoutTargetMore": "Eins mehr"
   },
   "weeklyReview": {
+    "budgetUsed": "Budgets diesen Monat zu {{pct}} % genutzt",
+    "habitsKept": "Gewohnheiten gehalten",
+    "habitsKeptValue": "{{hit}} von {{due}}",
+    "newBests": "Neue Bestwerte",
+    "nextWeek": "Nächste Woche",
+    "billsDue": "Fällige Rechnungen",
+    "nothingDue": "Nichts geplant",
+    "delta": {
+      "first": "erstmals in diesem Zeitraum",
+      "same": "wie letzte Woche",
+      "pct": "{{pct}} % ggü. letzter Woche",
+      "count": "{{n}} ggü. letzter Woche"
+    },
+    "ins": {
+      "busyNoWorkout": "Volle Aufgabenwoche ({{count}} erledigt), aber kein Training. Erholung zählt auch.",
+      "workouts": "{{count}} Trainings diese Woche. Starke Beständigkeit.",
+      "spendUp": "Ausgaben {{pct}} % höher als letzte Woche. Ein Blick auf die größte Kategorie lohnt sich.",
+      "spendDown": "Ausgaben deutlich niedriger als letzte Woche. Eine sparsame Phase.",
+      "studied": "Diese Woche {{hours}} h gelernt. Starker Einsatz.",
+      "overdue": "{{count}} überfällige Aufgaben stapeln sich. Plane 30 Minuten zum Sortieren ein.",
+      "light": "Ruhige Woche in allen Bereichen. Ein frischer Start am Montag."
+    },
     "title": "Wochenrückblick",
     "week": "Woche",
     "prev": "← Zurück",

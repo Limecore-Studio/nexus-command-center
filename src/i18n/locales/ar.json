@@ -1666,5 +1666,9 @@
     "pending_many": "{{count}} تغييرًا ينتظر المزامنة",
     "pending_other": "{{count}} تغيير ينتظر المزامنة",
     "never": "ليس بعد"
+  },
+  "undo": {
+    "deleted": "تم حذف «{{name}}»",
+    "undo": "تراجع"
   }
 }

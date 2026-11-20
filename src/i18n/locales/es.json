@@ -1594,5 +1594,9 @@
     "pending_one": "{{count}} cambio pendiente de sincronizar",
     "pending_other": "{{count}} cambios pendientes de sincronizar",
     "never": "todavía no"
+  },
+  "undo": {
+    "deleted": "«{{name}}» eliminado",
+    "undo": "Deshacer"
   }
 }

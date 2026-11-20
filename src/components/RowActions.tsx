@@ -6,9 +6,11 @@ interface RowActionsProps {
   onDelete?: () => void;
   onShare?: () => void;
   confirmMsg?: string;
+  /** v1.22 (NCC#293): delete at once, no confirm; the caller offers Undo. */
+  noConfirm?: boolean;
 }
 
-export default function RowActions({ onEdit, onDelete, onShare, confirmMsg }: RowActionsProps) {
+export default function RowActions({ onEdit, onDelete, onShare, confirmMsg, noConfirm }: RowActionsProps) {
   const { t } = useTranslation();
   const confirm = useConfirm();
   return (
@@ -43,6 +45,10 @@ export default function RowActions({ onEdit, onDelete, onShare, confirmMsg }: Ro
         <button
           onClick={(e) => {
             e.stopPropagation();
+            if (noConfirm) {
+              onDelete();
+              return;
+            }
             void (async () => {
               // confirmMsg is optional; callers that pass nothing get the
               // generic translated prompt rather than the old English default.

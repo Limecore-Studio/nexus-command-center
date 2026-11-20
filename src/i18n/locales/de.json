@@ -1574,5 +1574,9 @@
     "pending_one": "{{count}} Änderung wartet auf die Synchronisierung",
     "pending_other": "{{count}} Änderungen warten auf die Synchronisierung",
     "never": "noch nicht"
+  },
+  "undo": {
+    "deleted": "„{{name}}“ gelöscht",
+    "undo": "Rückgängig"
   }
 }

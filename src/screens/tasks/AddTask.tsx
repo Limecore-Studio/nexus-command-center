@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useConfirm } from '../../components/ConfirmDialog';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import AppHeader from '../../components/AppHeader';
 import TemplateChips from '../../components/TemplateChips';
+import { deleteWithUndo } from '../../store/useUndoStore';
 import { useTaskStore } from '../../store/useTaskStore';
 import { useTemplatesStore } from '../../store/useTemplatesStore';
 import type { TaskTemplate } from '../../types/templates';
@@ -31,7 +31,6 @@ const categories: { key: TaskCategory; labelKey: string }[] = [
 
 export default function AddTask() {
   const { t } = useTranslation();
-  const confirm = useConfirm();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const editId = params.get('id');
@@ -92,8 +91,9 @@ export default function AddTask() {
 
   const onDelete = async () => {
     if (!editId) return;
-    if (!(await confirm({ message: t('addtask.deleteConfirm') }))) return;
-    await deleteTask(editId);
+    // v1.22 (NCC#293): no confirm; the task list offers Undo for a moment.
+    const id = editId;
+    deleteWithUndo(id, title, () => deleteTask(id));
     navigate('/tasks');
   };
 

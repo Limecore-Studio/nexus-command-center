@@ -1554,5 +1554,9 @@
     "pending_one": "{{count}} perubahan menunggu sinkronisasi",
     "pending_other": "{{count}} perubahan menunggu sinkronisasi",
     "never": "belum"
+  },
+  "undo": {
+    "deleted": "“{{name}}” dihapus",
+    "undo": "Urungkan"
   }
 }

@@ -6,6 +6,7 @@ import StatCard from '../../components/StatCard';
 import RowActions from '../../components/RowActions';
 import ShareModal from '../../components/ShareModal';
 import HeatmapCalendar from '../../components/HeatmapCalendar';
+import { deleteWithUndo, useUndoStore } from '../../store/useUndoStore';
 import { haptic } from '../../lib/haptic';
 import { useTaskStore, TaskFilter } from '../../store/useTaskStore';
 import { useSessionStore } from '../../store/useSessionStore';
@@ -37,14 +38,17 @@ export default function TasksOverview() {
   const currentUserId = useSessionStore((s) => s.user?.id);
   const [sharing, setSharing] = useState<Task | null>(null);
 
+  // v1.22 (NCC#293): a deleted task is hidden while its Undo waits.
+  const undoHidden = useUndoStore((s) => s.hidden);
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
+      if (undoHidden.has(t.id)) return false;
       if (filter === 'today') return !t.completed && t.dueDate && isToday(t.dueDate);
       if (filter === 'overdue') return !t.completed && t.dueDate && isOverdue(t.dueDate);
       if (filter === 'done') return t.completed;
       return true;
     });
-  }, [tasks, filter]);
+  }, [tasks, filter, undoHidden]);
 
   const groups = useMemo(() => {
     const overdue: Task[] = [];
@@ -89,7 +93,7 @@ export default function TasksOverview() {
     task: t,
     onToggle: toggleComplete,
     onEdit,
-    onDelete: deleteTask,
+    onDelete: (id: string) => deleteWithUndo(id, tasks.find((x) => x.id === id)?.title ?? '', () => deleteTask(id)),
     onShare,
     sharedFromOther: !!(t.ownerId && currentUserId && t.ownerId !== currentUserId),
   });
@@ -274,6 +278,7 @@ function TaskItem({
         onShare={SHARING_ENABLED && !sharedFromOther ? () => onShare(task) : undefined}
         onEdit={() => onEdit(task.id)}
         onDelete={!sharedFromOther ? () => onDelete(task.id) : undefined}
+        noConfirm
         confirmMsg={t('tasks.deleteConfirm', { title: task.title })}
       />
     </div>

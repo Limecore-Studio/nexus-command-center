@@ -1594,5 +1594,9 @@
     "pending_one": "{{count}} modification en attente de synchronisation",
     "pending_other": "{{count}} modifications en attente de synchronisation",
     "never": "pas encore"
+  },
+  "undo": {
+    "deleted": "« {{name}} » supprimé",
+    "undo": "Annuler"
   }
 }

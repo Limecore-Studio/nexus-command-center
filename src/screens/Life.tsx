@@ -27,6 +27,7 @@ import { useBodyMetricsStore } from '../store/useBodyMetricsStore';
 import { bodySummary } from '../lib/bodyScale';
 import { formatShortDate } from '../utils/formatters';
 import { useStudiesStore } from '../store/useStudiesStore';
+import { liveGpa } from '../utils/gpa';
 import { useHabitsStore } from '../store/useHabitsStore';
 import { useTaskStore } from '../store/useTaskStore';
 import { useGoalsStore } from '../store/useGoalsStore';
@@ -160,7 +161,7 @@ export default function Life() {
         tasks,
         studySessions: studies,
         workouts: workouts as DataSources['workouts'],
-        currentGpa: currentImport?.calculatedGpa ?? null,
+        currentGpa: liveGpa(currentImport), // v1.22 (NCC#262)
         gradeScale, // v1.19 (NCC#197)
       };
       const sum = activeGoals.reduce(

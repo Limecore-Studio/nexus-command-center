@@ -1532,5 +1532,15 @@
     "none": "Not shared with anyone yet.",
     "canEdit": "Can edit",
     "readOnly": "Read only"
+  },
+  "sync": {
+    "status": "Sync status",
+    "allSynced": "Everything is synced.",
+    "failed": "The last sync didn't go through. Your changes are safe on this device.",
+    "conversion": "A currency conversion is still finishing. Nothing syncs until it does.",
+    "offline": "You're offline. Changes stay on this device and sync when you're back online.",
+    "pending_one": "{{count}} change waiting to sync",
+    "pending_other": "{{count}} changes waiting to sync",
+    "never": "not yet"
   }
 }

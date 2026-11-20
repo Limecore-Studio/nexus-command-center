@@ -1532,5 +1532,15 @@
     "none": "Ei vielä jaettu kenellekään.",
     "canEdit": "Voi muokata",
     "readOnly": "Vain luku"
+  },
+  "sync": {
+    "status": "Synkronoinnin tila",
+    "allSynced": "Kaikki on synkronoitu.",
+    "failed": "Viimeisin synkronointi epäonnistui. Muutoksesi ovat tallessa tällä laitteella.",
+    "conversion": "Valuuttamuunnos on vielä kesken. Mitään ei synkronoida ennen kuin se valmistuu.",
+    "offline": "Olet offline-tilassa. Muutokset pysyvät tällä laitteella ja synkronoituvat, kun yhteys palaa.",
+    "pending_one": "{{count}} muutos odottaa synkronointia",
+    "pending_other": "{{count}} muutosta odottaa synkronointia",
+    "never": "ei vielä"
   }
 }

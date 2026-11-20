@@ -1512,5 +1512,15 @@
     "none": "Belum dibagikan dengan siapa pun.",
     "canEdit": "Bisa mengedit",
     "readOnly": "Hanya baca"
+  },
+  "sync": {
+    "status": "Status sinkronisasi",
+    "allSynced": "Semua sudah tersinkron.",
+    "failed": "Sinkronisasi terakhir tidak berhasil. Perubahanmu aman di perangkat ini.",
+    "conversion": "Konversi mata uang masih berjalan. Tidak ada yang disinkronkan sampai selesai.",
+    "offline": "Kamu sedang offline. Perubahan tetap di perangkat ini dan disinkronkan saat kamu online lagi.",
+    "pending_one": "{{count}} perubahan menunggu sinkronisasi",
+    "pending_other": "{{count}} perubahan menunggu sinkronisasi",
+    "never": "belum"
   }
 }

@@ -13,6 +13,7 @@ import GoalPaceBar from '../components/GoalPaceBar';
 import { pacingFor } from '../lib/goalPacing';
 import RowActions from '../components/RowActions';
 import { useGoalsStore } from '../store/useGoalsStore';
+import { haptic } from '../lib/haptic';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
 import { liveGpa } from '../utils/gpa';
@@ -160,7 +161,10 @@ export default function Goals() {
                 data={dataSources}
                 baseCurrency={baseCurrency}
                 onEdit={() => setEditing(g)}
-                onComplete={() => markCompleted(g.id, true)}
+                onComplete={() => {
+                  haptic.success(); // v1.22 (limecore#130)
+                  void markCompleted(g.id, true);
+                }}
                 onDelete={() => deleteGoal(g.id)}
               />
             ))}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
+import { haptic } from '../lib/haptic';
 import BottomSheet from './BottomSheet';
 import TemplateChips from './TemplateChips';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -116,6 +117,7 @@ function QuickExpense({ onDone }: { onDone: () => void }) {
     // balance and budget math downstream (renders as a red expense that ADDS
     // to the balance). Quick Log has no visible amount-sign control.
     if (!n || n < 0 || !desc.trim() || !accountId) return;
+    haptic.light(); // v1.22 (limecore#130)
     await addTransaction({
       amount: n,
       description: desc.trim(),
@@ -243,6 +245,7 @@ function QuickWork({ onDone }: { onDone: () => void }) {
 
   const submit = async () => {
     if (rating < 1) return;
+    haptic.light(); // v1.22 (limecore#130)
     await setRating(rating, note.trim() || null);
     onDone();
   };
@@ -298,6 +301,7 @@ function QuickTask({ onDone }: { onDone: () => void }) {
 
   const submit = async () => {
     if (!title.trim()) return;
+    haptic.light(); // v1.22 (limecore#130)
     await addTask({
       title: title.trim(),
       dueDate: due ? new Date(due).toISOString() : undefined,

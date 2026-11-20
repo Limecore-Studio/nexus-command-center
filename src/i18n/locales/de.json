@@ -422,6 +422,8 @@
     "todayShort": "HEUTE"
   },
   "dash": {
+    "postedToday": "Heute gebucht",
+    "postedTodaySub": "Von deinen wiederkehrenden Regeln hinzugefügt. Tippe, um zu prüfen oder zu ändern.",
     "habitsToday": "Heutige Gewohnheiten",
     "doneOfTotal": "{{done}} von {{total}} erledigt",
     "buildHabitTitle": "Gewohnheit aufbauen",

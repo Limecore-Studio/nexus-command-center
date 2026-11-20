@@ -422,6 +422,8 @@
     "todayShort": "TÄNÄÄN"
   },
   "dash": {
+    "postedToday": "Kirjattu tänään",
+    "postedTodaySub": "Toistuvat säännöt lisäsivät nämä. Napauta tarkistaaksesi tai muuttaaksesi.",
     "habitsToday": "Tämän päivän tavat",
     "doneOfTotal": "{{done}} / {{total}} tehty",
     "buildHabitTitle": "Rakenna tapa",

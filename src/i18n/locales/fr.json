@@ -423,6 +423,8 @@
     "todayShort": "AUJ."
   },
   "dash": {
+    "postedToday": "Enregistré aujourd’hui",
+    "postedTodaySub": "Ajouté par vos règles récurrentes. Touchez-en un pour le vérifier ou le modifier.",
     "habitsToday": "Habitudes du jour",
     "doneOfTotal": "{{done}} sur {{total}} fait",
     "buildHabitTitle": "Créer une habitude",

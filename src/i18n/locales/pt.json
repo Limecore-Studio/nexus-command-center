@@ -521,6 +521,8 @@
     "queued": "Na fila local · sincroniza quando houver conexão"
   },
   "dash": {
+    "postedToday": "Registado hoje",
+    "postedTodaySub": "Adicionado pelas suas regras recorrentes. Toque num para verificar ou alterar.",
     "habitsToday": "Hábitos de hoje",
     "doneOfTotal": "{{done}} de {{total}} concluídos",
     "buildHabitTitle": "Crie um hábito",

@@ -524,6 +524,8 @@
     "queued": "في قائمة انتظار محلية · تتزامن عند الاتصال"
   },
   "dash": {
+    "postedToday": "سُجّل اليوم",
+    "postedTodaySub": "أضافته قواعدك المتكررة. اضغط على أحدها لمراجعته أو تغييره.",
     "habitsToday": "عادات اليوم",
     "doneOfTotal": "{{done}} من {{total}} منجزة",
     "buildHabitTitle": "ابنِ عادة",

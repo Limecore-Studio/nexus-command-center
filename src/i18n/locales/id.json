@@ -519,6 +519,8 @@
     "queued": "Diantrekan secara lokal · tersinkron saat online"
   },
   "dash": {
+    "postedToday": "Dicatat hari ini",
+    "postedTodaySub": "Ditambahkan oleh aturan berulangmu. Ketuk untuk memeriksa atau mengubahnya.",
     "habitsToday": "Kebiasaan hari ini",
     "doneOfTotal": "{{done}} dari {{total}} selesai",
     "buildHabitTitle": "Bangun sebuah kebiasaan",

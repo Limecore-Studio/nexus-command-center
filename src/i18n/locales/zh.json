@@ -421,6 +421,8 @@
     "todayShort": "今天"
   },
   "dash": {
+    "postedToday": "今日已记账",
+    "postedTodaySub": "由你的周期规则添加。点按可查看或修改。",
     "habitsToday": "今日习惯",
     "doneOfTotal": "{{total}} 个中已完成 {{done}}",
     "buildHabitTitle": "建立习惯",

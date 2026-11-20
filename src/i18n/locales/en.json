@@ -422,6 +422,8 @@
     "todayShort": "TODAY"
   },
   "dash": {
+    "postedToday": "Posted today",
+    "postedTodaySub": "Added by your recurring rules. Tap one to check or change it.",
     "habitsToday": "Today's habits",
     "doneOfTotal": "{{done}} of {{total}} done",
     "buildHabitTitle": "Build a habit",

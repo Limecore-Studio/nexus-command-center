@@ -1487,5 +1487,15 @@
     "body": "If something breaks, NCC can send us the technical details: the app version, the error and the screen it happened on. Never what you type. You can change this in Settings.",
     "yes": "Yes, send reports",
     "notNow": "Not now"
+  },
+  "sync": {
+    "status": "Sync status",
+    "allSynced": "Everything is synced.",
+    "failed": "The last sync didn't go through. Your changes are safe on this device.",
+    "conversion": "A currency conversion is still finishing. Nothing syncs until it does.",
+    "offline": "You're offline. Changes stay on this device and sync when you're back online.",
+    "pending_one": "{{count}} change waiting to sync",
+    "pending_other": "{{count}} changes waiting to sync",
+    "never": "not yet"
   }
 }

@@ -1467,5 +1467,15 @@
     "body": "Jika ada yang rusak, NCC dapat mengirimi kami detail teknisnya: versi aplikasi, galatnya, dan layar tempat terjadinya. Tidak pernah apa yang kamu ketik. Kamu bisa mengubahnya di Pengaturan.",
     "yes": "Ya, kirim",
     "notNow": "Nanti saja"
+  },
+  "sync": {
+    "status": "Status sinkronisasi",
+    "allSynced": "Semua sudah tersinkron.",
+    "failed": "Sinkronisasi terakhir tidak berhasil. Perubahanmu aman di perangkat ini.",
+    "conversion": "Konversi mata uang masih berjalan. Tidak ada yang disinkronkan sampai selesai.",
+    "offline": "Kamu sedang offline. Perubahan tetap di perangkat ini dan disinkronkan saat kamu online lagi.",
+    "pending_one": "{{count}} perubahan menunggu sinkronisasi",
+    "pending_other": "{{count}} perubahan menunggu sinkronisasi",
+    "never": "belum"
   }
 }

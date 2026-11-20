@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
-import SyncStatusChip from '../components/SyncStatusChip';
 import StatCard from '../components/StatCard';
 import RoutingStrip from '../components/RoutingStrip';
 import RackBudgetMeter from '../components/RackBudgetMeter';
@@ -160,7 +159,6 @@ export default function Dashboard() {
         <div className="desk-stack">
           {/* Rack: the inputs row — the suite made visible. Dashboard only. */}
           {rack && <RoutingStrip />}
-          <SyncStatusChip />
 
           {/* v1.2 — daily habits surface above the stat grid. The strip itself
               handles all empty/eligible/all-rest-day states; we render it

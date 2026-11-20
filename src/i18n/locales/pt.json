@@ -1507,5 +1507,15 @@
     "body": "Se algo falhar, o NCC pode enviar-nos os detalhes técnicos: a versão da app, o erro e o ecrã onde aconteceu. Nunca o que escreve. Pode alterar isto nas Definições.",
     "yes": "Sim, enviar",
     "notNow": "Agora não"
+  },
+  "sync": {
+    "status": "Estado da sincronização",
+    "allSynced": "Está tudo sincronizado.",
+    "failed": "A última sincronização não foi concluída. As suas alterações estão seguras neste dispositivo.",
+    "conversion": "Uma conversão de moeda ainda está a terminar. Nada é sincronizado até acabar.",
+    "offline": "Está offline. As alterações ficam neste dispositivo e são sincronizadas quando voltar a estar online.",
+    "pending_one": "{{count}} alteração à espera de sincronizar",
+    "pending_other": "{{count}} alterações à espera de sincronizar",
+    "never": "ainda não"
   }
 }

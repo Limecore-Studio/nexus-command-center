@@ -1487,5 +1487,15 @@
     "body": "Wenn etwas schiefgeht, kann NCC uns die technischen Details senden: App-Version, Fehler und den Bildschirm, auf dem er auftrat. Nie das, was du eingibst. Du kannst das in den Einstellungen ändern.",
     "yes": "Ja, senden",
     "notNow": "Nicht jetzt"
+  },
+  "sync": {
+    "status": "Synchronisierungsstatus",
+    "allSynced": "Alles ist synchronisiert.",
+    "failed": "Die letzte Synchronisierung hat nicht geklappt. Deine Änderungen sind auf diesem Gerät sicher.",
+    "conversion": "Eine Währungsumrechnung läuft noch. Bis sie fertig ist, wird nichts synchronisiert.",
+    "offline": "Du bist offline. Änderungen bleiben auf diesem Gerät und werden synchronisiert, sobald du wieder online bist.",
+    "pending_one": "{{count}} Änderung wartet auf die Synchronisierung",
+    "pending_other": "{{count}} Änderungen warten auf die Synchronisierung",
+    "never": "noch nicht"
   }
 }

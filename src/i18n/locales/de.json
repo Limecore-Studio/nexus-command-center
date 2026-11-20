@@ -198,6 +198,12 @@
     "languageBody": "Du kannst dies jederzeit in den Einstellungen ändern."
   },
   "settings": {
+    "computerTitle": "NCC am Computer nutzen",
+    "computerSameAccount": "Melde dich mit demselben Konto an, dann wird alles synchronisiert.",
+    "computerWeb": "Web-App",
+    "computerWebSub": "nexus.limecore.dev, in jedem Browser",
+    "computerDesktop": "Windows-App",
+    "computerDesktopSub": "Installationsprogramm von GitHub laden",
     "errorReports": "Fehlerberichte senden",
     "errorReportsSub": "Standardmäßig aus · nur mit Konto",
     "errorReportsNote": "Wenn die App auf einen Fehler stößt, von dem sie sich nicht erholt, sendet sie uns, welcher Fehler es war, wo in unserem Code, die App- und Android- bzw. Browserversion und den geöffneten Bildschirm. Nie, was du eingegeben hast. 90 Tage gespeichert.",
@@ -422,6 +428,10 @@
     "todayShort": "HEUTE"
   },
   "dash": {
+    "computerNoteTitle": "NCC läuft auch auf deinem Computer",
+    "computerNoteBody": "Öffne nexus.limecore.dev oder installiere die Windows-App und melde dich mit diesem Konto an. Alles wird synchronisiert.",
+    "computerNoteOpen": "Zeigen",
+    "computerNoteDismiss": "Nicht jetzt",
     "habitsToday": "Heutige Gewohnheiten",
     "doneOfTotal": "{{done}} von {{total}} erledigt",
     "buildHabitTitle": "Gewohnheit aufbauen",

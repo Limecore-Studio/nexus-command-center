@@ -126,11 +126,11 @@ export default function ShareModal({
         {/* Current shares */}
         <div className="space-y-1 mb-3">
           {loading && (
-            <div className="text-xs text-text-muted py-2">Loading…</div>
+            <div className="text-xs text-text-muted py-2">{t('common.loading')}</div>
           )}
           {!loading && shares.length === 0 && (
             <div className="text-xs text-text-muted py-2">
-              Not shared with anyone yet.
+              {t('share.none')}
             </div>
           )}
           {shares.map((s) => (
@@ -146,7 +146,7 @@ export default function ShareModal({
                   {s.display_name || 'User'}
                 </div>
                 <div className="text-[0.625rem] text-text-muted">
-                  {s.permission === 'write' ? 'Can edit' : 'Read only'}
+                  {s.permission === 'write' ? t('share.canEdit') : t('share.readOnly')}
                 </div>
               </div>
               <button
@@ -180,14 +180,14 @@ export default function ShareModal({
               onClick={() => setPermission('write')}
               className={`chip flex-1 ${permission === 'write' ? 'chip-on' : ''}`}
             >
-              Can edit
+              {t('share.canEdit')}
             </button>
             <button
               type="button"
               onClick={() => setPermission('read')}
               className={`chip flex-1 ${permission === 'read' ? 'chip-on' : ''}`}
             >
-              Read only
+              {t('share.readOnly')}
             </button>
           </div>
           <button

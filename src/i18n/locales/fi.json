@@ -65,6 +65,8 @@
     "updateReady": "Käynnistä uudelleen ja päivitä"
   },
   "life": {
+    "narrativeRegenerate": "Luo yhteenveto uudelleen",
+    "narrativeFootnote": "Gemini on luonut tämän pisteistäsi. Ei lääketieteellinen eikä taloudellinen neuvo.",
     "notCountedYet": "Ei vielä laskettu",
     "title": "Elämänkuviot",
     "thisWeek": "Tällä viikolla",
@@ -1498,5 +1500,37 @@
     "body": "Jos jokin menee rikki, NCC voi lähettää meille tekniset tiedot: sovelluksen version, virheen ja näkymän, jossa se tapahtui. Ei koskaan sitä, mitä kirjoitat. Voit muuttaa tätä asetuksista.",
     "yes": "Kyllä, lähetä",
     "notNow": "Ei nyt"
+  },
+  "ql": {
+    "title": "Pikakirjaus",
+    "task": "Tehtävä",
+    "saveExpense": "Tallenna kulu",
+    "workQuestion": "Miten työpäivä meni?",
+    "workToday": "Työpäivä tänään — napauta muuttaaksesi",
+    "rateGroup": "Arvioi työpäiväsi asteikolla 1–5",
+    "ratingOf": "{{n}}/5",
+    "notePh": "Lisää muistiinpano… (valinnainen)",
+    "addNote": "+ Lisää muistiinpano",
+    "saveRating": "Tallenna arvio",
+    "updateRating": "Päivitä arvio"
+  },
+  "notifIntro": {
+    "title": "Pysy ajan tasalla",
+    "body": "NCC voi lähettää laitteella muistutuksia asioista, joita muuten tarkistaisit avaamalla sovelluksen. Ne ajastetaan puhelimessasi.",
+    "tasksSub": "kun jokin erääntyy",
+    "budgetsSub": "kun lähestyt tai ylität luokan rajan",
+    "portfolio": "Salkun päätös",
+    "portfolioSub": "päivittäinen yhteenveto päivän muutoksesta",
+    "newsSub": "uutiset omistamistasi ja suurista indeksiliikkeistä",
+    "muteHint": "Voit poistaa jokaisen lajin käytöstä kohdassa Asetukset → Ilmoitukset.",
+    "enable": "Ota ilmoitukset käyttöön",
+    "alreadyGranted": "Olen jo sallinut ilmoitukset",
+    "denied": "NCC:n ilmoituksia ei ole sallittu. Voit sallia ne puhelimen asetuksista.",
+    "failed": "Ilmoituksia ei saatu käyttöön. Yritä uudelleen tai käytä kohtaa Asetukset → Ilmoitukset."
+  },
+  "share": {
+    "none": "Ei vielä jaettu kenellekään.",
+    "canEdit": "Voi muokata",
+    "readOnly": "Vain luku"
   }
 }

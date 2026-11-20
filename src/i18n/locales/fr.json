@@ -65,6 +65,8 @@
     "updateReady": "Redémarrer pour mettre à jour"
   },
   "life": {
+    "narrativeRegenerate": "Régénérer le résumé",
+    "narrativeFootnote": "Généré par Gemini à partir de vos scores. Ni un conseil médical ni un conseil financier.",
     "notCountedYet": "Pas encore compté",
     "title": "Schémas de vie",
     "thisWeek": "Cette semaine",
@@ -1518,5 +1520,37 @@
     "body": "En cas de problème, NCC peut nous envoyer les détails techniques : la version de l’app, l’erreur et l’écran où elle s’est produite. Jamais ce que vous saisissez. Vous pouvez changer cela dans les Réglages.",
     "yes": "Oui, envoyer",
     "notNow": "Pas maintenant"
+  },
+  "ql": {
+    "title": "Saisie rapide",
+    "task": "Tâche",
+    "saveExpense": "Enregistrer la dépense",
+    "workQuestion": "Comment s’est passé le travail aujourd’hui ?",
+    "workToday": "Travail du jour — touchez pour modifier",
+    "rateGroup": "Notez votre journée de travail de 1 à 5",
+    "ratingOf": "{{n}} sur 5",
+    "notePh": "Ajouter une note… (facultatif)",
+    "addNote": "+ Ajouter une note",
+    "saveRating": "Enregistrer la note",
+    "updateRating": "Mettre à jour la note"
+  },
+  "notifIntro": {
+    "title": "Restez informé",
+    "body": "NCC peut vous envoyer sur l’appareil des rappels pour ce que vous devriez sinon ouvrir l’app pour vérifier. Ils sont programmés sur votre téléphone.",
+    "tasksSub": "quand une échéance arrive",
+    "budgetsSub": "quand vous approchez ou dépassez la limite d’une catégorie",
+    "portfolio": "Clôture du portefeuille",
+    "portfolioSub": "un récapitulatif quotidien de la variation du jour",
+    "newsSub": "actualités sur vos positions et grands mouvements d’indices",
+    "muteHint": "Vous pouvez désactiver chaque type dans Réglages → Notifications.",
+    "enable": "Activer les notifications",
+    "alreadyGranted": "J’ai déjà autorisé les notifications",
+    "denied": "Les notifications ne sont pas autorisées pour NCC. Vous pouvez les autoriser dans les réglages du téléphone.",
+    "failed": "Impossible d’activer les notifications. Réessayez ou passez par Réglages → Notifications."
+  },
+  "share": {
+    "none": "Partagé avec personne pour l’instant.",
+    "canEdit": "Peut modifier",
+    "readOnly": "Lecture seule"
   }
 }

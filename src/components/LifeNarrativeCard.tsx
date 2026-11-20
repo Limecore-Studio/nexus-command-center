@@ -7,6 +7,7 @@
 // blocked) and there's no cached text, the card renders empty — no clutter.
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { db } from '../db/database';
 import { generateLifeNarrative, type NarrativeInput } from '../lib/aiNarrative';
 import Glyph from './Glyph';
@@ -15,6 +16,7 @@ const DRIFT_THRESHOLD = 5;
 const NARRATIVE_ID = 1;
 
 export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) {
+  const { t } = useTranslation();
   const [text, setText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -84,7 +86,7 @@ export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) 
               type="button"
               onClick={() => generate(true)}
               disabled={loading}
-              aria-label="Regenerate summary"
+              aria-label={t('life.narrativeRegenerate')}
               className="text-[0.6875rem] text-text-muted active:text-text disabled:opacity-40"
             >
               ↻
@@ -117,7 +119,7 @@ export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) 
       )}
 
       <div className="text-[0.5625rem] text-text-muted mt-2">
-        Generated from your scores via Gemini. Not medical or financial advice.
+        {t('life.narrativeFootnote')}
       </div>
     </div>
   );

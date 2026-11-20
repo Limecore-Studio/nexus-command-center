@@ -133,6 +133,8 @@
     "updateReady": "Mulai ulang untuk memperbarui"
   },
   "life": {
+    "narrativeRegenerate": "Buat ulang ringkasan",
+    "narrativeFootnote": "Dibuat oleh Gemini dari skor kamu. Bukan saran medis atau keuangan.",
     "notCountedYet": "Belum dihitung",
     "title": "Pola hidup",
     "thisWeek": "Minggu ini",
@@ -1478,5 +1480,37 @@
     "body": "Jika ada yang rusak, NCC dapat mengirimi kami detail teknisnya: versi aplikasi, galatnya, dan layar tempat terjadinya. Tidak pernah apa yang kamu ketik. Kamu bisa mengubahnya di Pengaturan.",
     "yes": "Ya, kirim",
     "notNow": "Nanti saja"
+  },
+  "ql": {
+    "title": "Catat cepat",
+    "task": "Tugas",
+    "saveExpense": "Simpan pengeluaran",
+    "workQuestion": "Bagaimana kerja hari ini?",
+    "workToday": "Kerja hari ini — ketuk untuk mengubah",
+    "rateGroup": "Beri nilai hari kerjamu 1 sampai 5",
+    "ratingOf": "{{n}} dari 5",
+    "notePh": "Tambahkan catatan… (opsional)",
+    "addNote": "+ Tambahkan catatan",
+    "saveRating": "Simpan penilaian",
+    "updateRating": "Perbarui penilaian"
+  },
+  "notifIntro": {
+    "title": "Tetap terhubung",
+    "body": "NCC dapat mengirim pengingat di perangkat untuk hal yang biasanya harus kamu cek dengan membuka aplikasi. Pengingat dijadwalkan di ponselmu.",
+    "tasksSub": "saat sesuatu jatuh tempo",
+    "budgetsSub": "saat kamu mendekati atau melewati batas kategori",
+    "portfolio": "Penutupan portofolio",
+    "portfolioSub": "ringkasan harian perubahan hari ini",
+    "newsSub": "berita tentang aset milikmu dan pergerakan indeks besar",
+    "muteHint": "Kamu bisa mematikan tiap jenis di Pengaturan → Notifikasi.",
+    "enable": "Aktifkan notifikasi",
+    "alreadyGranted": "Saya sudah mengizinkan notifikasi",
+    "denied": "Notifikasi untuk NCC tidak diizinkan. Kamu bisa mengizinkannya di pengaturan ponsel.",
+    "failed": "Notifikasi tidak bisa diaktifkan. Coba lagi, atau gunakan Pengaturan → Notifikasi."
+  },
+  "share": {
+    "none": "Belum dibagikan dengan siapa pun.",
+    "canEdit": "Bisa mengedit",
+    "readOnly": "Hanya baca"
   }
 }

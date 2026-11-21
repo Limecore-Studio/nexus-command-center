@@ -1574,5 +1574,9 @@
     "pending_one": "{{count}} muutos odottaa synkronointia",
     "pending_other": "{{count}} muutosta odottaa synkronointia",
     "never": "ei vielä"
+  },
+  "undo": {
+    "deleted": "”{{name}}” poistettu",
+    "undo": "Kumoa"
   }
 }

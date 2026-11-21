@@ -1,4 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
+import { useUndoStore } from '../store/useUndoStore';
 import { useSessionStore } from '../store/useSessionStore';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -71,6 +72,8 @@ const RESUME_REFRESH_THRESHOLD_MS = 20 * 60 * 1000;
 // v1.20 (limecore#71): almost every launch never shows it.
 const ReportPromptCard = lazy(() => import('./ReportPromptCard'));
 const ConsentPromptCard = lazy(() => import('./ConsentPromptCard'));
+// v1.22 (NCC#293): loaded only while a delete waits for its undo window.
+const UndoBar = lazy(() => import('./UndoBar'));
 
 export default function AppShell() {
   const signedIn = useSessionStore((s) => !!s.session);
@@ -79,6 +82,7 @@ export default function AppShell() {
   const [quickLogMounted, setQuickLogMounted] = useState(false);
   const [quickAddMounted, setQuickAddMounted] = useState(false);
   const [QuickLogBottomSheet, setQuickLogSheet] = useState(() => lazy(loadQuickLog));
+  const undoPending = useUndoStore((s) => s.pending !== null);
   const [QuickAddOverlay, setQuickAddSheet] = useState(() => lazy(loadQuickAdd));
   const location = useLocation();
   // v1.9 Item 14, Phase 1 — desktop shell. Above 769px the bottom tab bar is
@@ -376,6 +380,7 @@ export default function AppShell() {
         {/* v1.21.1 (limecore#87) — the opt-in question, once per owner; keyed
             so signing in asks the account's own question. It decides itself. */}
         <Suspense fallback={null}><ConsentPromptCard key={signedIn ? 'account' : 'guest'} /></Suspense>
+        {undoPending && <Suspense fallback={null}><UndoBar /></Suspense>}
         {/* pb-32 (128px) gives clear space below the last card so it isn't clipped
           * by the fixed BottomTabBar (which is ~80px + its own safe-bottom inset). */}
         {/* v1.2 follow-up — pb-32 → pb-44. The floating panel tab bar sits

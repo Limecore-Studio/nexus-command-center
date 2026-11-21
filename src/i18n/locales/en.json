@@ -1574,5 +1574,9 @@
     "pending_one": "{{count}} change waiting to sync",
     "pending_other": "{{count}} changes waiting to sync",
     "never": "not yet"
+  },
+  "undo": {
+    "deleted": "“{{name}}” deleted",
+    "undo": "Undo"
   }
 }

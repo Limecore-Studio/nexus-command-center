@@ -436,6 +436,8 @@
     "computerNoteBody": "打开 nexus.limecore.dev 或安装 Windows 应用，并用此账户登录。所有内容都会同步。",
     "computerNoteOpen": "查看方法",
     "computerNoteDismiss": "以后再说",
+    "postedToday": "今日已记账",
+    "postedTodaySub": "由你的周期规则添加。点按可查看或修改。",
     "habitsToday": "今日习惯",
     "doneOfTotal": "{{total}} 个中已完成 {{done}}",
     "buildHabitTitle": "建立习惯",

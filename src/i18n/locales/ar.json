@@ -539,6 +539,8 @@
     "computerNoteBody": "افتح nexus.limecore.dev أو ثبّت تطبيق Windows، وسجّل الدخول بهذا الحساب. ستتم مزامنة كل شيء.",
     "computerNoteOpen": "أرني",
     "computerNoteDismiss": "ليس الآن",
+    "postedToday": "سُجّل اليوم",
+    "postedTodaySub": "أضافته قواعدك المتكررة. اضغط على أحدها لمراجعته أو تغييره.",
     "habitsToday": "عادات اليوم",
     "doneOfTotal": "{{done}} من {{total}} منجزة",
     "buildHabitTitle": "ابنِ عادة",

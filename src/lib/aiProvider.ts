@@ -23,13 +23,14 @@ export const DEFAULT_AI_MODEL = 'gemini-2.5-flash';
 const KEY_PREF = 'apikey_gemini';
 const MODEL_PREF = 'ai.model';
 
-async function prefs() {
-  return (await import('@capacitor/preferences')).Preferences;
-}
+// The module, never the plugin itself, is what an async function may return:
+// a Capacitor plugin is a proxy that answers every property, `then` included,
+// so resolving a promise with it calls a native "then" that does not exist.
+const prefsModule = () => import('@capacitor/preferences');
 
 async function readPref(key: string): Promise<string | null> {
   try {
-    return (await (await prefs()).get({ key })).value ?? null;
+    return (await (await prefsModule()).Preferences.get({ key })).value ?? null;
   } catch {
     try {
       return localStorage.getItem(key);
@@ -41,7 +42,7 @@ async function readPref(key: string): Promise<string | null> {
 
 async function writePref(key: string, value: string | null): Promise<void> {
   try {
-    const p = await prefs();
+    const p = (await prefsModule()).Preferences;
     if (value == null) await p.remove({ key });
     else await p.set({ key, value });
   } catch {

@@ -1600,5 +1600,9 @@
   "undo": {
     "deleted": "«{{name}}» eliminado",
     "undo": "Anular"
+  },
+  "suite": {
+    "openStudyDesk": "Abrir no StudyDesk",
+    "openLimeLog": "Abrir no LimeLog"
   }
 }

@@ -1580,5 +1580,9 @@
   "undo": {
     "deleted": "“{{name}}” हटाया गया",
     "undo": "पूर्ववत करें"
+  },
+  "suite": {
+    "openStudyDesk": "StudyDesk में खोलें",
+    "openLimeLog": "LimeLog में खोलें"
   }
 }

@@ -1672,5 +1672,9 @@
   "undo": {
     "deleted": "تم حذف «{{name}}»",
     "undo": "تراجع"
+  },
+  "suite": {
+    "openStudyDesk": "فتح في StudyDesk",
+    "openLimeLog": "فتح في LimeLog"
   }
 }

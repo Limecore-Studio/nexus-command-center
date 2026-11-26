@@ -1580,5 +1580,9 @@
   "undo": {
     "deleted": "”{{name}}” poistettu",
     "undo": "Kumoa"
+  },
+  "suite": {
+    "openStudyDesk": "Avaa StudyDeskissä",
+    "openLimeLog": "Avaa LimeLogissa"
   }
 }

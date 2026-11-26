@@ -32,6 +32,14 @@
       backup at the OS level for Android 12+ (the boolean attrs above only
       cover legacy backup paths).
     -->
+    <!-- v1.22 (limecore#131): lets NCC see whether StudyDesk and LimeLog are
+         installed (Android 11+ package visibility), to open their screens or
+         fall back to their F-Droid page. No permission. -->
+    <queries>
+        <package android:name="com.StudyDesk.app" />
+        <package android:name="com.limecore.workouttracker" />
+    </queries>
+
     <application
         android:allowBackup="false"
         android:fullBackupContent="false"

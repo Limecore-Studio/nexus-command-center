@@ -1560,5 +1560,9 @@
   "undo": {
     "deleted": "“{{name}}” dihapus",
     "undo": "Urungkan"
+  },
+  "suite": {
+    "openStudyDesk": "Buka di StudyDesk",
+    "openLimeLog": "Buka di LimeLog"
   }
 }

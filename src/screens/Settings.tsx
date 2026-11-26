@@ -16,6 +16,7 @@ import pkg from '../../package.json';
 import { Capacitor } from '@capacitor/core';
 import { useAuthStore } from '../store/useAuthStore';
 import { APP_LOCK_APPLIES } from '../lib/isDesktop';
+import AiSection from './settings/AiSection';
 import { computerAppsOffered, DESKTOP_DOWNLOAD_URL, WEB_APP_URL } from '../lib/computerApps';
 import '../i18n/lazy/pin'; // settings.changePin* (loaded with this screen)
 
@@ -579,17 +580,22 @@ export default function Settings() {
           {/* Master switch for the cloud AI features. Off by default: the Life
               narrative previously generated on arrival at the tab, so "opt-in"
               was only true of the other two apps in the suite. */}
-          <Toggle
-            label={t('settings.aiFeatures')}
-            sub={aiEnabled ? t('settings.aiFeaturesOnSub') : t('settings.aiFeaturesOffSub')}
-            value={aiEnabled}
-            onChange={setAiEnabled}
+          {/* v1.22 (limecore#122): AI on the user's own Gemini key. The
+              section holds the key, the model, a test and the disclosures;
+              the switch stays off until a key is set. Loaded with Settings. */}
+          <AiSection
+            enabled={aiEnabled}
+            onEnabled={setAiEnabled}
+            toggle={(locked) => (
+              <Toggle
+                label={t('settings.aiFeatures')}
+                sub={aiEnabled ? t('settings.aiFeaturesOnSub') : t('settings.aiFeaturesOffSub')}
+                value={aiEnabled}
+                onChange={setAiEnabled}
+                locked={locked}
+              />
+            )}
           />
-          {/* Free-tier disclosure. Consent has to be informed where it is
-              given, so this sits on the switch and not only in the policy. */}
-          <div className="text-[0.625rem] text-text-muted px-1 pb-1 leading-relaxed">
-            {t('settings.aiTrainingNote')}
-          </div>
           {/* v1.16 (limecore#16) — off by default, accounts only; the note is
               the consent text the privacy policy (#50) relies on. */}
           <ErrorReportsToggle />

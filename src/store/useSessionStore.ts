@@ -176,6 +176,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   async signOut(opts) {
+    // v1.22 (limecore#122): the AI key belongs to whoever is signed in; it
+    // does not carry over to a guest or the next account.
+    void import('../lib/aiProvider').then((m) => m.clearAiKey()).catch(() => {});
     // v1.4 — clear the SSO bridge BEFORE the auth round-trip so a
     // concurrent sibling query can't grab a token that's about to be
     // invalidated. onAuthStateChange's null fire will also clear, but

@@ -176,6 +176,10 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   async signOut(opts) {
+    // v1.22 (NCC#263): the supporter perk belongs to the account. Without
+    // this, "Sign out, keep data" left it unlocked for the guest or the next
+    // account on this device.
+    void import('../lib/entitlement').then((m) => m.clearEntitlement()).catch(() => {});
     // v1.4 — clear the SSO bridge BEFORE the auth round-trip so a
     // concurrent sibling query can't grab a token that's about to be
     // invalidated. onAuthStateChange's null fire will also clear, but

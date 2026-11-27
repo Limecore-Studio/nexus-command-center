@@ -31,6 +31,7 @@ import { useBraindumpStore } from '../store/useBraindumpStore';
 import { useGoalsStore } from '../store/useGoalsStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { computeGoalProgress } from '../lib/goals';
+import { useGoalDataSources } from '../lib/useGoalDataSources';
 import { buildWeeklyReview } from '../lib/weeklyReview';
 import { formatCurrency, isOverdue, isToday, localDateKey, parseDateLocal } from '../utils/formatters';
 import { postedToday } from '../lib/postedToday';
@@ -64,11 +65,6 @@ export default function Dashboard() {
   // v1.15 Item 10 — Goals and Review cards.
   const goals = useGoalsStore((s) => s.goals);
   const holdings = useFinanceStore((s) => s.holdings);
-  const manualAssets = useFinanceStore((s) => s.manualAssets);
-  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
-  const portfolioCashEntries = useFinanceStore((s) => s.portfolioCashEntries);
-  const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
-  const fxRates = useFinanceStore((s) => s.fxRates);
   const studySessions = useStudiesStore((s) => s.studySessions);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
 
@@ -137,17 +133,15 @@ export default function Dashboard() {
 
   // Same inputs and the same computeGoalProgress the Goals screen uses, so a
   // percentage here can never disagree with the one a tap away.
-  const activeGoals = useMemo(() => {
-    const data = {
-      transactions, holdings, manualAssets, stockQuotes, cryptoPrices, fxRates, baseCurrency,
-      portfolioLots, portfolioCashEntries, // v1.22 (NCC#252)
-      tasks, studySessions, workouts: sessions, currentGpa: gpa,
-      gradeScale, // v1.19 (NCC#197)
-    };
-    return goals
-      .filter((g) => !g.completed && !g.deletedAt)
-      .map((g) => ({ goal: g, pct: Math.max(0, Math.min(100, Math.round(computeGoalProgress(g, data).percent))) }));
-  }, [goals, transactions, holdings, manualAssets, portfolioLots, portfolioCashEntries, stockQuotes, cryptoPrices, fxRates, baseCurrency, tasks, studySessions, sessions, gpa, gradeScale]);
+  // v1.22 (NCC#263): one shared hook builds the inputs for all three screens.
+  const goalData = useGoalDataSources();
+  const activeGoals = useMemo(
+    () =>
+      goals
+        .filter((g) => !g.completed && !g.deletedAt)
+        .map((g) => ({ goal: g, pct: Math.max(0, Math.min(100, Math.round(computeGoalProgress(g, goalData).percent))) })),
+    [goals, goalData],
+  );
 
   // This week so far, from the builder the Review screen itself uses.
   const week = useMemo(

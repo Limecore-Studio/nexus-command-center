@@ -136,6 +136,7 @@
     "errNameRequired": "Saisissez votre nom.",
     "errPasswordMismatch": "Les mots de passe ne correspondent pas.",
     "errGoogleStart": "Impossible de démarrer la connexion Google.",
+    "errGoogleFinish": "La connexion Google n'a pas abouti. Réessaie.",
     "desktopBrowser": "Terminez la connexion dans votre navigateur, puis revenez ici.",
     "errDesktopNoListener": "La connexion sur ordinateur est indisponible pour ce lancement. Redémarrez Nexus ou connectez-vous par e-mail ci-dessous.",
     "errInvalidCredentials": "E-mail ou mot de passe incorrect.",

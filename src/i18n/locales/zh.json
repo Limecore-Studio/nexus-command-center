@@ -136,6 +136,7 @@
     "errNameRequired": "请输入你的姓名。",
     "errPasswordMismatch": "两次输入的密码不一致。",
     "errGoogleStart": "无法启动 Google 登录。",
+    "errGoogleFinish": "Google 登录未完成。请重试。",
     "desktopBrowser": "请在浏览器中完成登录，然后回到这里。",
     "errDesktopNoListener": "本次启动无法使用桌面登录。请重启 Nexus，或在下方使用邮箱登录。",
     "errInvalidCredentials": "邮箱或密码不正确。",

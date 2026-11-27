@@ -50,6 +50,7 @@
     "errNameRequired": "Digite seu nome.",
     "errPasswordMismatch": "As senhas não coincidem.",
     "errGoogleStart": "Não foi possível iniciar o login com o Google.",
+    "errGoogleFinish": "O início de sessão com o Google não terminou. Tenta novamente.",
     "desktopBrowser": "Conclua o login no seu navegador e volte para cá.",
     "errDesktopNoListener": "O login no computador está indisponível nesta inicialização. Reinicie o Nexus ou entre com e-mail abaixo.",
     "errInvalidCredentials": "E-mail ou senha incorretos.",

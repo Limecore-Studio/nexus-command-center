@@ -10,7 +10,7 @@ import { useSessionStore } from './store/useSessionStore';
 import { useSyncStore } from './store/useSyncStore';
 import { seedIfEmpty } from './db/seed';
 import { clearAllLocalData } from './db/database';
-import { supabase } from './lib/supabase';
+import { supabase, OAUTH_FAILED_EVENT } from './lib/supabase';
 import { useTranslation } from 'react-i18next';
 import { startLive, stopLive } from './lib/liveSync';
 // v1.22 (limecore#126): the sync engine runs after the first frame, never
@@ -439,9 +439,10 @@ export default function App() {
         const qs = url.split('?')[1] ?? '';
         const params = new URLSearchParams(qs);
         const code = params.get('code');
-        if (code) {
-          await supabase.auth.exchangeCodeForSession(code);
-        }
+        // v1.22 (NCC#263): a cancelled consent or a failed exchange is
+        // reported to Login instead of leaving it waiting.
+        const failed = !code || !!(await supabase.auth.exchangeCodeForSession(code)).error;
+        if (failed) window.dispatchEvent(new Event(OAUTH_FAILED_EVENT));
       } finally {
         // Close the in-app browser (Chrome Custom Tab) once we're back.
         try {
@@ -465,8 +466,17 @@ export default function App() {
   useEffect(() => {
     if (!desktop?.onCallback) return;
     return desktop.onCallback(({ code }) => {
-      if (!code) return;
-      void supabase.auth.exchangeCodeForSession(code);
+      // v1.22 (NCC#263): an error callback (consent cancelled) or a failed
+      // exchange (verifier gone, offline) used to be dropped, and Login kept
+      // saying "finish signing in in your browser".
+      const fail = () => window.dispatchEvent(new Event(OAUTH_FAILED_EVENT));
+      if (!code) return fail();
+      void supabase.auth
+        .exchangeCodeForSession(code)
+        .then(({ error }) => {
+          if (error) fail();
+        })
+        .catch(fail);
     });
   }, []);
 

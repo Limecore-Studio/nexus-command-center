@@ -136,6 +136,7 @@
     "errNameRequired": "Enter your name.",
     "errPasswordMismatch": "Passwords do not match.",
     "errGoogleStart": "Could not start Google sign-in.",
+    "errGoogleFinish": "Google sign-in did not finish. Try again.",
     "desktopBrowser": "Finish signing in in your browser, then come back here.",
     "errDesktopNoListener": "Desktop sign-in is unavailable this launch. Restart Nexus, or sign in with email below.",
     "errInvalidCredentials": "Incorrect email or password.",

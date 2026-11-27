@@ -42,6 +42,16 @@ describe('recordAppOpen', () => {
     expect(h.queued).toHaveLength(1);
   });
 
+  it("the next account's first open that day is still recorded (limecore#113)", async () => {
+    setConsent('appOpens', true, 'user-1');
+    setConsent('appOpens', true, 'user-2');
+    expect(await recordAppOpen()).toBe(true);
+    h.session = { user: { id: 'user-2' } };
+    expect(await recordAppOpen()).toBe(true);
+    expect(await recordAppOpen()).toBe(false);
+    expect(h.queued).toHaveLength(2);
+  });
+
   it("another account's yes does not cover this one", async () => {
     setConsent('appOpens', true, 'user-2');
     expect(await recordAppOpen()).toBe(false);

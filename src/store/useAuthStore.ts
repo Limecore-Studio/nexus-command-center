@@ -46,6 +46,22 @@ const AUTOLOCK_KEY = 'auth.autoLockMin';
 const BIOMETRIC_KEY = 'auth.biometricEnabled';
 export const PIN_ATTEMPTS_KEY = 'auth.pinFailedAttempts';
 export const PIN_LAST_FAIL_KEY = 'auth.pinLastFailAt';
+/** v1.22 (limecore#99): what is left of a lockout, in ms. */
+export const PIN_LOCK_LEFT_KEY = 'auth.pinLockLeftMs';
+
+// v1.22 (limecore#99): a lockout runs on the monotonic clock, not the wall
+// clock, so moving the device's time forward does not end it. What is left is
+// stored, and a restart resumes it from there (a restart mid-lock never
+// shortens it). `lockedUntil` stays a wall-clock time, for the countdown only.
+let lockDeadlineMono = 0;
+const monoNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+function lockLeftMs(): number {
+  return Math.max(0, lockDeadlineMono - monoNow());
+}
+function startLock(ms: number): number {
+  lockDeadlineMono = ms > 0 ? monoNow() + ms : 0;
+  return ms > 0 ? Date.now() + ms : 0;
+}
 
 const PBKDF2_ITERATIONS = 250_000;
 const SALT_BYTES = 16;
@@ -272,12 +288,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   ready: false,
 
   async init() {
-    const [pin, autoLock, bio, attempts, lastFailAt] = await Promise.all([
+    const [pin, autoLock, bio, attempts, lastFailAt, lockLeft] = await Promise.all([
       getPref(PIN_KEY),
       getPref(AUTOLOCK_KEY),
       getPref(BIOMETRIC_KEY),
       getPref(PIN_ATTEMPTS_KEY),
       getPref(PIN_LAST_FAIL_KEY),
+      getPref(PIN_LOCK_LEFT_KEY),
     ]);
 
     // v1.4 — opportunistic v2 → v3 migration. If we find a plaintext v2
@@ -311,7 +328,18 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     const failedAttempts = attempts ? Number(attempts) : 0;
     const lastFail = lastFailAt ? Number(lastFailAt) : 0;
     const lockoutSec = getLockoutSecondsForAttempts(failedAttempts);
-    const lockedUntilCandidate = lastFail && lockoutSec > 0 ? lastFail + lockoutSec * 1000 : 0;
+    // The stored time left wins. Without it (a lockout from before v1.22) the
+    // old wall-clock reading, except that a clock set back before the last
+    // failure restarts the whole lockout instead of extending it oddly.
+    const storedLeft = lockLeft != null ? Number(lockLeft) : NaN;
+    let leftMs = 0;
+    if (Number.isFinite(storedLeft)) {
+      leftMs = Math.min(Math.max(0, storedLeft), lockoutSec * 1000);
+    } else if (lastFail && lockoutSec > 0) {
+      const now = Date.now();
+      leftMs = now < lastFail ? lockoutSec * 1000 : Math.max(0, lastFail + lockoutSec * 1000 - now);
+    }
+    const lockedUntilCandidate = startLock(leftMs);
 
     set({
       hasPin: !!pin,
@@ -320,7 +348,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       autoLockMinutes: autoLockMin,
       biometricEnabled: bio !== '0',
       failedAttempts,
-      lockedUntil: lockedUntilCandidate > Date.now() ? lockedUntilCandidate : 0,
+      lockedUntil: lockedUntilCandidate,
     });
   },
 
@@ -341,6 +369,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // PIN they were guessing before resetting.
     await removePref(PIN_ATTEMPTS_KEY);
     await removePref(PIN_LAST_FAIL_KEY);
+    await removePref(PIN_LOCK_LEFT_KEY);
+    startLock(0);
     set({ hasPin: true, pinUnreadable: false, failedAttempts: 0, lockedUntil: 0 });
   },
 
@@ -351,12 +381,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // Hard gate on lockout — don't even compute the hash if locked out, both
     // to surface the lockout cleanly and to deny the attacker any
     // unintended timing signal.
-    if (state.lockedUntil > now) {
+    const left = lockLeftMs();
+    if (left > 0) {
+      await setPref(PIN_LOCK_LEFT_KEY, String(Math.ceil(left)));
+      const until = now + left;
+      if (state.lockedUntil !== until) set({ lockedUntil: until });
       return {
         ok: false,
         locked: {
-          until: state.lockedUntil,
-          remainingSeconds: Math.ceil((state.lockedUntil - now) / 1000),
+          until,
+          remainingSeconds: Math.ceil(left / 1000),
           totalAttempts: state.failedAttempts,
         },
       };
@@ -406,6 +440,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     if (matched) {
       await removePref(PIN_ATTEMPTS_KEY);
       await removePref(PIN_LAST_FAIL_KEY);
+      await removePref(PIN_LOCK_LEFT_KEY);
+      startLock(0);
       set({ failedAttempts: 0, lockedUntil: 0 });
       return { ok: true };
     }
@@ -415,7 +451,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     await setPref(PIN_ATTEMPTS_KEY, String(nextAttempts));
     await setPref(PIN_LAST_FAIL_KEY, String(now));
     const lockoutSec = getLockoutSecondsForAttempts(nextAttempts);
-    const newLockedUntil = lockoutSec > 0 ? now + lockoutSec * 1000 : 0;
+    await setPref(PIN_LOCK_LEFT_KEY, String(lockoutSec * 1000));
+    const newLockedUntil = startLock(lockoutSec * 1000);
     set({ failedAttempts: nextAttempts, lockedUntil: newLockedUntil });
 
     if (newLockedUntil > 0) {

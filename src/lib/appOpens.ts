@@ -64,9 +64,12 @@ export async function recordAppOpen(): Promise<boolean> {
   if (!session) return false;
   if (!consented('appOpens', session.user.id)) return false;
 
+  // v1.22 (limecore#113): the guard is per account. A plain date let the
+  // first account's open block the next account's first open that day.
   const today = localDay();
+  const mark = `${session.user.id}:${today}`;
   try {
-    if (localStorage.getItem(LAST_KEY) === today) return false;
+    if (localStorage.getItem(LAST_KEY) === mark) return false;
   } catch {
     // Blocked storage — fall through and queue; the primary key still
     // collapses the duplicate server-side.
@@ -76,7 +79,7 @@ export async function recordAppOpen(): Promise<boolean> {
     platform: platform(),
     openedOn: today,
   });
-  try { localStorage.setItem(LAST_KEY, today); } catch { /* see above */ }
+  try { localStorage.setItem(LAST_KEY, mark); } catch { /* see above */ }
   return true;
 }
 

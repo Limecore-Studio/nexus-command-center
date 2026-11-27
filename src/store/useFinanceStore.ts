@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { db } from '../db/database';
-import { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, PortfolioSnapshot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry, PortfolioCashEntryType, isManuallyPriced } from '../types/finance';
-import { manualHoldingValueBase } from '../lib/manualValuation';
+import { Transaction, BudgetCategory, PortfolioHolding, PortfolioLot, PortfolioSnapshot, ManualAsset, WatchlistItem, StockSale, PortfolioCashEntry, PortfolioCashEntryType } from '../types/finance';
+import { computeTotalBase } from '../lib/portfolioTotal';
 import { generateId } from '../utils/uuid';
 import { localDateKey } from '../utils/formatters';
 import { enqueue } from '../db/syncQueue';
@@ -799,9 +799,14 @@ export const useFinanceStore = create<FinanceStore>((set, get) => ({
     // counted in the snapshot, not benchmarks.
     const baseCurrency = useSettingsStore.getState().baseCurrency;
     const rates = fxPayload?.rates ?? get().fxRates;
-    const totalBase = computeTotalBase(holdings, stockQuotes, cryptoPrices, rates, baseCurrency, get().portfolioLots);
+    // v1.22 (NCC#263): the merged quotes, so a holding whose fresh fetch
+    // failed is valued from its cached quote; and no snapshot at all while any
+    // holding is still unpriced. A partial total used to overwrite the day's
+    // snapshot (14,000 written as 8,000), and the history showed a dip that
+    // never happened.
+    const { total: totalBase, unpriced } = computeTotalBase(holdings, mergedStockQuotes, mergedCryptoPrices, rates, baseCurrency, get().portfolioLots);
     let nextSnapshots = get().portfolioSnapshots;
-    if (totalBase != null && totalBase > 0) {
+    if (totalBase != null && totalBase > 0 && unpriced === 0) {
       const todayKey = localDateKey(new Date());
       const snapshot: PortfolioSnapshot = {
         date: todayKey,
@@ -1204,42 +1209,3 @@ async function portfolioMove(
   });
 }
 
-function computeTotalBase(
-  holdings: PortfolioHolding[],
-  stockQuotes: QuoteResult[],
-  cryptoPrices: CryptoResult | null,
-  rates: Record<string, number> | null,
-  baseCurrency: string,
-  lots: PortfolioLot[] = [],
-): number | null {
-  let total = 0;
-  let anyPriced = false;
-  for (const h of holdings) {
-    // v1.19 (NCC#204): bonds and custom holdings carry their own price.
-    if (isManuallyPriced(h.assetType)) {
-      const v = manualHoldingValueBase(h, lots, rates, baseCurrency);
-      if (v == null) continue;
-      total += v;
-      anyPriced = true;
-      continue;
-    }
-    if (h.assetType === 'stock' || h.assetType === 'etf') {
-      const q = stockQuotes.find((s) => s.ticker === h.ticker);
-      if (!q) continue;
-      const native = q.quote.c * h.quantity;
-      const conv = convertSync(native, q.currency, baseCurrency, rates);
-      if (conv == null) continue;
-      total += conv;
-      anyPriced = true;
-    } else {
-      const p = cryptoPrices?.prices.find((p) => p.id === h.ticker);
-      if (!p) continue;
-      const nativeEur = p.priceEur * h.quantity;
-      const conv = baseCurrency === 'EUR' ? nativeEur : convertSync(nativeEur, 'EUR', baseCurrency, rates);
-      if (conv == null) continue;
-      total += conv;
-      anyPriced = true;
-    }
-  }
-  return anyPriced ? total : null;
-}

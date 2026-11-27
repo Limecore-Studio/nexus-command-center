@@ -142,6 +142,7 @@
     "errNameRequired": "Syötä nimesi.",
     "errPasswordMismatch": "Salasanat eivät täsmää.",
     "errGoogleStart": "Google-kirjautumista ei voitu aloittaa.",
+    "errGoogleFinish": "Google-kirjautuminen ei valmistunut. Yritä uudelleen.",
     "desktopBrowser": "Viimeistele kirjautuminen selaimessa ja palaa tänne.",
     "errDesktopNoListener": "Työpöytäkirjautuminen ei ole käytettävissä tällä käynnistyskerralla. Käynnistä Nexus uudelleen tai kirjaudu sähköpostilla alla.",
     "errInvalidCredentials": "Väärä sähköposti tai salasana.",
@@ -1539,6 +1540,10 @@
       "backupWith": "{{recap}}. Napauta nähdäksesi ajantasaiset luvut.",
       "backupGeneric": "Napauta nähdäksesi päivän päätöskurssit."
     },
+    "weekly": {
+      "title": "Viikkosi on valmis",
+      "body": "Katso viikkosi: talous, opinnot, liikunta ja tehtävät."
+    },
     "task": {
       "leadLabel": "Muistuta",
       "lead_0": "Eräaikana",
@@ -1604,5 +1609,9 @@
   "undo": {
     "deleted": "”{{name}}” poistettu",
     "undo": "Kumoa"
+  },
+  "suite": {
+    "openStudyDesk": "Avaa StudyDeskissä",
+    "openLimeLog": "Avaa LimeLogissa"
   }
 }

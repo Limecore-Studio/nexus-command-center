@@ -4,4 +4,11 @@
     <string name="title_activity_main">Nexus Command Center</string>
     <string name="package_name">com.limecore.nexus</string>
     <string name="custom_url_scheme">com.limecore.nexus</string>
+    <!-- v1.22 (limecore#127): launcher shortcut labels. -->
+    <string name="shortcut_expense_short">Expense</string>
+    <string name="shortcut_expense_long">Add expense</string>
+    <string name="shortcut_quicklog_short">Quick Log</string>
+    <string name="shortcut_quicklog_long">Quick Log</string>
+    <string name="shortcut_tasks_short">Tasks</string>
+    <string name="shortcut_tasks_long">Open tasks</string>
 </resources>

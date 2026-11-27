@@ -142,6 +142,7 @@
     "errNameRequired": "Introduce tu nombre.",
     "errPasswordMismatch": "Las contraseñas no coinciden.",
     "errGoogleStart": "No se pudo iniciar el acceso con Google.",
+    "errGoogleFinish": "El inicio de sesión con Google no se completó. Inténtalo de nuevo.",
     "desktopBrowser": "Termina de iniciar sesión en tu navegador y vuelve aquí.",
     "errDesktopNoListener": "El inicio de sesión de escritorio no está disponible en este arranque. Reinicia Nexus o inicia sesión con tu correo abajo.",
     "errInvalidCredentials": "Correo o contraseña incorrectos.",
@@ -1559,6 +1560,10 @@
       "backupWith": "{{recap}}. Toca para ver cifras en directo.",
       "backupGeneric": "Toca para ver el cierre de hoy."
     },
+    "weekly": {
+      "title": "Tu semana está lista",
+      "body": "Toca para revisar tu semana: finanzas, estudios, ejercicio y tareas."
+    },
     "task": {
       "leadLabel": "Recordarme",
       "lead_0": "A la hora límite",
@@ -1624,5 +1629,9 @@
   "undo": {
     "deleted": "«{{name}}» eliminado",
     "undo": "Deshacer"
+  },
+  "suite": {
+    "openStudyDesk": "Abrir en StudyDesk",
+    "openLimeLog": "Abrir en LimeLog"
   }
 }

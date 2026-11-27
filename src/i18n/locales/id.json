@@ -56,6 +56,7 @@
     "errNameRequired": "Masukkan namamu.",
     "errPasswordMismatch": "Kata sandi tidak cocok.",
     "errGoogleStart": "Tidak dapat memulai proses masuk dengan Google.",
+    "errGoogleFinish": "Masuk dengan Google tidak selesai. Coba lagi.",
     "desktopBrowser": "Selesaikan proses masuk di peramban, lalu kembali ke sini.",
     "errDesktopNoListener": "Masuk lewat desktop tidak tersedia pada peluncuran ini. Mulai ulang Nexus, atau masuk dengan email di bawah.",
     "errInvalidCredentials": "Email atau kata sandi salah.",
@@ -1519,6 +1520,10 @@
       "backupWith": "{{recap}}. Ketuk untuk angka terkini.",
       "backupGeneric": "Ketuk untuk penutupan hari ini."
     },
+    "weekly": {
+      "title": "Minggumu sudah siap",
+      "body": "Ketuk untuk meninjau minggumu: keuangan, belajar, kebugaran, dan tugas."
+    },
     "task": {
       "leadLabel": "Ingatkan saya",
       "lead_0": "Saat tenggat",
@@ -1584,5 +1589,9 @@
   "undo": {
     "deleted": "“{{name}}” dihapus",
     "undo": "Urungkan"
+  },
+  "suite": {
+    "openStudyDesk": "Buka di StudyDesk",
+    "openLimeLog": "Buka di LimeLog"
   }
 }

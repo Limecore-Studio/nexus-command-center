@@ -56,6 +56,7 @@
     "errNameRequired": "أدخل اسمك.",
     "errPasswordMismatch": "كلمتا المرور غير متطابقتين.",
     "errGoogleStart": "تعذّر بدء تسجيل الدخول عبر Google.",
+    "errGoogleFinish": "لم يكتمل تسجيل الدخول عبر Google. حاول مرة أخرى.",
     "desktopBrowser": "أكمل تسجيل الدخول في المتصفح ثم عد إلى هنا.",
     "errDesktopNoListener": "تسجيل الدخول من سطح المكتب غير متاح في هذه الجلسة. أعد تشغيل Nexus أو سجّل الدخول بالبريد الإلكتروني أدناه.",
     "errInvalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
@@ -1627,6 +1628,10 @@
       "backupWith": "{{recap}}. اضغط للأرقام المباشرة.",
       "backupGeneric": "اضغط لإغلاق اليوم."
     },
+    "weekly": {
+      "title": "أسبوعك جاهز",
+      "body": "اضغط لمراجعة أسبوعك: المال والدراسة واللياقة والمهام."
+    },
     "task": {
       "leadLabel": "ذكّرني",
       "lead_0": "في موعد الاستحقاق",
@@ -1696,5 +1701,9 @@
   "undo": {
     "deleted": "تم حذف «{{name}}»",
     "undo": "تراجع"
+  },
+  "suite": {
+    "openStudyDesk": "فتح في StudyDesk",
+    "openLimeLog": "فتح في LimeLog"
   }
 }

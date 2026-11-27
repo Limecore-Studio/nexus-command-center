@@ -173,3 +173,8 @@ if (Capacitor.isNativePlatform()) {
 export const OAUTH_REDIRECT_URL = Capacitor.isNativePlatform()
   ? 'com.limecore.nexus://login-callback'
   : DESKTOP_REDIRECT_URL || `${window.location.origin}/`;
+
+/** v1.22 (NCC#263): fired on window when an OAuth sign-in comes back without
+ *  a session (cancelled, refused, or the code exchange failed), so Login can
+ *  say so instead of waiting for a callback that has already happened. */
+export const OAUTH_FAILED_EVENT = 'nexus-oauth-failed';

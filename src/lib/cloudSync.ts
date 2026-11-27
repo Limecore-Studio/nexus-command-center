@@ -41,6 +41,7 @@ import { selectRequeue, selectPrunable, REQUEUE_TAG, PRUNE_AFTER_DAYS } from './
 import { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydratePortfolioCashFromCloud, hydrateStockSalesFromCloud, hydrateStudiesTables, hydrateWorkQualityFromCloud, putFromCloud, removeTombstoned } from './cloudSyncHydrate';
 import { pushHandlers } from './cloudSyncPush';
 import { dueFromServer } from './taskDue';
+import { SHARING_ENABLED } from './sharing';
 import { ENTITY_TABLES } from './liveHints';
 export { hydrateBodyMetricsFromCloud, hydrateBraindumpFromCloud, hydrateHabitsFromCloud, hydrateStudiesFromCloud, hydrateWorkQualityFromCloud } from './cloudSyncHydrate';
 
@@ -183,8 +184,15 @@ export async function pushQueue(userId: string): Promise<PushResult> {
   // row is not refreshed by the pull) instead of being dropped. Holding a
   // row back is the safer side of that trade; losing it is not recoverable.
   let parentFailedAt = Infinity;
+  // v1.22 (NCC#263): an entity whose item failed and stays queued keeps its
+  // later items queued too, in order. Otherwise a delete queued behind a
+  // failed insert ran as a 0-row update, was marked done, and the insert's
+  // retry then brought the row back on every device.
+  const heldBack = new Set<string>();
+  const entityKey = (q: { entityType: string; entityId: string }) => `${q.entityType}:${q.entityId}`;
 
   for (const item of pending) {
+    if (heldBack.has(entityKey(item))) continue;
     result.attempted++;
     const handler = pushHandlers[item.entityType];
     if (!handler) {
@@ -223,6 +231,7 @@ export async function pushQueue(userId: string): Promise<PushResult> {
         await db.syncQueue.update(item.id, { lastError: msg });
         result.errors.push({ entityType: item.entityType, entityId: item.entityId, message: msg });
         parentFailedAt = Math.min(parentFailedAt, priority);
+        heldBack.add(entityKey(item));
       }
       result.failed++;
       // v1.18.1 (NCC#147): no network means every remaining item would fail
@@ -372,9 +381,14 @@ export async function pullAll(_userId: string, only?: ReadonlySet<string>): Prom
     db.transactions
   );
 
+  // v1.22 (limecore#99): while sharing is off, only this account's own rows
+  // come down. RLS still lets a share row expose another account's task or
+  // category, and nothing on this device has accepted one.
+  const ownRowsOnly = SHARING_ENABLED ? [] : [{ column: 'user_id', op: 'eq' as const, value: _userId }];
+
   result.budgetCategories = await pullTable<any, BudgetCategory>(
     'budget_categories',
-    [],
+    ownRowsOnly,
     (r) => ({
       id: r.id,
       name: r.name,
@@ -385,6 +399,7 @@ export async function pullAll(_userId: string, only?: ReadonlySet<string>): Prom
     }),
     async (rows) => {
       await putPulled(db.budgetCategories, rows, ['linkedManualAssetId']);
+      if (!SHARING_ENABLED) await dropForeignRows(db.budgetCategories, _userId);
     },
     db.budgetCategories
   );
@@ -509,7 +524,7 @@ export async function pullAll(_userId: string, only?: ReadonlySet<string>): Prom
 
   result.tasks = await pullTable<any, Task>(
     'tasks',
-    [],
+    ownRowsOnly,
     (r) => ({
       id: r.id,
       title: r.title,
@@ -525,6 +540,7 @@ export async function pullAll(_userId: string, only?: ReadonlySet<string>): Prom
     }),
     async (rows) => {
       await putPulled(db.tasks, rows, ['category']);
+      if (!SHARING_ENABLED) await dropForeignRows(db.tasks, _userId);
     },
     db.tasks
   );
@@ -876,4 +892,12 @@ export async function hasLocalData(): Promise<boolean> {
     db.grades.filter((r) => r.syncStatus === 'pending').count(),
   ]);
   return counts.some((c) => c > 0);
+}
+
+/** v1.22 (limecore#99): rows another account owns that an earlier pull
+ *  brought in through a share. Rows with no ownerId (made on this device) and
+ *  this account's own rows stay. */
+async function dropForeignRows(table: Table<{ id: string; ownerId?: string }, string>, userId: string): Promise<void> {
+  const foreign = (await table.toArray()).filter((r) => r.ownerId && r.ownerId !== userId).map((r) => r.id);
+  if (foreign.length > 0) await table.bulkDelete(foreign);
 }

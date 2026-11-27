@@ -11,12 +11,12 @@
 //      so the next launch goes straight to the app. User can still sign in
 //      later from Settings to enable Supabase sync.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
-import { supabase, OAUTH_REDIRECT_URL } from '../../lib/supabase';
+import { supabase, OAUTH_REDIRECT_URL, OAUTH_FAILED_EVENT } from '../../lib/supabase';
 import { desktop, DESKTOP_REDIRECT_URL } from '../../lib/desktop';
 import { setGuestMode } from '../../lib/guestMode';
 import { isOnboarded } from '../../lib/onboarding';
@@ -41,6 +41,16 @@ export default function Login() {
   // system browser, and a window that visibly does nothing after the click is
   // indistinguishable from one that failed.
   const [notice, setNotice] = useState<string | null>(null);
+  // v1.22 (NCC#263): a Google sign-in that came back without a session.
+  useEffect(() => {
+    const onFailed = () => {
+      setNotice(null);
+      setGoogleSubmitting(false);
+      setError(t('auth.errGoogleFinish'));
+    };
+    window.addEventListener(OAUTH_FAILED_EVENT, onFailed);
+    return () => window.removeEventListener(OAUTH_FAILED_EVENT, onFailed);
+  }, [t]);
   const [showEmail, setShowEmail] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {

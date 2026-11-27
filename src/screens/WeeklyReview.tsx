@@ -32,6 +32,7 @@ import { daysUntil, fetchStudyDeadlines, type StudyDeadline } from '../lib/study
 import { RackLevels, RackLog, type LevelRow } from '../components/RackWeekly';
 import { useActiveTheme } from '../lib/theme';
 import Glyph from '../components/Glyph';
+import SuiteAppLink from '../components/SuiteAppLink';
 
 function formatRange(start: Date, end: Date): string {
   const sameMonth = start.getMonth() === end.getMonth();
@@ -325,9 +326,13 @@ export default function WeeklyReview() {
           {extras.studyByCourse.length > 0 && (
             <div className="mt-2 space-y-0.5">
               {extras.studyByCourse.slice(0, 4).map((c) => (
-                <div key={c.courseId} className="flex justify-between text-[0.625rem] text-text-muted">
+                <div key={c.courseId} className="flex justify-between items-center gap-2 text-[0.625rem] text-text-muted">
                   <span className="truncate">{c.name}</span>
-                  <span className="font-mono">{formatHours(c.minutes)}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono">{formatHours(c.minutes)}</span>
+                    {/* v1.22 (limecore#131): that course in StudyDesk. */}
+                    <SuiteAppLink app="studydesk" route={`course/${c.courseId}`} />
+                  </span>
                 </div>
               ))}
             </div>
@@ -364,6 +369,10 @@ export default function WeeklyReview() {
               {t('weeklyReview.mostTrained', { name: data.fitness.topExercise, sets: data.fitness.topExerciseSets })}
             </div>
           )}
+          {/* v1.22 (limecore#131): progress in LimeLog. */}
+          <div className="mt-2">
+            <SuiteAppLink app="limelog" route="progress" />
+          </div>
           {/* v1.22 (NCC#278): heaviest sets that beat every earlier one. */}
           {extras.newBests.length > 0 && (
             <div className="text-[0.625rem] text-success mt-1">

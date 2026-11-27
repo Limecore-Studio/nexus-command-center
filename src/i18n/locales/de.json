@@ -142,6 +142,7 @@
     "errNameRequired": "Gib deinen Namen ein.",
     "errPasswordMismatch": "Die Passwörter stimmen nicht überein.",
     "errGoogleStart": "Google-Anmeldung konnte nicht gestartet werden.",
+    "errGoogleFinish": "Die Google-Anmeldung wurde nicht abgeschlossen. Versuche es erneut.",
     "desktopBrowser": "Schließe die Anmeldung im Browser ab und komm dann hierher zurück.",
     "errDesktopNoListener": "Die Desktop-Anmeldung ist bei diesem Start nicht verfügbar. Starte Nexus neu oder melde dich unten per E-Mail an.",
     "errInvalidCredentials": "E-Mail oder Passwort ist falsch.",
@@ -1539,6 +1540,10 @@
       "backupWith": "{{recap}}. Tippe für aktuelle Zahlen.",
       "backupGeneric": "Tippe für den heutigen Schlussstand."
     },
+    "weekly": {
+      "title": "Deine Woche ist bereit",
+      "body": "Tippe, um deine Woche anzusehen: Finanzen, Studium, Fitness und Aufgaben."
+    },
     "task": {
       "leadLabel": "Erinnern",
       "lead_0": "Zur Fälligkeit",
@@ -1604,5 +1609,9 @@
   "undo": {
     "deleted": "„{{name}}“ gelöscht",
     "undo": "Rückgängig"
+  },
+  "suite": {
+    "openStudyDesk": "In StudyDesk öffnen",
+    "openLimeLog": "In LimeLog öffnen"
   }
 }

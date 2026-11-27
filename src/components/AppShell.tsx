@@ -1,5 +1,6 @@
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useUndoStore } from '../store/useUndoStore';
+import { DEEP_LINK_EVENT, takeDeepLink } from '../lib/deepLinks';
 import { useSessionStore } from '../store/useSessionStore';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -83,6 +84,24 @@ export default function AppShell() {
   const [quickAddMounted, setQuickAddMounted] = useState(false);
   const [QuickLogBottomSheet, setQuickLogSheet] = useState(() => lazy(loadQuickLog));
   const undoPending = useUndoStore((s) => s.pending !== null);
+  // v1.22 (limecore#127): a launcher shortcut's link (lib/deepLinks), waiting
+  // from before the shell mounted (cold start, sign-in) or arriving now.
+  const navigateTo = useNavigate();
+  useEffect(() => {
+    const open = () => {
+      const target = takeDeepLink();
+      if (!target) return;
+      if (target.kind === 'quickLog') {
+        setQuickLogMounted(true);
+        setQuickLogOpen(true);
+      } else {
+        navigateTo(target.path);
+      }
+    };
+    open();
+    window.addEventListener(DEEP_LINK_EVENT, open);
+    return () => window.removeEventListener(DEEP_LINK_EVENT, open);
+  }, [navigateTo]);
   const [QuickAddOverlay, setQuickAddSheet] = useState(() => lazy(loadQuickAdd));
   const location = useLocation();
   // v1.9 Item 14, Phase 1 — desktop shell. Above 769px the bottom tab bar is

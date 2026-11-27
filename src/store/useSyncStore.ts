@@ -286,6 +286,10 @@ export const useSyncStore = create<SyncStore>((set, get) => ({
     // enqueue, so a burst becomes one run.
     let pushTimer: ReturnType<typeof setTimeout> | null = null;
     onEnqueued(() => {
+      // v1.22 (NCC#263): offline, pushNow returns early, so without this the
+      // count stayed 0 and neither the 'online' handler nor the flusher
+      // (both gated on pendingCount > 0) ever pushed the edits.
+      void get().refreshPending();
       if (pushTimer) clearTimeout(pushTimer);
       pushTimer = setTimeout(() => {
         pushTimer = null;

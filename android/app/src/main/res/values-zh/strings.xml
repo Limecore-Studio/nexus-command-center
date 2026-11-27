@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- v1.22 (limecore#127): launcher shortcut labels. -->
+    <string name="shortcut_expense_short">支出</string>
+    <string name="shortcut_expense_long">添加支出</string>
+    <string name="shortcut_quicklog_short">快速记录</string>
+    <string name="shortcut_quicklog_long">快速记录</string>
+    <string name="shortcut_tasks_short">任务</string>
+    <string name="shortcut_tasks_long">打开任务</string>
+</resources>

@@ -423,7 +423,24 @@ setupUpdates({
   openExternally,
 });
 
+// v1.22 (NCC#263): one NCC per user profile. A second launch (a double-click
+// on the shortcut while the window is behind others) would open the same
+// IndexedDB and localStorage from a second process and bind its own OAuth
+// port. It hands over to the running window and exits instead.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  log('another instance holds the lock; quitting');
+  app.quit();
+}
+app.on('second-instance', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+});
+
 app.whenReady().then(async () => {
+  if (!gotSingleInstanceLock) return;
   log('app.whenReady resolved');
   registerProtocolHandler();
   log(`serving ${DIST_DIR} at ${APP_ORIGIN}/ (stable origin)`);

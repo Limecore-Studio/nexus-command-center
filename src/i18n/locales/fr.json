@@ -106,6 +106,12 @@
     }
   },
   "auth": {
+    "bio": {
+      "reason": "Déverrouiller Nexus Command Center",
+      "title": "Nexus : déverrouillage biométrique",
+      "subtitle": "Utilise l'empreinte ou le visage pour déverrouiller",
+      "cancel": "Utiliser le PIN"
+    },
     "signInSubtitle": "Command Center · Connexion",
     "firstRunSubtitle": "Finances, forme, études et habitudes — un seul score.",
     "firstRunPromise": "Aucun compte requis. Commencez maintenant, synchronisez plus tard.",
@@ -1536,6 +1542,24 @@
     "customHint": "Prix fixé par vous : mettez-le à jour quand il change."
   },
   "notif": {
+    "budget": {
+      "over": "Budget dépassé",
+      "near": "Budget presque atteint",
+      "body": "{{name}} : {{spent}} / {{limit}} ({{pct}} %)",
+      "view": "Voir la catégorie"
+    },
+    "news": {
+      "market": "Marché · {{source}}",
+      "moveTitle": "Mouvement de marché",
+      "moveBody": "{{ticker}} : {{pct}} aujourd'hui"
+    },
+    "eod": {
+      "title": "Marchés fermés",
+      "body": "Ouvre Nexus pour le récap du jour.",
+      "recap": "Aujourd'hui {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}. Touche pour les chiffres en direct.",
+      "backupGeneric": "Touche pour la clôture du jour."
+    },
     "weekly": {
       "title": "Ta semaine est prête",
       "body": "Touche pour revoir ta semaine : finances, études, sport et tâches."

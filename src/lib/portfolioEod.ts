@@ -33,6 +33,8 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { cancelNotifications, ID_RANGES, scheduleNotification } from './notifications';
 import { convertSync } from '../api/fxRates';
+import i18n from '../i18n';
+import { formatLocale } from '../utils/formatters';
 import { isFromTodaysSession } from './marketDay';
 
 const EOD_BASE = ID_RANGES['portfolio-eod'].base;
@@ -146,22 +148,15 @@ function projectedRecap(): Recap | null {
   return { changePct, changeBase, baseCurrency };
 }
 
+/** v1.22 (NCC#263): translated, with the percent and the amount formatted
+ *  for the user's locale and currency instead of a hand-picked symbol. */
 function formatRecapBody(recap: Recap): string {
-  const sign = recap.changeBase >= 0 ? '+' : '−';
-  const pct = Math.abs(recap.changePct).toFixed(2);
-  const amt = Math.abs(recap.changeBase).toFixed(2);
-  // Currency symbol fallback to ISO code — keeps the body short on common ones.
-  const sym =
-    recap.baseCurrency === 'EUR' ? '€' :
-    recap.baseCurrency === 'USD' ? '$' :
-    recap.baseCurrency === 'GBP' ? '£' :
-    recap.baseCurrency === 'JPY' ? '¥' :
-    ` ${recap.baseCurrency}`;
-  // For symbol-prefix currencies put it before the number; for the
-  // fallback (` ABC`) it lands as suffix. Either reads fine.
-  const symPrefix = sym.startsWith(' ') ? '' : sym;
-  const symSuffix = sym.startsWith(' ') ? sym : '';
-  return `Today ${sign}${pct}% · ${sign}${symPrefix}${amt}${symSuffix}`;
+  const locale = formatLocale();
+  const pct = new Intl.NumberFormat(locale, { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' })
+    .format(recap.changePct / 100);
+  const amount = new Intl.NumberFormat(locale, { style: 'currency', currency: recap.baseCurrency, signDisplay: 'always' })
+    .format(recap.changeBase);
+  return i18n.t('notif.eod.recap', { pct, amount });
 }
 
 // ─── Main entry point ────────────────────────────────────────────────────
@@ -234,8 +229,8 @@ export async function runPortfolioEodTick(): Promise<void> {
   await scheduleNotification({
     id: PRIMARY_ID,
     category: 'portfolio-eod',
-    title: 'Markets closed',
-    body: "Open Nexus for today's recap.",
+    title: i18n.t('notif.eod.title'),
+    body: i18n.t('notif.eod.body'),
     at: primary,
     extra: { route: '/finance/portfolio' },
   });
@@ -247,12 +242,12 @@ export async function runPortfolioEodTick(): Promise<void> {
   // they engage during the day.
   const recap = projectedRecap();
   const backupBody = recap
-    ? `${formatRecapBody(recap)} — tap for live numbers.`
-    : "Tap for today's close.";
+    ? i18n.t('notif.eod.backupWith', { recap: formatRecapBody(recap) })
+    : i18n.t('notif.eod.backupGeneric');
   await scheduleNotification({
     id: BACKUP_ID,
     category: 'portfolio-eod',
-    title: 'Markets closed',
+    title: i18n.t('notif.eod.title'),
     body: backupBody,
     at: backup,
     extra: { route: '/finance/portfolio' },

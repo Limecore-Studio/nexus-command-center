@@ -106,6 +106,12 @@
     }
   },
   "auth": {
+    "bio": {
+      "reason": "Avaa Nexus Command Center",
+      "title": "Nexus: biometrinen avaus",
+      "subtitle": "Avaa sormenjäljellä tai kasvoilla",
+      "cancel": "Käytä PIN-koodia"
+    },
     "signInSubtitle": "Command Center · Kirjaudu sisään",
     "firstRunSubtitle": "Talous, kunto, opinnot ja tavat — yksi pistemäärä.",
     "firstRunPromise": "Tiliä ei tarvita. Aloita heti, synkronoi myöhemmin.",
@@ -1516,6 +1522,24 @@
     "customHint": "Itse hinnoiteltu: päivitä hinta, kun se muuttuu."
   },
   "notif": {
+    "budget": {
+      "over": "Budjetti ylittyi",
+      "near": "Budjetti lähes käytetty",
+      "body": "{{name}}: {{spent}} / {{limit}} ({{pct}} %)",
+      "view": "Näytä kategoria"
+    },
+    "news": {
+      "market": "Markkinat · {{source}}",
+      "moveTitle": "Markkinaliike",
+      "moveBody": "{{ticker}}: {{pct}} tänään"
+    },
+    "eod": {
+      "title": "Pörssit sulkeutuivat",
+      "body": "Avaa Nexus nähdäksesi päivän yhteenvedon.",
+      "recap": "Tänään {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}. Napauta nähdäksesi ajantasaiset luvut.",
+      "backupGeneric": "Napauta nähdäksesi päivän päätöskurssit."
+    },
     "weekly": {
       "title": "Viikkosi on valmis",
       "body": "Katso viikkosi: talous, opinnot, liikunta ja tehtävät."

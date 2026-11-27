@@ -20,6 +20,12 @@
     "ok": "حسنًا"
   },
   "auth": {
+    "bio": {
+      "reason": "فتح Nexus Command Center",
+      "title": "Nexus: فتح بالبصمة",
+      "subtitle": "استخدم البصمة أو الوجه للفتح",
+      "cancel": "استخدام الرمز"
+    },
     "signInSubtitle": "Command Center · تسجيل الدخول",
     "firstRunSubtitle": "المال واللياقة والدراسة والعادات — في نتيجة واحدة.",
     "firstRunPromise": "لا حاجة إلى حساب. ابدأ الآن وزامِن لاحقًا.",
@@ -1604,6 +1610,24 @@
     "customHint": "سعر تحدده أنت: حدّثه عندما يتغير."
   },
   "notif": {
+    "budget": {
+      "over": "تجاوزت الميزانية",
+      "near": "اقتربت من الميزانية",
+      "body": "{{name}}: {{spent}} / {{limit}} ({{pct}}%)",
+      "view": "عرض الفئة"
+    },
+    "news": {
+      "market": "السوق · {{source}}",
+      "moveTitle": "حركة في السوق",
+      "moveBody": "{{ticker}}: {{pct}} اليوم"
+    },
+    "eod": {
+      "title": "أُغلقت الأسواق",
+      "body": "افتح Nexus لملخص اليوم.",
+      "recap": "اليوم {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}. اضغط للأرقام المباشرة.",
+      "backupGeneric": "اضغط لإغلاق اليوم."
+    },
     "weekly": {
       "title": "أسبوعك جاهز",
       "body": "اضغط لمراجعة أسبوعك: المال والدراسة واللياقة والمهام."

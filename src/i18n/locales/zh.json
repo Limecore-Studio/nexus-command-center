@@ -106,6 +106,12 @@
     }
   },
   "auth": {
+    "bio": {
+      "reason": "解锁 Nexus Command Center",
+      "title": "Nexus：生物识别解锁",
+      "subtitle": "使用指纹或面部解锁",
+      "cancel": "使用 PIN"
+    },
     "signInSubtitle": "Command Center · 登录",
     "firstRunSubtitle": "财务、健身、学习与习惯——汇成一个评分。",
     "firstRunPromise": "无需账户。现在就开始，之后再同步。",
@@ -1502,6 +1508,24 @@
     "customHint": "由你定价：价格变化时请更新。"
   },
   "notif": {
+    "budget": {
+      "over": "已超出预算",
+      "near": "接近预算",
+      "body": "{{name}}：{{spent}} / {{limit}}（{{pct}}%）",
+      "view": "查看类别"
+    },
+    "news": {
+      "market": "市场 · {{source}}",
+      "moveTitle": "市场波动",
+      "moveBody": "{{ticker}}：今日 {{pct}}"
+    },
+    "eod": {
+      "title": "市场已收盘",
+      "body": "打开 Nexus 查看今日回顾。",
+      "recap": "今日 {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}。点按查看实时数据。",
+      "backupGeneric": "点按查看今日收盘。"
+    },
     "weekly": {
       "title": "你的一周总结已就绪",
       "body": "点按查看你的一周：财务、学习、健身和任务。"

@@ -15,22 +15,22 @@
 // `x-goog-api-key` header, so the web, desktop and Android editions all call
 // it directly; index.html's content security policy allows the host.
 
+import { Preferences } from '@capacitor/preferences';
+
 export const AI_HOST = 'https://generativelanguage.googleapis.com';
 /** Editable in Settings: when Google retires a model, a user on an old
- *  version can type the new name instead of waiting for an update. */
-export const DEFAULT_AI_MODEL = 'gemini-2.5-flash';
+ *  version can type the new name instead of waiting for an update. The
+ *  default is the model `ai-generate` ran last (limecore#60): Google's 2.5
+ *  models no longer serve new projects, so a 2.5 default fails on a new key.
+ *  Same as LimeLog's (LimeLog#172). */
+export const DEFAULT_AI_MODEL = 'gemini-3.5-flash-lite';
 
 const KEY_PREF = 'apikey_gemini';
 const MODEL_PREF = 'ai.model';
 
-// The module, never the plugin itself, is what an async function may return:
-// a Capacitor plugin is a proxy that answers every property, `then` included,
-// so resolving a promise with it calls a native "then" that does not exist.
-const prefsModule = () => import('@capacitor/preferences');
-
 async function readPref(key: string): Promise<string | null> {
   try {
-    return (await (await prefsModule()).Preferences.get({ key })).value ?? null;
+    return (await Preferences.get({ key })).value ?? null;
   } catch {
     try {
       return localStorage.getItem(key);
@@ -42,9 +42,8 @@ async function readPref(key: string): Promise<string | null> {
 
 async function writePref(key: string, value: string | null): Promise<void> {
   try {
-    const p = (await prefsModule()).Preferences;
-    if (value == null) await p.remove({ key });
-    else await p.set({ key, value });
+    if (value == null) await Preferences.remove({ key });
+    else await Preferences.set({ key, value });
   } catch {
     try {
       if (value == null) localStorage.removeItem(key);
@@ -76,6 +75,20 @@ export function classifyAiError(status: number, message: string): AiError {
   return 'other';
 }
 
+/** The generation settings `ai-generate` used, moved here with the call
+ *  (limecore#60), the same as LimeLog's. 3.x: lowest thinking level and no
+ *  temperature (deprecated there, and sending thinkingBudget too is a 400);
+ *  2.x: the old settings. Thinking counts against maxOutputTokens, so it stays
+ *  at the minimum or a small cap returns only a few words. Exported for the
+ *  tests. */
+export function generationConfig(model: string, maxTokens: number, temperature: number, json = false): Record<string, unknown> {
+  const config: Record<string, unknown> = /^gemini-2\./.test(model)
+    ? { temperature, maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } }
+    : { maxOutputTokens: maxTokens, thinkingConfig: { thinkingLevel: 'MINIMAL' } };
+  if (json) config.responseMimeType = 'application/json';
+  return config;
+}
+
 export async function generate(opts: {
   prompt: string;
   maxTokens: number;
@@ -96,19 +109,20 @@ export async function generate(opts: {
       headers: { 'content-type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: opts.prompt }] }],
-        generationConfig: { maxOutputTokens: opts.maxTokens, temperature: opts.temperature },
+        generationConfig: generationConfig(model, opts.maxTokens, opts.temperature),
       }),
     });
   } catch {
     return { ok: false, error: 'network' };
   }
-  let body: { candidates?: { content?: { parts?: { text?: string }[] } }[]; error?: { message?: string } } = {};
+  let body: { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]; error?: { message?: string } } = {};
   try {
     body = await res.json();
   } catch {
     /* not JSON */
   }
   if (!res.ok) return { ok: false, error: classifyAiError(res.status, body.error?.message ?? '') };
-  const text = (body.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('').trim();
+  // Thought parts are the model's reasoning, not the answer.
+  const text = (body.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? '').join('').trim();
   return text ? { ok: true, text } : { ok: false, error: 'other' };
 }

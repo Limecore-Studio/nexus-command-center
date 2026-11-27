@@ -28,7 +28,9 @@ export default function AiSection({
   toggle: (locked: boolean) => ReactNode;
 }) {
   const { t } = useTranslation();
-  const [key, setKey] = useState('');
+  // undefined while the stored key is still loading: the switch-off below
+  // must wait for the answer, or it turned AI off on every visit.
+  const [key, setKey] = useState<string | undefined>(undefined);
   const [model, setModel] = useState(DEFAULT_AI_MODEL);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
@@ -42,7 +44,7 @@ export default function AiSection({
 
   // No key means AI is off, whatever was switched on before.
   useEffect(() => {
-    if (!key && enabled) void onEnabled(false);
+    if (key === '' && enabled) void onEnabled(false);
   }, [key, enabled, onEnabled]);
 
   const saveKey = async () => {
@@ -132,7 +134,7 @@ export default function AiSection({
       </div>
 
       {toggle(!key)}
-      {!key && <div className="text-[0.625rem] text-text-muted px-1">{t('ai.needKey')}</div>}
+      {key === '' && <div className="text-[0.625rem] text-text-muted px-1">{t('ai.needKey')}</div>}
       {/* Consent has to be informed where it is given, so this sits on the
           switch and not only in the policy. */}
       <div className="text-[0.625rem] text-text-muted px-1 pb-1 leading-relaxed">{t('ai.terms')}</div>

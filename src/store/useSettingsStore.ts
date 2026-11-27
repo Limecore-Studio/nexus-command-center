@@ -113,7 +113,7 @@ interface SettingsStore {
    *  portfolio + watchlist rows displays. */
   insightsTab: InsightsTab;
   /** v1.8 — whether the cloud AI features may run. Gates the Life-tab
-   *  narrative; when false nothing is sent to the `ai-generate` function. */
+   *  narrative; when false (or no key is set) nothing is sent to Gemini. */
   /** 'auto' follows the tier default (1.0 phone/tablet, 1.2 desktop); any
    *  other value is an explicit user choice applied at every tier. */
   uiScale: UiScale;

@@ -1,6 +1,6 @@
 // Life narrative card — v1.4. Sits on the Life tab between the score ring and
 // the Patterns list. Shows a short AI-written summary of the week, generated
-// by the `ai-generate` Edge Function (cloud Gemini). Cached in Dexie and
+// by Gemini on the user's own key (lib/aiProvider, v1.22). Cached in Dexie and
 // regenerated when the life score drifts ≥5 points, or on manual refresh.
 //
 // Degrades to nothing: if generation returns null (AI not configured, offline,
@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { db } from '../db/database';
 import { generateLifeNarrative, type NarrativeInput } from '../lib/aiNarrative';
+import type { AiError } from '../lib/aiProvider';
 import Glyph from './Glyph';
 
 const DRIFT_THRESHOLD = 5;
@@ -20,6 +21,8 @@ export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) 
   const [text, setText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  // v1.22 (limecore#122): why it failed, when the user can fix it.
+  const [aiError, setAiError] = useState<AiError | null>(null);
   // Avoid duplicate generations for the same score within one mount.
   const lastGeneratedScore = useRef<number | null>(null);
 
@@ -27,7 +30,10 @@ export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) 
     if (loading) return;
     setLoading(true);
     setFailed(false);
-    const result = await generateLifeNarrative(input);
+    setAiError(null);
+    const out = await generateLifeNarrative(input);
+    const result = out && 'text' in out ? out.text : null;
+    if (out && 'error' in out) setAiError(out.error);
     if (result) {
       setText(result);
       lastGeneratedScore.current = input.lifeScore;
@@ -68,8 +74,9 @@ export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input.lifeScore]);
 
-  // Nothing to show and nothing happening → render empty (graceful absence).
-  if (!text && !loading) return null;
+  // Nothing to show and nothing happening → render empty (graceful absence),
+  // unless a request failed for a reason the user can fix (v1.22).
+  if (!text && !loading && !aiError) return null;
 
   return (
     <div className="panel p-4 border-s-2 border-primary/40">
@@ -118,6 +125,11 @@ export default function LifeNarrativeCard({ input }: { input: NarrativeInput }) 
         </button>
       )}
 
+      {aiError && (
+        <div role="status" className="text-[0.625rem] text-warning mt-2">
+          {t(`ai.err.${aiError}`)}
+        </div>
+      )}
       <div className="text-[0.5625rem] text-text-muted mt-2">
         {t('life.narrativeFootnote')}
       </div>

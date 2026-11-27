@@ -47,6 +47,21 @@ public class LimecoreAppLinkPlugin extends Plugin {
 
         JSObject result = new JSObject();
         if (intent.resolveActivity(getContext().getPackageManager()) == null) {
+            // NCC#347: the app is installed but too old to know this link (F-Droid
+            // updates each app on its own schedule). Open it at its start screen
+            // rather than sending the user to the store for an app they have.
+            Intent launch = getContext().getPackageManager().getLaunchIntentForPackage(pkg);
+            if (launch != null) {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    getContext().startActivity(launch);
+                    result.put("opened", true);
+                    call.resolve(result);
+                    return;
+                } catch (ActivityNotFoundException e) {
+                    // fall through to "not opened"
+                }
+            }
             result.put("opened", false);
             call.resolve(result);
             return;

@@ -703,6 +703,20 @@ async function pushHabit(item: SyncQueueItem, ctx: PushContext): Promise<void> {
     archived_at: local.archivedAt ?? null,
     updated_at: updatedAt,
   };
+  // v1.22 (limecore#113): the habits trigger stamps now() on every write
+  // instead of keeping the newer edit, so an offline edit pushed late beat a
+  // newer one from another device and every device then took the older
+  // version. Until the trigger keeps last-writer-wins like set_updated_at(),
+  // an edit older than the server's row is not sent: the next pull brings the
+  // newer one here. (A narrow race remains between this read and the write.)
+  const { data: current, error: readErr } = await supabase
+    .from('habits')
+    .select('updated_at')
+    .eq('id', row.id)
+    .maybeSingle();
+  if (readErr) throw readErr;
+  const serverStamp = (current as { updated_at?: string } | null)?.updated_at;
+  if (serverStamp && Date.parse(serverStamp) > Date.parse(updatedAt)) return;
   const { error } = await supabase.from('habits').upsert(row);
   if (error) throw error;
 }

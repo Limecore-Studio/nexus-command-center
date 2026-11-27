@@ -183,8 +183,15 @@ export async function pushQueue(userId: string): Promise<PushResult> {
   // row is not refreshed by the pull) instead of being dropped. Holding a
   // row back is the safer side of that trade; losing it is not recoverable.
   let parentFailedAt = Infinity;
+  // v1.22 (NCC#263): an entity whose item failed and stays queued keeps its
+  // later items queued too, in order. Otherwise a delete queued behind a
+  // failed insert ran as a 0-row update, was marked done, and the insert's
+  // retry then brought the row back on every device.
+  const heldBack = new Set<string>();
+  const entityKey = (q: { entityType: string; entityId: string }) => `${q.entityType}:${q.entityId}`;
 
   for (const item of pending) {
+    if (heldBack.has(entityKey(item))) continue;
     result.attempted++;
     const handler = pushHandlers[item.entityType];
     if (!handler) {
@@ -223,6 +230,7 @@ export async function pushQueue(userId: string): Promise<PushResult> {
         await db.syncQueue.update(item.id, { lastError: msg });
         result.errors.push({ entityType: item.entityType, entityId: item.entityId, message: msg });
         parentFailedAt = Math.min(parentFailedAt, priority);
+        heldBack.add(entityKey(item));
       }
       result.failed++;
       // v1.18.1 (NCC#147): no network means every remaining item would fail

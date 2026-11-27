@@ -1515,6 +1515,10 @@
     "customHint": "Von dir bepreist: aktualisiere den Preis, wenn er sich ändert."
   },
   "notif": {
+    "weekly": {
+      "title": "Deine Woche ist bereit",
+      "body": "Tippe, um deine Woche anzusehen: Finanzen, Studium, Fitness und Aufgaben."
+    },
     "task": {
       "leadLabel": "Erinnern",
       "lead_0": "Zur Fälligkeit",

@@ -1535,6 +1535,10 @@
     "customHint": "Preço definido por si: atualize-o quando mudar."
   },
   "notif": {
+    "weekly": {
+      "title": "A tua semana está pronta",
+      "body": "Toca para rever a tua semana: finanças, estudos, exercício e tarefas."
+    },
     "task": {
       "leadLabel": "Lembrar-me",
       "lead_0": "Na hora do prazo",

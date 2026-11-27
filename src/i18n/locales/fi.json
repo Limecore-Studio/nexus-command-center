@@ -1515,6 +1515,10 @@
     "customHint": "Itse hinnoiteltu: päivitä hinta, kun se muuttuu."
   },
   "notif": {
+    "weekly": {
+      "title": "Viikkosi on valmis",
+      "body": "Katso viikkosi: talous, opinnot, liikunta ja tehtävät."
+    },
     "task": {
       "leadLabel": "Muistuta",
       "lead_0": "Eräaikana",

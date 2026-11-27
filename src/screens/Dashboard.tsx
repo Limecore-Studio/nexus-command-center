@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppHeader from '../components/AppHeader';
 import StatCard from '../components/StatCard';
+import SuiteAppLink from '../components/SuiteAppLink';
 import RoutingStrip from '../components/RoutingStrip';
 import RackBudgetMeter from '../components/RackBudgetMeter';
 import { RackMeterBank, RackChannels } from '../components/RackDashboard';
@@ -263,11 +264,13 @@ export default function Dashboard() {
               label={t('dash.gpa')}
               sub={gpaDelta}
               tone={studies ? 'success' : 'default'}
+              action={<SuiteAppLink app="studydesk" route="plan" />}
             />
             <StatCard
               value={`${workoutsThisWeek}×`}
               label={t('dash.workoutsWk')}
               sub={workoutsThisWeek >= 4 ? t('dash.onTarget') : workoutsThisWeek === 0 ? t('dash.noWorkoutsYet') : t('dash.pushHarder')}
+              action={<SuiteAppLink app="limelog" route="today" />}
             />
             <StatCard
               value={tasksToday}

@@ -19,6 +19,8 @@ public class MainActivity extends BridgeActivity {
         // v1.21.1 (limecore#103) — the system "create document" picker, so the
         // data export writes a real file.
         registerPlugin(LimecoreSaveFilePlugin.class);
+        // v1.22 (limecore#131) — open a StudyDesk or LimeLog screen.
+        registerPlugin(LimecoreAppLinkPlugin.class);
         super.onCreate(savedInstanceState);
         handleNotificationTap(getIntent());
     }

@@ -5,28 +5,36 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/yfin/:path*",
-      "destination": "https://query1.finance.yahoo.com/:path*"
+      "source": "/yfin/v8/finance/chart/:path*",
+      "destination": "https://query1.finance.yahoo.com/v8/finance/chart/:path*"
     },
     {
-      "source": "/yfin2/:path*",
-      "destination": "https://query2.finance.yahoo.com/:path*"
+      "source": "/yfin/v1/finance/search",
+      "destination": "https://query1.finance.yahoo.com/v1/finance/search"
     },
     {
-      "source": "/fh/:path*",
-      "destination": "https://finnhub.io/:path*"
+      "source": "/yfin2/v10/finance/quoteSummary/:path*",
+      "destination": "https://query2.finance.yahoo.com/v10/finance/quoteSummary/:path*"
+    },
+    {
+      "source": "/yfin2/v1/test/getcrumb",
+      "destination": "https://query2.finance.yahoo.com/v1/test/getcrumb"
+    },
+    {
+      "source": "/fh/api/v1/:path*",
+      "destination": "https://finnhub.io/api/v1/:path*"
     },
     {
       "source": "/cg/:path*",
       "destination": "/api/cg?path=:path*"
     },
     {
-      "source": "/fx/:path*",
-      "destination": "https://open.er-api.com/:path*"
+      "source": "/fx/v6/latest/:path*",
+      "destination": "https://open.er-api.com/v6/latest/:path*"
     },
     {
-      "source": "/ecb-api/:path*",
-      "destination": "https://data-api.ecb.europa.eu/:path*"
+      "source": "/ecb-api/service/data/:path*",
+      "destination": "https://data-api.ecb.europa.eu/service/data/:path*"
     }
   ],
   "headers": [

@@ -502,7 +502,13 @@ export default function App() {
   //
   // NOT ON WEB EITHER (2026-09-18, owner call): the same reasoning applies to
   // a browser tab. Android is the only build that keeps the lock.
-  if (!unlocked && APP_LOCK_APPLIES) {
+  // v1.22 (NCC#263): once the app has been shown in this run, an auto-lock
+  // covers it instead of replacing it. Replacing unmounted every screen, so a
+  // half-filled Add Transaction was gone after the PIN. The shell stays
+  // mounted underneath, hidden and inert (no focus, no clicks, not read out).
+  // A cold start still shows LockScreen alone, before anything is mounted.
+  const lockOverlay = !unlocked && APP_LOCK_APPLIES && authReady && shellShownThisRun;
+  if (!unlocked && APP_LOCK_APPLIES && !lockOverlay) {
     // v1.18.1 (limecore#58): until the stored PIN state is read, hasPin is
     // its default (false) and LockScreen would open in "set a PIN" mode.
     if (!authReady) {
@@ -573,6 +579,13 @@ export default function App() {
   // 4. Fully authenticated. Render the app.
   return (
     <>
+      <MarkShellShown />
+      {lockOverlay && (
+        <div className="fixed inset-0 z-[1000] bg-bg overflow-auto">
+          <LockScreen />
+        </div>
+      )}
+      <div className="contents" inert={lockOverlay || undefined} aria-hidden={lockOverlay || undefined} style={lockOverlay ? { visibility: 'hidden' } : undefined}>
       {/* Item 8 — asks once per account, inside the account-age window only.
           Non-blocking by design; see the component. */}
       <Suspense fallback={null}>
@@ -622,8 +635,20 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </div>
     </>
   );
+}
+
+/** v1.22 (NCC#263): whether the app shell has rendered in this run. Module
+ *  state, not React state: it only ever turns true, and it decides whether a
+ *  lock covers the shell or replaces it. */
+let shellShownThisRun = false;
+function MarkShellShown() {
+  useEffect(() => {
+    shellShownThisRun = true;
+  }, []);
+  return null;
 }
 
 /**

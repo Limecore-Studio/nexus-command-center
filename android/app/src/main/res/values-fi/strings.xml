@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- v1.22 (limecore#127): launcher shortcut labels. -->
+    <string name="shortcut_expense_short">Kulu</string>
+    <string name="shortcut_expense_long">Lisää kulu</string>
+    <string name="shortcut_quicklog_short">Pikakirjaus</string>
+    <string name="shortcut_quicklog_long">Pikakirjaus</string>
+    <string name="shortcut_tasks_short">Tehtävät</string>
+    <string name="shortcut_tasks_long">Avaa tehtävät</string>
+</resources>

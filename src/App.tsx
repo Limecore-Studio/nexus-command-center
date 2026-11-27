@@ -1,3 +1,4 @@
+import { queueDeepLink } from './lib/deepLinks';
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -414,7 +415,15 @@ export default function App() {
   // exchange the code for a session.
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
+    // v1.22 (limecore#127): a launcher shortcut's route link, on a cold start
+    // (the launch URL) or while running (appUrlOpen). AppShell opens it.
+    void CapacitorApp.getLaunchUrl()
+      .then((launch) => {
+        if (launch?.url) queueDeepLink(launch.url);
+      })
+      .catch(() => {});
     const sub = CapacitorApp.addListener('appUrlOpen', async (event) => {
+      if (queueDeepLink(event.url)) return;
       try {
         const url = event.url;
         if (!url.startsWith('com.limecore.nexus://login-callback')) return;

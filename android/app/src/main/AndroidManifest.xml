@@ -65,6 +65,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="com.limecore.nexus" />
             </intent-filter>
+
+            <!-- v1.22 (limecore#127): launcher shortcuts (long-press the icon).
+                 They use the scheme above: com.limecore.nexus://open/<route>. -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
 
         <!-- Alias activity used by Health Connect on Android < 14 to show permissions UI -->

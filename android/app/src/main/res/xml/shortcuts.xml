@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  v1.22 (limecore#127): static launcher shortcuts (long-press the app icon).
+  Each opens a route deep link that the web layer handles (src/lib/deepLinks.ts);
+  signed out, the app asks for sign-in first and then opens the target.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="add_expense"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_expense"
+        android:shortcutShortLabel="@string/shortcut_expense_short"
+        android:shortcutLongLabel="@string/shortcut_expense_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="com.limecore.nexus://open/expense"
+            android:targetPackage="com.limecore.nexus"
+            android:targetClass="com.limecore.nexus.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="quick_log"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_quicklog"
+        android:shortcutShortLabel="@string/shortcut_quicklog_short"
+        android:shortcutLongLabel="@string/shortcut_quicklog_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="com.limecore.nexus://open/quicklog"
+            android:targetPackage="com.limecore.nexus"
+            android:targetClass="com.limecore.nexus.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="tasks"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_tasks"
+        android:shortcutShortLabel="@string/shortcut_tasks_short"
+        android:shortcutLongLabel="@string/shortcut_tasks_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:data="com.limecore.nexus://open/tasks"
+            android:targetPackage="com.limecore.nexus"
+            android:targetClass="com.limecore.nexus.MainActivity" />
+    </shortcut>
+</shortcuts>

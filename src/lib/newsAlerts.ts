@@ -35,6 +35,8 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ID_RANGES, scheduleNotification } from './notifications';
 import type { NewsItem } from '../api/stockDetail';
+import i18n from '../i18n';
+import { formatLocale } from '../utils/formatters';
 
 const NEWS_BASE = ID_RANGES.news.base; // 5000
 const BIG_MOVE_ID = ID_RANGES.news.base + ID_RANGES.news.size - 1; // 5999 — top of range
@@ -184,7 +186,7 @@ export async function runNewsAlertsTick(): Promise<void> {
         const result = await scheduleNotification({
           id: newsNotifId(item.id, 1),
           category: 'news',
-          title: `Market · ${item.source}`,
+          title: i18n.t('notif.news.market', { source: item.source }),
           body: item.headline.slice(0, 200),
           extra: { route: '/finance?tab=portfolio', url: item.url },
         });
@@ -212,13 +214,16 @@ export async function runNewsAlertsTick(): Promise<void> {
     if (lastFired !== today) {
       // Pick the most extreme mover for the headline.
       const top = movers.sort((a, b) => Math.abs(b.dp) - Math.abs(a.dp))[0];
-      const sign = top.dp >= 0 ? '+' : '−';
       try {
         const result = await scheduleNotification({
           id: BIG_MOVE_ID,
           category: 'news',
-          title: 'Market move',
-          body: `${top.ticker}: ${sign}${Math.abs(top.dp).toFixed(2)}% today`,
+          title: i18n.t('notif.news.moveTitle'),
+          body: i18n.t('notif.news.moveBody', {
+            ticker: top.ticker,
+            pct: new Intl.NumberFormat(formatLocale(), { style: 'percent', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'always' })
+              .format(top.dp / 100),
+          }),
           extra: { route: '/finance?tab=portfolio' },
         });
         if (result.ok) {

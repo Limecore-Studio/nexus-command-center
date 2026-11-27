@@ -29,6 +29,8 @@
 import type { Transaction, BudgetCategory } from '../types/finance';
 import { scheduleNotification, ID_RANGES } from './notifications';
 import { useSettingsStore } from '../store/useSettingsStore';
+import i18n from '../i18n';
+import { formatCurrency } from '../utils/formatters';
 import { hashSlot, slotAllocator } from './notifSlots';
 
 const THRESHOLDS = [80, 100] as const;
@@ -71,9 +73,6 @@ function spentThisMonth(
 // Minimal in-place currency formatter — the budget message body shouldn't
 // import the heavyweight Intl formatter just for one string. Two decimals
 // when needed, integer when not.
-function formatAmount(n: number): string {
-  return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
-}
 
 /**
  * Walk the budget categories, compare current-month spend to each cap, and
@@ -115,10 +114,15 @@ export async function checkBudgetThresholds(
     const lastFired = lastFiredRaw ? parseInt(lastFiredRaw, 10) : 0;
     if (lastFired >= highestCrossed) continue; // already alerted at this tier
 
-    const title = highestCrossed === THRESHOLDS[1] ? 'Over budget' : 'Approaching budget';
-    const body =
-      `${cat.icon ? cat.icon + ' ' : ''}${cat.name}: ${formatAmount(spent)} / ${formatAmount(cat.monthlyLimit)}` +
-      ` (${Math.round(pct)}%)`;
+    // v1.22 (NCC#263): translated, amounts in the base currency's format.
+    const title = i18n.t(highestCrossed === THRESHOLDS[1] ? 'notif.budget.over' : 'notif.budget.near');
+    const base = useSettingsStore.getState().baseCurrency;
+    const body = i18n.t('notif.budget.body', {
+      name: `${cat.icon ? cat.icon + ' ' : ''}${cat.name}`,
+      spent: formatCurrency(spent, base),
+      limit: formatCurrency(cat.monthlyLimit, base),
+      pct: Math.round(pct),
+    });
 
     try {
       const result = await scheduleNotification({
@@ -133,7 +137,7 @@ export async function checkBudgetThresholds(
         // route; the action gives users a one-tap path even when they
         // landed on the lockscreen from another context.
         actions: [
-          { id: 'view', title: 'View category', route: '/finance/budgets', extra: { categoryId: cat.id } },
+          { id: 'view', title: i18n.t('notif.budget.view'), route: '/finance/budgets', extra: { categoryId: cat.id } },
         ],
       });
       if (result.ok) {

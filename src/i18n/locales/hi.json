@@ -20,6 +20,12 @@
     "ok": "ठीक है"
   },
   "auth": {
+    "bio": {
+      "reason": "Nexus Command Center अनलॉक करें",
+      "title": "Nexus: बायोमेट्रिक अनलॉक",
+      "subtitle": "अनलॉक करने के लिए फ़िंगरप्रिंट या चेहरा इस्तेमाल करें",
+      "cancel": "PIN इस्तेमाल करें"
+    },
     "signInSubtitle": "Command Center · साइन इन करें",
     "firstRunSubtitle": "पैसा, फ़िटनेस, पढ़ाई और आदतें — एक ही स्कोर।",
     "firstRunPromise": "खाते की ज़रूरत नहीं। अभी शुरू करें, बाद में सिंक करें।",
@@ -1515,6 +1521,24 @@
     "customHint": "भाव आप तय करते हैं: बदलने पर अपडेट करें।"
   },
   "notif": {
+    "budget": {
+      "over": "बजट से ज़्यादा",
+      "near": "बजट के करीब",
+      "body": "{{name}}: {{spent}} / {{limit}} ({{pct}}%)",
+      "view": "श्रेणी देखें"
+    },
+    "news": {
+      "market": "बाज़ार · {{source}}",
+      "moveTitle": "बाज़ार में हलचल",
+      "moveBody": "{{ticker}}: आज {{pct}}"
+    },
+    "eod": {
+      "title": "बाज़ार बंद हो गए",
+      "body": "आज का सारांश देखने के लिए Nexus खोलें।",
+      "recap": "आज {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}। ताज़ा आँकड़ों के लिए टैप करें।",
+      "backupGeneric": "आज का समापन देखने के लिए टैप करें।"
+    },
     "task": {
       "leadLabel": "मुझे याद दिलाएँ",
       "lead_0": "नियत समय पर",

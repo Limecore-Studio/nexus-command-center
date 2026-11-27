@@ -20,6 +20,12 @@
     "ok": "OK"
   },
   "auth": {
+    "bio": {
+      "reason": "Desbloquear o Nexus Command Center",
+      "title": "Nexus: desbloqueio biométrico",
+      "subtitle": "Usa a impressão digital ou o rosto para desbloquear",
+      "cancel": "Usar PIN"
+    },
     "signInSubtitle": "Command Center · Entrar",
     "firstRunSubtitle": "Finanças, treino, estudos e hábitos — uma só pontuação.",
     "firstRunPromise": "Sem conta. Comece agora e sincronize depois.",
@@ -1535,6 +1541,24 @@
     "customHint": "Preço definido por si: atualize-o quando mudar."
   },
   "notif": {
+    "budget": {
+      "over": "Orçamento ultrapassado",
+      "near": "Perto do orçamento",
+      "body": "{{name}}: {{spent}} / {{limit}} ({{pct}}%)",
+      "view": "Ver categoria"
+    },
+    "news": {
+      "market": "Mercado · {{source}}",
+      "moveTitle": "Movimento do mercado",
+      "moveBody": "{{ticker}}: {{pct}} hoje"
+    },
+    "eod": {
+      "title": "Mercados fechados",
+      "body": "Abre o Nexus para o resumo de hoje.",
+      "recap": "Hoje {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}. Toca para ver os números em direto.",
+      "backupGeneric": "Toca para ver o fecho de hoje."
+    },
     "task": {
       "leadLabel": "Lembrar-me",
       "lead_0": "Na hora do prazo",

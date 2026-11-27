@@ -3,6 +3,7 @@
 // plugin isn't installed yet — caller should fall back to PIN.
 
 import { Capacitor } from '@capacitor/core';
+import i18n from '../i18n';
 
 interface BiometricCapability {
   available: boolean;
@@ -65,10 +66,11 @@ export async function authenticateBiometric(): Promise<{ ok: boolean; reason?: s
   if (!mod) return { ok: false, reason: 'Plugin missing.' };
   try {
     await mod.BiometricAuth.authenticate({
-      reason: 'Unlock Nexus Command Center',
-      androidTitle: 'Nexus — Biometric Unlock',
-      androidSubtitle: 'Use fingerprint or face to unlock',
-      cancelTitle: 'Use PIN',
+      // v1.22 (NCC#263): the system sheet in the app's language.
+      reason: i18n.t('auth.bio.reason'),
+      androidTitle: i18n.t('auth.bio.title'),
+      androidSubtitle: i18n.t('auth.bio.subtitle'),
+      cancelTitle: i18n.t('auth.bio.cancel'),
     });
     return { ok: true };
   } catch (e) {

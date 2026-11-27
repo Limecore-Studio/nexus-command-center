@@ -20,6 +20,12 @@
     "ok": "OK"
   },
   "auth": {
+    "bio": {
+      "reason": "Buka Nexus Command Center",
+      "title": "Nexus: buka dengan biometrik",
+      "subtitle": "Gunakan sidik jari atau wajah untuk membuka",
+      "cancel": "Gunakan PIN"
+    },
     "signInSubtitle": "Command Center · Masuk",
     "firstRunSubtitle": "Keuangan, kebugaran, studi, dan kebiasaan — satu skor.",
     "firstRunPromise": "Tanpa akun. Mulai sekarang, sinkronkan nanti.",
@@ -1495,6 +1501,24 @@
     "customHint": "Harga dari Anda: perbarui saat berubah."
   },
   "notif": {
+    "budget": {
+      "over": "Melebihi anggaran",
+      "near": "Mendekati anggaran",
+      "body": "{{name}}: {{spent}} / {{limit}} ({{pct}}%)",
+      "view": "Lihat kategori"
+    },
+    "news": {
+      "market": "Pasar · {{source}}",
+      "moveTitle": "Pergerakan pasar",
+      "moveBody": "{{ticker}}: {{pct}} hari ini"
+    },
+    "eod": {
+      "title": "Pasar tutup",
+      "body": "Buka Nexus untuk ringkasan hari ini.",
+      "recap": "Hari ini {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}. Ketuk untuk angka terkini.",
+      "backupGeneric": "Ketuk untuk penutupan hari ini."
+    },
     "task": {
       "leadLabel": "Ingatkan saya",
       "lead_0": "Saat tenggat",

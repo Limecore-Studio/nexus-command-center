@@ -106,6 +106,12 @@
     }
   },
   "auth": {
+    "bio": {
+      "reason": "Unlock Nexus Command Center",
+      "title": "Nexus: biometric unlock",
+      "subtitle": "Use fingerprint or face to unlock",
+      "cancel": "Use PIN"
+    },
     "signInSubtitle": "Command Center · Sign in",
     "firstRunSubtitle": "Finances, fitness, studies and habits — one score.",
     "firstRunPromise": "No account needed. Start now, sync later.",
@@ -1515,6 +1521,24 @@
     "customHint": "Priced by you: update the price whenever it changes."
   },
   "notif": {
+    "budget": {
+      "over": "Over budget",
+      "near": "Approaching budget",
+      "body": "{{name}}: {{spent}} / {{limit}} ({{pct}}%)",
+      "view": "View category"
+    },
+    "news": {
+      "market": "Market · {{source}}",
+      "moveTitle": "Market move",
+      "moveBody": "{{ticker}}: {{pct}} today"
+    },
+    "eod": {
+      "title": "Markets closed",
+      "body": "Open Nexus for today's recap.",
+      "recap": "Today {{pct}} · {{amount}}",
+      "backupWith": "{{recap}}. Tap for live numbers.",
+      "backupGeneric": "Tap for today's close."
+    },
     "task": {
       "leadLabel": "Remind me",
       "lead_0": "At the due time",

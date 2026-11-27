@@ -19,6 +19,17 @@
 -- account's current address. The log keeps a hash of the address, not the
 -- address, and rows older than two days are deleted by begin itself.
 
+-- md5(pg_get_functiondef) of production's kofi_alt_email_begin(uuid, text,
+-- text), read 2026-11-27 (the 20261008 v118 body). If this fails, begin
+-- changed after this was written: re-read it and redo the edit against it.
+do $$
+begin
+  if md5(replace(pg_get_functiondef('public.kofi_alt_email_begin(uuid,text,text)'::regprocedure), chr(13), ''))
+       <> '39e36fc7bf425b59e15a84376153af65' then
+    raise exception 'limecore#99: kofi_alt_email_begin changed since 2026-11-27; re-read it and update this migration';
+  end if;
+end $$;
+
 create table if not exists public.kofi_alt_email_sends (
   id          bigint generated always as identity primary key,
   user_id     uuid        not null references auth.users (id) on delete cascade,

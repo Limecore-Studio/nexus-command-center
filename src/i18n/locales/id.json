@@ -1496,6 +1496,10 @@
     "customHint": "Harga dari Anda: perbarui saat berubah."
   },
   "notif": {
+    "weekly": {
+      "title": "Minggumu sudah siap",
+      "body": "Ketuk untuk meninjau minggumu: keuangan, belajar, kebugaran, dan tugas."
+    },
     "task": {
       "leadLabel": "Ingatkan saya",
       "lead_0": "Saat tenggat",

@@ -1536,6 +1536,10 @@
     "customHint": "Precio puesto por ti: actualízalo cuando cambie."
   },
   "notif": {
+    "weekly": {
+      "title": "Tu semana está lista",
+      "body": "Toca para revisar tu semana: finanzas, estudios, ejercicio y tareas."
+    },
     "task": {
       "leadLabel": "Recordarme",
       "lead_0": "A la hora límite",

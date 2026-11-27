@@ -1516,6 +1516,10 @@
     "customHint": "Priced by you: update the price whenever it changes."
   },
   "notif": {
+    "weekly": {
+      "title": "Your week is ready",
+      "body": "Tap to review your week: finance, study, fitness and tasks."
+    },
     "task": {
       "leadLabel": "Remind me",
       "lead_0": "At the due time",

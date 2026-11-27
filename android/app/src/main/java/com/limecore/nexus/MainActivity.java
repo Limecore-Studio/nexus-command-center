@@ -1,6 +1,7 @@
 package com.limecore.nexus;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
@@ -22,6 +23,12 @@ public class MainActivity extends BridgeActivity {
         // v1.22 (limecore#131) — open a StudyDesk or LimeLog screen.
         registerPlugin(LimecoreAppLinkPlugin.class);
         super.onCreate(savedInstanceState);
+        // v1.22 (limecore#99): the Recents thumbnail would show the last
+        // screen (balances, holdings) without the app lock. Android 13+ can
+        // show a blank card instead while leaving screenshots possible.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false);
+        }
         handleNotificationTap(getIntent());
     }
 

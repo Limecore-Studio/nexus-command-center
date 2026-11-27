@@ -203,3 +203,39 @@ describe('whenLocked', () => {
     expect(fired).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('PIN lockout and the device clock (limecore#99)', () => {
+  it('moving the clock forward does not end a lockout', async () => {
+    await useAuthStore.getState().setPin('123456');
+    for (let i = 0; i < 5; i++) await useAuthStore.getState().verifyPin('000000');
+    expect(useAuthStore.getState().failedAttempts).toBe(5);
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() + 24 * 3600 * 1000; // a day ahead
+      const r = await useAuthStore.getState().verifyPin('123456');
+      expect(r.ok).toBe(false);
+      expect(r.locked?.remainingSeconds).toBeGreaterThan(0);
+    } finally {
+      Date.now = realNow;
+    }
+  });
+
+  it('a restart resumes the time left, whatever the clock says', async () => {
+    await useAuthStore.getState().setPin('123456');
+    for (let i = 0; i < 5; i++) await useAuthStore.getState().verifyPin('000000');
+    expect(Number(prefs.get('auth.pinLockLeftMs'))).toBe(30_000);
+    prefs.set('auth.pinLastFailAt', '1'); // a clock long past the lockout
+    await useAuthStore.getState().init();
+    const r = await useAuthStore.getState().verifyPin('123456');
+    expect(r.ok).toBe(false);
+  });
+
+  it('the right PIN after the lockout clears it', async () => {
+    await useAuthStore.getState().setPin('123456');
+    for (let i = 0; i < 5; i++) await useAuthStore.getState().verifyPin('000000');
+    prefs.set('auth.pinLockLeftMs', '0');
+    await useAuthStore.getState().init();
+    expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(true);
+    expect(prefs.has('auth.pinLockLeftMs')).toBe(false);
+  });
+});

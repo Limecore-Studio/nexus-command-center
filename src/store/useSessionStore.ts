@@ -179,6 +179,10 @@ export const useSessionStore = create<SessionState>((set) => ({
     // v1.22 (limecore#122): the AI key belongs to whoever is signed in; it
     // does not carry over to a guest or the next account.
     void import('../lib/aiProvider').then((m) => m.clearAiKey()).catch(() => {});
+    // v1.22 (NCC#263): the supporter perk belongs to the account. Without
+    // this, "Sign out, keep data" left it unlocked for the guest or the next
+    // account on this device.
+    void import('../lib/entitlement').then((m) => m.clearEntitlement()).catch(() => {});
     // v1.4 — clear the SSO bridge BEFORE the auth round-trip so a
     // concurrent sibling query can't grab a token that's about to be
     // invalidated. onAuthStateChange's null fire will also clear, but

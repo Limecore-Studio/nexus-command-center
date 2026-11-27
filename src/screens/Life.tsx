@@ -27,9 +27,7 @@ import { useBodyMetricsStore } from '../store/useBodyMetricsStore';
 import { bodySummary } from '../lib/bodyScale';
 import { formatShortDate } from '../utils/formatters';
 import { useStudiesStore } from '../store/useStudiesStore';
-import { liveGpa } from '../utils/gpa';
 import { useHabitsStore } from '../store/useHabitsStore';
-import { useTaskStore } from '../store/useTaskStore';
 import { useGoalsStore } from '../store/useGoalsStore';
 import { useWorkQualityStore } from '../store/useWorkQualityStore';
 import { useLifeProfileStore } from '../store/useLifeProfileStore';
@@ -44,7 +42,8 @@ import {
   type LifeScore,
 } from '../lib/crossDomainSignals';
 import { computeWorkScore, weeklyRatingStats } from '../lib/workScore';
-import { computeGoalProgress, type DataSources } from '../lib/goals';
+import { computeGoalProgress } from '../lib/goals';
+import { useGoalDataSources } from '../lib/useGoalDataSources';
 import {
   enabledDomains,
   weeklyTargetFor,
@@ -105,11 +104,8 @@ export default function Life() {
   const bodyMetrics = useBodyMetricsStore((s) => s.metrics);
   const body = useMemo(() => bodySummary(bodyMetrics), [bodyMetrics]);
   const studies = useStudiesStore((s) => s.studySessions);
-  const currentImport = useStudiesStore((s) => s.currentImport);
-  const gradeScale = useStudiesStore((s) => s.gradeScale);
   const habits = useHabitsStore((s) => s.habits);
   const completions = useHabitsStore((s) => s.completions);
-  const tasks = useTaskStore((s) => s.tasks);
   const goals = useGoalsStore((s) => s.goals);
   const workLogs = useWorkQualityStore((s) => s.logs);
   const loadWork = useWorkQualityStore((s) => s.load);
@@ -139,31 +135,18 @@ export default function Life() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const goalData = useGoalDataSources();
   // ─── Work score (only meaningful when the profile enables Work) ─────────
   const workScore = useMemo(() => {
     const { weeklyRatingAvg, daysLoggedThisWeek } = weeklyRatingStats(workLogs);
 
     // Active-goal progress: average of clamped per-goal % across incomplete
-    // goals. DataSources is assembled from the stores that the relevant goal
-    // types read; portfolio-valuation fields are left empty (net_worth goals
-    // then read 0 — accepted, since Work weights goals only 20%).
+    // goals, from the same sources the Goals screen uses (v1.22, NCC#263:
+    // net-worth goals used to read 0% here, with no holdings and EUR fixed).
     const activeGoals = goals.filter((g) => !g.completed && !g.deletedAt);
     let goalsProgressPct = 0;
     if (activeGoals.length > 0) {
-      const ds: DataSources = {
-        transactions: txns,
-        holdings: [],
-        manualAssets: [],
-        stockQuotes: [],
-        cryptoPrices: null,
-        fxRates: null,
-        baseCurrency: 'EUR',
-        tasks,
-        studySessions: studies,
-        workouts: workouts as DataSources['workouts'],
-        currentGpa: liveGpa(currentImport), // v1.22 (NCC#262)
-        gradeScale, // v1.19 (NCC#197)
-      };
+      const ds = goalData;
       const sum = activeGoals.reduce(
         (s, g) => s + Math.min(100, Math.max(0, computeGoalProgress(g, ds).percent)),
         0,
@@ -176,7 +159,7 @@ export default function Life() {
     const workLifeHabitsPct = habitWeek?.hitRatio != null ? habitWeek.hitRatio * 100 : 0;
 
     return computeWorkScore({ weeklyRatingAvg, daysLoggedThisWeek, goalsProgressPct, workLifeHabitsPct });
-  }, [workLogs, goals, txns, tasks, studies, workouts, currentImport, gradeScale, habits, completions]);
+  }, [workLogs, goals, goalData, habits, completions]);
 
   const report = useMemo(
     () =>

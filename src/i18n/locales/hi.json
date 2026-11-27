@@ -50,6 +50,7 @@
     "errNameRequired": "अपना नाम दर्ज करें।",
     "errPasswordMismatch": "पासवर्ड मेल नहीं खाते।",
     "errGoogleStart": "Google साइन-इन शुरू नहीं हो सका।",
+    "errGoogleFinish": "Google साइन-इन पूरा नहीं हुआ। फिर से कोशिश करें।",
     "desktopBrowser": "अपने ब्राउज़र में साइन-इन पूरा करें, फिर यहाँ लौटें।",
     "errDesktopNoListener": "इस बार डेस्कटॉप साइन-इन उपलब्ध नहीं है। Nexus को पुनः प्रारंभ करें, या नीचे ईमेल से साइन इन करें।",
     "errInvalidCredentials": "ईमेल या पासवर्ड ग़लत है।",
@@ -1515,6 +1516,10 @@
     "customHint": "भाव आप तय करते हैं: बदलने पर अपडेट करें।"
   },
   "notif": {
+    "weekly": {
+      "title": "आपका हफ़्ता तैयार है",
+      "body": "अपना हफ़्ता देखने के लिए टैप करें: वित्त, पढ़ाई, फ़िटनेस और काम।"
+    },
     "task": {
       "leadLabel": "मुझे याद दिलाएँ",
       "lead_0": "नियत समय पर",
@@ -1580,6 +1585,10 @@
   "undo": {
     "deleted": "“{{name}}” हटाया गया",
     "undo": "पूर्ववत करें"
+  },
+  "suite": {
+    "openStudyDesk": "StudyDesk में खोलें",
+    "openLimeLog": "LimeLog में खोलें"
   },
   "ai": {
     "keyLabel": "Gemini API कुंजी",

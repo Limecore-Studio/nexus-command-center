@@ -52,6 +52,7 @@ interface YahooChartResponse {
         regularMarketDayHigh?: number;
         regularMarketDayLow?: number;
         regularMarketOpen?: number;
+        regularMarketTime?: number;
         currency?: string;
         // Extra fields Yahoo's chart endpoint also returns. Useful as a
         // no-auth fallback for getYahooMetric: we get 52w range, exchange,
@@ -232,6 +233,7 @@ export async function getYahooQuote(
       l: meta.regularMarketDayLow ?? price,
       o: meta.regularMarketOpen ?? price,
       pc: prev,
+      t: typeof meta.regularMarketTime === 'number' ? meta.regularMarketTime : undefined,
     };
     const currency = meta.currency || 'USD';
     await writeCache(key, { quote, currency });

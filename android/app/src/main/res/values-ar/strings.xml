@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- v1.22 (limecore#127): launcher shortcut labels. -->
+    <string name="shortcut_expense_short">مصروف</string>
+    <string name="shortcut_expense_long">إضافة مصروف</string>
+    <string name="shortcut_quicklog_short">تسجيل</string>
+    <string name="shortcut_quicklog_long">تسجيل سريع</string>
+    <string name="shortcut_tasks_short">المهام</string>
+    <string name="shortcut_tasks_long">فتح المهام</string>
+</resources>

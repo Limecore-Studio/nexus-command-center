@@ -679,7 +679,11 @@ export function summarise(rows: ImportRow[]): ImportSummary {
 /** Quote a cell only when it needs it, so the common case stays readable in a
  *  text editor. */
 function csvCell(value: string): string {
-  return /[",\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  // v1.22 (limecore#99): a text cell that starts like a formula runs as one in
+  // Excel or Sheets, and a payee name from an imported statement is enough.
+  // The leading apostrophe is the spreadsheet convention for "this is text".
+  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
 /**

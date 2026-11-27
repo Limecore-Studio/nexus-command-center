@@ -222,6 +222,12 @@ export default function Settings() {
         setCurrencyError(t('settings.currencyConvertUndoPending', { from }));
       }
       await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]);
+    } catch (e) {
+      // v1.22 (NCC#263): anything unexpected says so, rather than an
+      // unhandled rejection and a silent screen.
+      console.warn('[currency] change failed:', (e as Error)?.message ?? e);
+      setCurrencyError(t('settings.currencyConvertFailed'));
+      await Promise.all([useFinanceStore.getState().load(), useRecurringStore.getState().load()]).catch(() => {});
     } finally {
       setCurrencyBusy(false);
     }

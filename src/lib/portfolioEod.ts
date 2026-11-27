@@ -33,6 +33,7 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { cancelNotifications, ID_RANGES, scheduleNotification } from './notifications';
 import { convertSync } from '../api/fxRates';
+import { isFromTodaysSession } from './marketDay';
 
 const EOD_BASE = ID_RANGES['portfolio-eod'].base;
 const PRIMARY_ID = EOD_BASE + 1; // 4001 — 4:05pm ET generic
@@ -127,6 +128,9 @@ function projectedRecap(): Recap | null {
     // pc=0 is Finnhub's "we don't know" sentinel for unsupported symbols;
     // skip rather than treat as a 100% gain.
     if (!q || !q.quote.pc) continue;
+    // v1.22 (NCC#263): only quotes from today's session. A pre-open quote is
+    // yesterday's move; with none from today the backup says nothing specific.
+    if (!isFromTodaysSession(q.quote)) continue;
     const pcNative = q.quote.pc * h.quantity;
     const cNative = q.quote.c * h.quantity;
     const pcBase = convertSync(pcNative, q.currency, baseCurrency, rates);

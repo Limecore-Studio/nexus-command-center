@@ -100,6 +100,9 @@ export interface FinnhubQuote {
   l: number;  // low
   o: number;  // open
   pc: number; // previous close
+  /** Unix seconds of the last trade (Finnhub sends it; v1.22 keeps it so a
+   *  pre-open quote is not read as today's move). */
+  t?: number;
 }
 
 export interface QuoteResult {

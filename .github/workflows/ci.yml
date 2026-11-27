@@ -14,7 +14,9 @@ jobs:
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 20
+          # v1.22 (limecore#113): Node 20 is end-of-life; 22 matches the
+          # F-Droid build recipe.
+          node-version: 22
           cache: npm
 
       # `npm ci` matters here: the caret on typescript resolves to a 6.x on a
@@ -41,6 +43,12 @@ jobs:
       # recurring; failing the build does.
       - name: IME guard
         run: node scripts/check-ime.mjs
+
+      # v1.22 (NCC#263): eslint (react-hooks included) ran only in build.ps1
+      # on release day, so a lint error could merge green. The IME guard
+      # above is also the first half of `npm run lint`.
+      - name: Lint gate
+        run: npx eslint . --report-unused-disable-directives --max-warnings 0
 
       - name: Build gate
         run: npm run build

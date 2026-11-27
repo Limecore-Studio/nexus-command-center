@@ -95,6 +95,9 @@ export default function AppShell() {
         setQuickLogMounted(true);
         setQuickLogOpen(true);
       } else {
+        // NCC#349: a shortcut to a screen lands on that screen, not under a
+        // Quick Log sheet left open by an earlier link.
+        setQuickLogOpen(false);
         navigateTo(target.path);
       }
     };

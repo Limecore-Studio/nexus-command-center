@@ -136,6 +136,7 @@
     "errNameRequired": "Enter your name.",
     "errPasswordMismatch": "Passwords do not match.",
     "errGoogleStart": "Could not start Google sign-in.",
+    "errGoogleFinish": "Google sign-in did not finish. Try again.",
     "desktopBrowser": "Finish signing in in your browser, then come back here.",
     "errDesktopNoListener": "Desktop sign-in is unavailable this launch. Restart Nexus, or sign in with email below.",
     "errInvalidCredentials": "Incorrect email or password.",
@@ -1515,6 +1516,10 @@
     "customHint": "Priced by you: update the price whenever it changes."
   },
   "notif": {
+    "weekly": {
+      "title": "Your week is ready",
+      "body": "Tap to review your week: finance, study, fitness and tasks."
+    },
     "task": {
       "leadLabel": "Remind me",
       "lead_0": "At the due time",
@@ -1580,5 +1585,9 @@
   "undo": {
     "deleted": "“{{name}}” deleted",
     "undo": "Undo"
+  },
+  "suite": {
+    "openStudyDesk": "Open in StudyDesk",
+    "openLimeLog": "Open in LimeLog"
   }
 }

@@ -35,6 +35,7 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { useSettingsStore } from '../store/useSettingsStore';
 import { ID_RANGES, scheduleNotification } from './notifications';
 import type { NewsItem } from '../api/stockDetail';
+import { etIsoDate, isFromTodaysSession } from './marketDay';
 
 const NEWS_BASE = ID_RANGES.news.base; // 5000
 const BIG_MOVE_ID = ID_RANGES.news.base + ID_RANGES.news.size - 1; // 5999 — top of range
@@ -91,11 +92,6 @@ function newsNotifId(itemId: number, salt: number): number {
 function matchesMacroKeywords(headline: string): boolean {
   const h = ' ' + headline.toLowerCase() + ' ';
   return MACRO_KEYWORDS.some((kw) => h.includes(kw));
-}
-
-function todayLocalDate(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -203,11 +199,16 @@ export async function runNewsAlertsTick(): Promise<void> {
   const qqq = state.stockQuotes.find((q) => q.ticker === 'QQQ');
   const movers = [spy, qqq]
     .filter((q): q is NonNullable<typeof q> => !!q)
+    // v1.22 (NCC#263): today's session only. A weekend or pre-open quote
+    // still carries the last session's move, and the alert fired again for
+    // it every day it stayed on screen.
+    .filter((q) => isFromTodaysSession(q.quote))
     .map((q) => ({ ticker: q.ticker, dp: q.quote.dp ?? 0 }))
     .filter((m) => Math.abs(m.dp) >= BIG_MOVE_THRESHOLD_PCT);
 
   if (movers.length > 0) {
-    const today = todayLocalDate();
+    // Keyed on the trading day, not the local date.
+    const today = etIsoDate();
     const lastFired = localStorage.getItem(BIG_MOVE_LAST_KEY);
     if (lastFired !== today) {
       // Pick the most extreme mover for the headline.

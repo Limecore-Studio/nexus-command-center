@@ -366,7 +366,9 @@ describe('archive change made in NCC', () => {
     const id = useStudiesStore.getState().courses[0].id;
     await useStudiesStore.getState().updateCourse(id, { archivedAt: ARCHIVED });
     const first = await pushQueue(USER);
-    expect(first.failed).toBe(2);
+    // v1.22 (NCC#263): the archive is held back behind its course's failed
+    // insert rather than tried (and failed) on its own.
+    expect(first.failed).toBe(1);
     expect(await listPending()).toHaveLength(2);
     down = false;
     // Same-millisecond items may drain in either order; a drain at most

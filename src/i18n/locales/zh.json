@@ -136,6 +136,7 @@
     "errNameRequired": "请输入你的姓名。",
     "errPasswordMismatch": "两次输入的密码不一致。",
     "errGoogleStart": "无法启动 Google 登录。",
+    "errGoogleFinish": "Google 登录未完成。请重试。",
     "desktopBrowser": "请在浏览器中完成登录，然后回到这里。",
     "errDesktopNoListener": "本次启动无法使用桌面登录。请重启 Nexus，或在下方使用邮箱登录。",
     "errInvalidCredentials": "邮箱或密码不正确。",
@@ -1501,6 +1502,10 @@
     "customHint": "由你定价：价格变化时请更新。"
   },
   "notif": {
+    "weekly": {
+      "title": "你的一周总结已就绪",
+      "body": "点按查看你的一周：财务、学习、健身和任务。"
+    },
     "task": {
       "leadLabel": "提醒时间",
       "lead_0": "到期时",
@@ -1566,5 +1571,9 @@
   "undo": {
     "deleted": "已删除“{{name}}”",
     "undo": "撤销"
+  },
+  "suite": {
+    "openStudyDesk": "在 StudyDesk 中打开",
+    "openLimeLog": "在 LimeLog 中打开"
   }
 }

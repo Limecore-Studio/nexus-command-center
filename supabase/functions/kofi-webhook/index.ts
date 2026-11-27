@@ -42,6 +42,7 @@
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are injected by the platform.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { storeUnmatched } from './unmatched.ts';
 
 // A membership bills monthly; the grace absorbs a late or retried charge so a
 // paying supporter never blinks out between a renewal falling due and it
@@ -151,10 +152,27 @@ Deno.serve(async (req: Request) => {
 
   if (!matched) {
     // Not an error. The common case is a supporter who checked out with a
-    // different address and has not set kofi_alt_email. Logged with the message
-    // id so it can be resolved by hand through the admin path, and 200 so Ko-fi
-    // does not retry forever against a state that will not change on its own.
-    console.warn('[kofi] ' + messageId + ': no account matches ' + redact(email) + ' — needs manual linking');
+    // different address and has not verified it yet. 200 so Ko-fi does not
+    // retry forever against a state that will not change on its own.
+    //
+    // v1.22 (limecore#112): the payment is KEPT (unmatched.ts), so verifying
+    // that address later grants it (kofi_claim_unmatched). It used to live
+    // only in this log line, and the in-app promise that "a payment may already
+    // be waiting on this address" could not be kept.
+    if (!messageId) {
+      console.warn('[kofi] membership payment with no message id: no account matches ' + redact(email) + ', not stored');
+      return new Response('OK', { status: 200 });
+    }
+    const outcome = await storeUnmatched(supabase, { messageId, email, tier });
+    if (outcome === 'failed') {
+      // The payment is real: ask Ko-fi to retry rather than lose it.
+      console.error('[kofi] ' + messageId + ': no account matches; storing it failed, asking Ko-fi to retry');
+      return new Response('Internal Error', { status: 500 });
+    }
+    console.warn(
+      '[kofi] ' + messageId + ': no account matches ' + redact(email) +
+        (outcome === 'stored' ? ', kept for a later claim' : ', not stored (kofi_unmatched_payments missing)'),
+    );
     return new Response('OK', { status: 200 });
   }
 

@@ -36,9 +36,23 @@ function client() {
         (server[table] ??= []).push(row);
         return Promise.resolve({ error: null });
       };
+      const update = (patch: any) => ({
+        eq: (_col: string, id: string) => {
+          calls.push(`${table}:update`);
+          if (timeoutOn.has(table)) {
+            const failed: any = Promise.resolve({ error: { message: 'canceling statement due to statement timeout', code: '57014' } });
+            failed.is = () => failed;
+            return failed;
+          }
+          for (const r of server[table] ?? []) if (r.id === id) Object.assign(r, patch);
+          const done: any = Promise.resolve({ error: null });
+          done.is = () => done;
+          return done;
+        },
+      });
       // v1.22: pushHabit reads the server's updated_at first (limecore#113).
       const select = () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) });
-      return { upsert: write, insert: write, select };
+      return { upsert: write, insert: write, update, select };
     },
   };
 }
@@ -147,5 +161,23 @@ describe('queue pruning (NCC#249)', () => {
     ]);
     await pushQueue('user-1');
     expect((await db.syncQueue.toArray()).map((q) => q.id).sort()).toEqual(['recent']);
+  });
+});
+
+describe('pushQueue keeps one entity in order (NCC#263)', () => {
+  it('holds a delete back while the same row insert is still failing', async () => {
+    const habitId = await habitWithCompletion();
+    await enqueue('habit', habitId, 'delete', { id: habitId });
+    timeoutOn.add('habits');
+    await pushQueue('u1');
+    expect(calls.filter((c) => c.startsWith('habits'))).toEqual(['habits']);
+    expect((await listPending()).filter((q) => q.entityType === 'habit')).toHaveLength(2);
+
+    timeoutOn = new Set();
+    calls = [];
+    await pushQueue('u1');
+    // The insert lands first, then the delete: not the other way round.
+    expect(calls.filter((c) => c.startsWith('habits'))).toEqual(['habits', 'habits:update']);
+    expect(await listPending()).toHaveLength(0);
   });
 });

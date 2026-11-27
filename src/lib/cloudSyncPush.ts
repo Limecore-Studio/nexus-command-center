@@ -317,7 +317,41 @@ async function pushWatchlistItem(item: SyncQueueItem, ctx: PushContext): Promise
     updated_at: updatedAt,
   };
   const { error } = await supabase.from('watchlist_items').upsert(row);
+  if (error?.code === '23505') {
+    await adoptServerWatchlistItem(row, local.id);
+    return;
+  }
   if (error) throw error;
+}
+
+/**
+ * v1.22 (NCC#263): the same ticker added on two devices before they synced.
+ * The server keeps one live row per (user, ticker, asset type), so the second
+ * insert is a 23505 that used to be dropped, leaving a local duplicate whose
+ * edits (alert targets) never reached the other device. Instead this device's
+ * edit is written onto the server's row, and the local row takes that row's
+ * id, so there is one entry on both devices.
+ */
+async function adoptServerWatchlistItem(
+  row: { user_id: string; ticker: string; asset_type: string; name: string; notes: string | null; target_above: number | null; target_below: number | null; updated_at: string },
+  localId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('watchlist_items')
+    .update({ name: row.name, notes: row.notes, target_above: row.target_above, target_below: row.target_below, updated_at: row.updated_at })
+    .eq('user_id', row.user_id)
+    .eq('ticker', row.ticker)
+    .eq('asset_type', row.asset_type)
+    .is('deleted_at', null)
+    .select('id');
+  if (error) throw error;
+  const serverId = (data as { id: string }[] | null)?.[0]?.id;
+  if (!serverId || serverId === localId) return;
+  await db.transaction('rw', db.watchlistItems, async () => {
+    const mine = await db.watchlistItems.get(localId);
+    await db.watchlistItems.delete(localId);
+    if (mine && !(await db.watchlistItems.get(serverId))) await db.watchlistItems.put({ ...mine, id: serverId });
+  });
 }
 
 async function pushGoal(item: SyncQueueItem, ctx: PushContext): Promise<void> {

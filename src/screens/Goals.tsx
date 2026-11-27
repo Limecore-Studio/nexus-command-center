@@ -12,14 +12,10 @@ import AppHeader from '../components/AppHeader';
 import GoalPaceBar from '../components/GoalPaceBar';
 import { pacingFor } from '../lib/goalPacing';
 import RowActions from '../components/RowActions';
+import { useGoalDataSources } from '../lib/useGoalDataSources';
 import { useGoalsStore } from '../store/useGoalsStore';
 import { haptic } from '../lib/haptic';
-import { useFinanceStore } from '../store/useFinanceStore';
 import { useStudiesStore } from '../store/useStudiesStore';
-import { liveGpa } from '../utils/gpa';
-import { useFitnessStore } from '../store/useFitnessStore';
-import { useTaskStore } from '../store/useTaskStore';
-import { useSettingsStore } from '../store/useSettingsStore';
 import {
   computeGoalProgress,
   formatGoalValue,
@@ -46,54 +42,10 @@ export default function Goals() {
   const markCompleted = useGoalsStore((s) => s.markCompleted);
   const deleteGoal = useGoalsStore((s) => s.deleteGoal);
 
-  // Pull live data from every relevant module so progress refreshes
-  // automatically when any underlying source changes.
-  const holdings = useFinanceStore((s) => s.holdings);
-  const portfolioLots = useFinanceStore((s) => s.portfolioLots);
-  const stockQuotes = useFinanceStore((s) => s.stockQuotes);
-  const cryptoPrices = useFinanceStore((s) => s.cryptoPrices);
-  const fxRates = useFinanceStore((s) => s.fxRates);
-  const manualAssets = useFinanceStore((s) => s.manualAssets);
-  const transactions = useFinanceStore((s) => s.transactions);
-  const tasks = useTaskStore((s) => s.tasks);
-  const studySessions = useStudiesStore((s) => s.studySessions);
-  const currentImport = useStudiesStore((s) => s.currentImport);
-  const gradeScale = useStudiesStore((s) => s.gradeScale);
-  const workouts = useFitnessStore((s) => s.sessions);
-  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
-
-  const dataSources: DataSources = useMemo(
-    () => ({
-      transactions,
-      holdings,
-      portfolioLots,
-      manualAssets,
-      stockQuotes,
-      cryptoPrices,
-      fxRates,
-      baseCurrency,
-      tasks,
-      studySessions,
-      workouts,
-      currentGpa: liveGpa(currentImport), // v1.22 (NCC#262)
-      gradeScale,
-    }),
-    [
-      transactions,
-      holdings,
-      portfolioLots,
-      manualAssets,
-      stockQuotes,
-      cryptoPrices,
-      fxRates,
-      baseCurrency,
-      tasks,
-      studySessions,
-      workouts,
-      currentImport,
-      gradeScale,
-    ],
-  );
+  // Live data from every relevant module, so progress refreshes when any
+  // source changes. v1.22 (NCC#263): shared with the Dashboard and Life.
+  const dataSources = useGoalDataSources();
+  const baseCurrency = dataSources.baseCurrency;
 
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);

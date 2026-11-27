@@ -31,6 +31,10 @@ export const ENTITLEMENT_EVENT = 'nexus-entitlement-change';
 // Short enough that a fresh supporter sees their perk the same session, long
 // enough that opening the app offline for a week doesn't strip a paid theme.
 const REVALIDATE_AFTER_MS = 6 * 60 * 60 * 1000; // 6 hours
+// v1.22 (NCC#263): a "not a supporter" answer is kept only briefly. Someone
+// who has just paid on Ko-fi comes back to the app expecting the perk; six
+// hours of a cached no was six hours of a locked theme they had paid for.
+const NEGATIVE_REVALIDATE_AFTER_MS = 5 * 60 * 1000; // 5 minutes
 
 interface EntitlementRecord {
   userId: string;
@@ -107,12 +111,12 @@ export async function refreshEntitlement(
   }
 
   const cached = readCachedEntitlement();
-  if (
-    !force &&
-    cached &&
-    cached.userId === userId &&
-    Date.now() - (cached.checkedAt || 0) < REVALIDATE_AFTER_MS
-  ) {
+  // v1.22 (NCC#263): another account's record is never an answer for this
+  // one, not even offline.
+  const own = cached && cached.userId === userId ? cached : null;
+  if (cached && !own) clearEntitlement();
+  const ttl = own && isEntitled() ? REVALIDATE_AFTER_MS : NEGATIVE_REVALIDATE_AFTER_MS;
+  if (!force && own && Date.now() - (own.checkedAt || 0) < ttl) {
     return isEntitled();
   }
 

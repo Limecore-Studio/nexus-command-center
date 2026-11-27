@@ -49,7 +49,7 @@ vi.mock('./saveFile', () => ({
 }));
 
 // Native Preferences, holding what a signed-in device with a PIN holds.
-const JWT = 'eyJhbGciOiJFUzI1NiIsImtpZCI6ImFiYyJ9.eyJzdWIiOiJ1c2VyLTEiLCJzZXNzaW9uX2lkIjoicyJ9.c2lnbmF0dXJlLWJ5dGVzLWhlcmU';
+const JWT = 'eyJhbGciOiJFUzI1NiIsImtpZCI6ImFiYyJ9.eyJzdWIiOiJ1c2VyLTEiLCJzZXNzaW9uX2lkIjoicyJ9.c2lnbmF0dXJlLWJ5dGVzLWhlcmU'; // pragma: allowlist secret (a fake session token for the export test)
 const prefs = vi.hoisted(() => new Map<string, string>());
 vi.mock('@capacitor/preferences', () => ({
   Preferences: {

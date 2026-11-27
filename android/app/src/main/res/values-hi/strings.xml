@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- v1.22 (limecore#127): launcher shortcut labels. -->
+    <string name="shortcut_expense_short">ख़र्च</string>
+    <string name="shortcut_expense_long">ख़र्च जोड़ें</string>
+    <string name="shortcut_quicklog_short">क्विक लॉग</string>
+    <string name="shortcut_quicklog_long">क्विक लॉग</string>
+    <string name="shortcut_tasks_short">कार्य</string>
+    <string name="shortcut_tasks_long">कार्य खोलें</string>
+</resources>

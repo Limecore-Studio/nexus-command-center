@@ -36,7 +36,9 @@ function client() {
         (server[table] ??= []).push(row);
         return Promise.resolve({ error: null });
       };
-      return { upsert: write, insert: write };
+      // v1.22: pushHabit reads the server's updated_at first (limecore#113).
+      const select = () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) });
+      return { upsert: write, insert: write, select };
     },
   };
 }
@@ -112,7 +114,10 @@ describe('isTransportError', () => {
 describe('pushQueue when the session ends mid-drain (NCC#162)', () => {
   it('keeps items queued on an RLS refusal with no session, and still drops one with a session', async () => {
     let session: unknown = null;
-    const refuse = { upsert: () => Promise.resolve({ error: { code: '42501', message: 'new row violates row-level security policy' } }) };
+    const refuse = {
+      upsert: () => Promise.resolve({ error: { code: '42501', message: 'new row violates row-level security policy' } }),
+      select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: null }) }) }),
+    };
     holder.client = { auth: { getSession: async () => ({ data: { session } }) }, from: () => refuse };
     await habitWithCompletion();
     const r1 = await pushQueue('u1');

@@ -17,7 +17,7 @@ import { startLive, stopLive } from './lib/liveSync';
 // before it, so it loads on first use instead of in the startup bundle.
 const cloudSync = () => import('./lib/cloudSync');
 import { setConsentOwner } from './lib/consentOwner';
-import { refreshEntitlement } from './lib/entitlement';
+import { isEntitled, refreshEntitlement } from './lib/entitlement';
 import { useStudiesStore } from './store/useStudiesStore';
 import { useBraindumpStore } from './store/useBraindumpStore';
 import { isGuestMode } from './lib/guestMode';
@@ -282,6 +282,14 @@ export default function App() {
     const uid = session?.user?.id;
     if (!uid) return;
     void refreshEntitlement(uid);
+    // v1.22 (NCC#263): Android keeps the process while the user pays on
+    // Ko-fi in the browser, so coming back is the moment to ask again. Only
+    // while the perk is locked: a supporter's answer keeps its 6-hour cache.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && !isEntitled()) void refreshEntitlement(uid, { force: true });
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
   }, [session?.user?.id]);
 
   useEffect(() => {

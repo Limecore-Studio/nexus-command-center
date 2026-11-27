@@ -54,7 +54,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
-    "electron": "^43.4.0",
+    "electron": "^43.8.13",
     "electron-builder": "^26.15.3",
     "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",

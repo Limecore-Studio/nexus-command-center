@@ -345,7 +345,9 @@ function GoalForm({
                 onClick={() => onPickType(gt)}
                 className={`chip text-[0.6875rem] ${goalType === gt ? 'chip-on' : ''}`}
               >
-                {m.icon} {t(`goalTypes.${gt}`, { defaultValue: m.label })}
+                {/* NCC#353: `icon` is a Glyph name, not a character to print. */}
+                <Glyph name={m.icon} size={12} className="inline-block shrink-0 align-[-2px] mr-1" />
+                {t(`goalTypes.${gt}`, { defaultValue: m.label })}
               </button>
             );
           })}

@@ -55,7 +55,10 @@ export const PIN_LOCK_LEFT_KEY = 'auth.pinLockLeftMs';
 // shortens it). `lockedUntil` stays a wall-clock time, for the countdown only.
 let lockDeadlineMono = 0;
 const monoNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-function lockLeftMs(): number {
+/** What is left of the lockout, in ms, on the monotonic clock. The lock
+ *  screen counts down from this, not from `lockedUntil`: a clock set back
+ *  would otherwise show (and enforce) a lockout as long as the change. */
+export function lockLeftMs(): number {
   return Math.max(0, lockDeadlineMono - monoNow());
 }
 function startLock(ms: number): number {

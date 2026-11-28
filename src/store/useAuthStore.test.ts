@@ -32,7 +32,7 @@ vi.mock('@/lib/keystore', () => ({
   },
 }));
 
-const { useAuthStore, whenLocked } = await import('./useAuthStore');
+const { useAuthStore, whenLocked, lockLeftMs } = await import('./useAuthStore');
 const { clearPin } = await import('../lib/clearPin');
 
 beforeEach(() => {
@@ -237,5 +237,21 @@ describe('PIN lockout and the device clock (limecore#99)', () => {
     await useAuthStore.getState().init();
     expect((await useAuthStore.getState().verifyPin('123456')).ok).toBe(true);
     expect(prefs.has('auth.pinLockLeftMs')).toBe(false);
+  });
+});
+
+describe('lockout time left for the countdown (NCC#351)', () => {
+  it('is the real time left, whatever the wall clock says', async () => {
+    await useAuthStore.getState().setPin('123456');
+    for (let i = 0; i < 5; i++) await useAuthStore.getState().verifyPin('000000');
+    const realNow = Date.now;
+    try {
+      Date.now = () => realNow() - 24 * 3600 * 1000; // clock set back a day
+      const left = lockLeftMs();
+      expect(left).toBeGreaterThan(0);
+      expect(left).toBeLessThanOrEqual(30_000);
+    } finally {
+      Date.now = realNow;
+    }
   });
 });

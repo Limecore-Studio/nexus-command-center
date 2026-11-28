@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '../store/useAuthStore';
+import { lockLeftMs, useAuthStore } from '../store/useAuthStore';
 import { authenticateBiometric, biometricCapability } from '../utils/biometric';
 import Glyph from '../components/Glyph';
 
@@ -31,15 +31,19 @@ export default function LockScreen() {
   // Seeding it from Date.now() made the first render impure for no gain.
   const [, setNow] = useState(0);
   useEffect(() => {
-    if (lockedUntil <= Date.now()) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    if (lockLeftMs() <= 0) return;
+    const id = setInterval(() => {
+      setNow(Date.now());
+      if (lockLeftMs() <= 0) clearInterval(id);
+    }, 1000);
     return () => clearInterval(id);
   }, [lockedUntil]);
   // HYG-4: A lockout countdown has to read the clock during render. Holding the
   // clock in state instead would just trade this rule for
   // set-state-in-effect, which is not an improvement.
-  // eslint-disable-next-line react-hooks/purity
-  const secondsLeft = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+  // v1.22 (NCC#351): from the monotonic clock the store enforces, so a clock
+  // set back mid-lockout does not lock the keypad for as long as the change.
+  const secondsLeft = Math.ceil(lockLeftMs() / 1000);
   const isLockedOut = secondsLeft > 0;
 
   useEffect(() => {
